@@ -1,5 +1,6 @@
 import MainLayout from '../layout/MainLayout.vue'
 import ForbiddenView from '../views/error/ForbiddenView.vue'
+import FaceCaptureView from '../views/face/FaceCaptureView.vue'
 import LoginView from '../views/login/LoginView.vue'
 import DepartmentView from '../views/department/DepartmentView.vue'
 import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
@@ -71,7 +72,7 @@ export const protectedChildRoutes = [
   {
     path: 'face',
     name: 'face',
-    component: ModulePlaceholderView,
+    component: FaceCaptureView,
     meta: {
       requiresAuth: true,
       title: '人脸采集',
