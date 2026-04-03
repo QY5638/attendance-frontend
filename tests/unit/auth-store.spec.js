@@ -67,6 +67,42 @@ describe('auth store', () => {
     expect(store.defaultHomePath).toBe('/attendance')
   })
 
+  it('clears persisted session when restored role is unsupported', () => {
+    localStorage.setItem('attendance_token', 'dirty-token')
+    localStorage.setItem('attendance_role_code', 'GUEST')
+    localStorage.setItem('attendance_real_name', '脏数据用户')
+
+    const store = useAuthStore()
+    store.restore()
+
+    expect(store.token).toBe('')
+    expect(store.roleCode).toBe('')
+    expect(store.realName).toBe('')
+    expect(store.isAuthenticated).toBe(false)
+    expect(localStorage.getItem('attendance_token')).toBeNull()
+    expect(localStorage.getItem('attendance_role_code')).toBeNull()
+    expect(localStorage.getItem('attendance_real_name')).toBeNull()
+  })
+
+  it('clears session through clearSession action', () => {
+    const store = useAuthStore()
+    store.token = 'token-value'
+    store.roleCode = 'ADMIN'
+    store.realName = '系统管理员'
+    localStorage.setItem('attendance_token', 'token-value')
+    localStorage.setItem('attendance_role_code', 'ADMIN')
+    localStorage.setItem('attendance_real_name', '系统管理员')
+
+    store.clearSession()
+
+    expect(store.token).toBe('')
+    expect(store.roleCode).toBe('')
+    expect(store.realName).toBe('')
+    expect(localStorage.getItem('attendance_token')).toBeNull()
+    expect(localStorage.getItem('attendance_role_code')).toBeNull()
+    expect(localStorage.getItem('attendance_real_name')).toBeNull()
+  })
+
   it('clears state and storage on logout', () => {
     const store = useAuthStore()
     store.token = 'token-value'

@@ -27,20 +27,41 @@
           label-position="top"
           @keyup.enter="handleSubmit"
         >
-          <el-form-item label="用户名" prop="username">
-            <el-input v-model="form.username" placeholder="请输入用户名" clearable />
+          <el-form-item label="用户名" prop="username" :error="fieldErrors.username">
+            <el-input
+              v-model="form.username"
+              data-testid="login-username-input"
+              placeholder="请输入用户名"
+              clearable
+            />
           </el-form-item>
 
-          <el-form-item label="密码" prop="password">
+          <el-form-item label="密码" prop="password" :error="fieldErrors.password">
             <el-input
               v-model="form.password"
+              data-testid="login-password-input"
               placeholder="请输入密码"
               show-password
               clearable
             />
           </el-form-item>
 
-          <el-button type="primary" class="login-page__submit" :loading="submitting" @click="handleSubmit">
+          <el-alert
+            v-if="formError"
+            data-testid="login-form-error"
+            class="login-page__error"
+            type="error"
+            :closable="false"
+            :title="formError"
+          />
+
+          <el-button
+            data-testid="login-submit-button"
+            type="primary"
+            class="login-page__submit"
+            :loading="submitting"
+            @click="handleSubmit"
+          >
             登录系统
           </el-button>
         </el-form>
@@ -58,6 +79,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 
+import { resolvePostLoginPath } from '../../router/guard'
 import { useAuthStore } from '../../store/auth'
 
 const router = useRouter()
@@ -65,6 +87,11 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const formRef = ref()
+const formError = ref('')
+const fieldErrors = reactive({
+  username: '',
+  password: '',
+})
 const submitting = ref(false)
 const form = reactive({
   username: '',
@@ -76,13 +103,35 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
+function clearSubmitErrors() {
+  formError.value = ''
+  fieldErrors.username = ''
+  fieldErrors.password = ''
+}
+
+function applySubmitError(error) {
+  const message = error?.message || '登录失败，请稍后重试'
+
+  if (error?.field && Object.prototype.hasOwnProperty.call(fieldErrors, error.field)) {
+    fieldErrors[error.field] = message
+    return
+  }
+
+  formError.value = message
+}
+
 async function handleSubmit() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) {
+  if (submitting.value) {
     return
   }
 
   submitting.value = true
+  clearSubmitErrors()
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) {
+    submitting.value = false
+    return
+  }
 
   try {
     await authStore.login({
@@ -91,10 +140,9 @@ async function handleSubmit() {
     })
 
     ElMessage.success('登录成功')
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-    router.replace(redirect || authStore.defaultHomePath)
+    router.replace(resolvePostLoginPath(route.query.redirect, authStore.defaultHomePath))
   } catch (error) {
-    ElMessage.error(error?.message || '登录失败，请稍后重试')
+    applySubmitError(error)
   } finally {
     submitting.value = false
   }
@@ -171,6 +219,10 @@ async function handleSubmit() {
 .login-page__submit {
   width: 100%;
   margin-top: 8px;
+}
+
+.login-page__error {
+  margin-bottom: 16px;
 }
 
 .login-page__tips {

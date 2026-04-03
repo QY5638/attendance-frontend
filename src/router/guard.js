@@ -1,3 +1,19 @@
+export function normalizeRedirectPath(redirect) {
+  if (typeof redirect !== 'string' || !redirect.startsWith('/') || redirect.startsWith('//')) {
+    return ''
+  }
+
+  if (redirect === '/login' || redirect.startsWith('/login?') || redirect.startsWith('/login#')) {
+    return ''
+  }
+
+  return redirect
+}
+
+export function resolvePostLoginPath(redirect, defaultHomePath) {
+  return normalizeRedirectPath(redirect) || defaultHomePath
+}
+
 export function resolveGuardNavigation({
   isAuthenticated,
   canAccess,
@@ -5,11 +21,15 @@ export function resolveGuardNavigation({
   to,
 }) {
   if (to.meta?.requiresAuth && !isAuthenticated) {
+    const redirect = normalizeRedirectPath(to.fullPath || to.path)
+
     return {
       path: '/login',
-      query: {
-        redirect: to.fullPath || to.path,
-      },
+      query: redirect
+        ? {
+            redirect,
+          }
+        : undefined,
     }
   }
 

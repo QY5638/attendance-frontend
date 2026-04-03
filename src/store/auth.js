@@ -46,18 +46,28 @@ export const useAuthStore = defineStore('auth', {
       }
 
       const data = readAuthStorage()
+
+      if ((data.token || data.roleCode || data.realName) && !isSupportedRole(data.roleCode)) {
+        this.clearSession()
+        return
+      }
+
       this.token = data.token
       this.roleCode = data.roleCode
       this.realName = data.realName
       this.restored = true
     },
 
-    logout() {
+    clearSession() {
       this.token = ''
       this.roleCode = ''
       this.realName = ''
       this.restored = true
       clearAuthStorage()
+    },
+
+    logout() {
+      this.clearSession()
     },
 
     hasRole(roles = []) {

@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import { useAuthStore } from '../store/auth'
 import { setUnauthorizedHandler } from '../utils/request'
-import { setupRouterGuard } from './guard'
+import { normalizeRedirectPath, setupRouterGuard } from './guard'
 import { appRoutes } from './routes'
 
 export function createAppRouter(pinia) {
@@ -16,7 +16,11 @@ export function createAppRouter(pinia) {
 
   setUnauthorizedHandler(() => {
     const currentRoute = router.currentRoute.value
-    authStore.logout()
+    const redirect = currentRoute.meta?.requiresAuth
+      ? normalizeRedirectPath(currentRoute.fullPath || currentRoute.path)
+      : ''
+
+    authStore.clearSession()
 
     if (currentRoute.path === '/login') {
       return
@@ -24,9 +28,9 @@ export function createAppRouter(pinia) {
 
     router.replace({
       path: '/login',
-      query: currentRoute.fullPath
+      query: redirect
         ? {
-            redirect: currentRoute.fullPath,
+            redirect,
           }
         : undefined,
     })

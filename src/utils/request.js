@@ -4,8 +4,37 @@ import { clearAuthStorage, readAuthStorage } from './auth'
 
 let unauthorizedHandler = null
 
+function createRequestError(type, message) {
+  return {
+    type,
+    message,
+    field: '',
+  }
+}
+
 export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler
+}
+
+export function handleRequestError(error, handler = unauthorizedHandler) {
+  if (error?.response?.status === 401) {
+    const normalized = createRequestError('unauthorized', '登录状态已失效，请重新登录')
+
+    clearAuthStorage()
+    handler?.(normalized)
+
+    return normalized
+  }
+
+  if (error?.code === 'ECONNABORTED') {
+    return createRequestError('timeout', '请求超时，请稍后重试')
+  }
+
+  if (error?.request && !error?.response) {
+    return createRequestError('network', '无法连接到后端服务，请确认接口服务已启动')
+  }
+
+  return createRequestError('unknown', '请求失败，请稍后重试')
 }
 
 const request = axios.create({
@@ -26,17 +55,7 @@ request.interceptors.request.use((config) => {
 
 request.interceptors.response.use(
   (response) => response.data,
-  (error) => {
-    if (error?.response?.status === 401) {
-      clearAuthStorage()
-
-      if (unauthorizedHandler) {
-        unauthorizedHandler()
-      }
-    }
-
-    return Promise.reject(error)
-  },
+  (error) => Promise.reject(handleRequestError(error)),
 )
 
 export default request
