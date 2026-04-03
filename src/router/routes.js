@@ -1,10 +1,12 @@
 import MainLayout from '../layout/MainLayout.vue'
+import DashboardView from '../views/dashboard/DashboardView.vue'
 import ForbiddenView from '../views/error/ForbiddenView.vue'
 import FaceCaptureView from '../views/face/FaceCaptureView.vue'
 import LoginView from '../views/login/LoginView.vue'
 import DepartmentView from '../views/department/DepartmentView.vue'
 import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
 import RoleView from '../views/role/RoleView.vue'
+import StatisticsView from '../views/statistics/StatisticsView.vue'
 import UserView from '../views/user/UserView.vue'
 import { buildMenuGroups } from './access'
 
@@ -12,7 +14,7 @@ export const protectedChildRoutes = [
   {
     path: 'dashboard',
     name: 'dashboard',
-    component: ModulePlaceholderView,
+    component: DashboardView,
     meta: {
       requiresAuth: true,
       title: '概览工作台',
@@ -24,7 +26,7 @@ export const protectedChildRoutes = [
   {
     path: 'statistics',
     name: 'statistics',
-    component: ModulePlaceholderView,
+    component: StatisticsView,
     meta: {
       requiresAuth: true,
       title: '统计分析',
