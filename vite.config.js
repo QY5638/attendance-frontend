@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { configDefaults } from 'vitest/config'
 
 export default defineConfig({
   plugins: [vue()],
@@ -22,5 +23,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     clearMocks: true,
+    exclude: [...configDefaults.exclude, '.worktrees/**'],
   },
 })
