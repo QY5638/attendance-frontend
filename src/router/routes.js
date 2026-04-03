@@ -1,7 +1,10 @@
 import MainLayout from '../layout/MainLayout.vue'
 import ForbiddenView from '../views/error/ForbiddenView.vue'
 import LoginView from '../views/login/LoginView.vue'
+import DepartmentView from '../views/department/DepartmentView.vue'
 import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
+import RoleView from '../views/role/RoleView.vue'
+import UserView from '../views/user/UserView.vue'
 import { buildMenuGroups } from './access'
 
 export const protectedChildRoutes = [
@@ -32,7 +35,7 @@ export const protectedChildRoutes = [
   {
     path: 'user',
     name: 'user',
-    component: ModulePlaceholderView,
+    component: UserView,
     meta: {
       requiresAuth: true,
       title: '用户管理',
@@ -44,7 +47,7 @@ export const protectedChildRoutes = [
   {
     path: 'department',
     name: 'department',
-    component: ModulePlaceholderView,
+    component: DepartmentView,
     meta: {
       requiresAuth: true,
       title: '部门管理',
@@ -56,7 +59,7 @@ export const protectedChildRoutes = [
   {
     path: 'system/role',
     name: 'system-role',
-    component: ModulePlaceholderView,
+    component: RoleView,
     meta: {
       requiresAuth: true,
       title: '角色管理',
