@@ -1,5 +1,6 @@
 import MainLayout from '../layout/MainLayout.vue'
 import DashboardView from '../views/dashboard/DashboardView.vue'
+import AttendanceView from '../views/attendance/AttendanceView.vue'
 import ForbiddenView from '../views/error/ForbiddenView.vue'
 import FaceCaptureView from '../views/face/FaceCaptureView.vue'
 import LoginView from '../views/login/LoginView.vue'
@@ -86,7 +87,7 @@ export const protectedChildRoutes = [
   {
     path: 'attendance',
     name: 'attendance',
-    component: ModulePlaceholderView,
+    component: AttendanceView,
     meta: {
       requiresAuth: true,
       title: '考勤记录',
