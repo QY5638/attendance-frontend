@@ -5,10 +5,12 @@ import ForbiddenView from '../views/error/ForbiddenView.vue'
 import FaceCaptureView from '../views/face/FaceCaptureView.vue'
 import LoginView from '../views/login/LoginView.vue'
 import DepartmentView from '../views/department/DepartmentView.vue'
+import ExceptionView from '../views/exception/ExceptionView.vue'
 import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
 import RoleView from '../views/role/RoleView.vue'
 import StatisticsView from '../views/statistics/StatisticsView.vue'
 import UserView from '../views/user/UserView.vue'
+import WarningView from '../views/warning/WarningView.vue'
 import { buildMenuGroups } from './access'
 
 export const protectedChildRoutes = [
@@ -99,7 +101,7 @@ export const protectedChildRoutes = [
   {
     path: 'exception',
     name: 'exception',
-    component: ModulePlaceholderView,
+    component: ExceptionView,
     meta: {
       requiresAuth: true,
       title: '异常中心',
@@ -111,7 +113,7 @@ export const protectedChildRoutes = [
   {
     path: 'warning',
     name: 'warning',
-    component: ModulePlaceholderView,
+    component: WarningView,
     meta: {
       requiresAuth: true,
       title: '预警列表',
