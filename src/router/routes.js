@@ -10,6 +10,7 @@ import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vu
 import ReviewView from '../views/review/ReviewView.vue'
 import RoleView from '../views/role/RoleView.vue'
 import StatisticsView from '../views/statistics/StatisticsView.vue'
+import SystemView from '../views/system/SystemView.vue'
 import UserView from '../views/user/UserView.vue'
 import WarningView from '../views/warning/WarningView.vue'
 import { buildMenuGroups } from './access'
@@ -138,7 +139,7 @@ export const protectedChildRoutes = [
   {
     path: 'system',
     name: 'system',
-    component: ModulePlaceholderView,
+    component: SystemView,
     meta: {
       requiresAuth: true,
       title: '系统配置',
