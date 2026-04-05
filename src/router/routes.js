@@ -7,6 +7,7 @@ import LoginView from '../views/login/LoginView.vue'
 import DepartmentView from '../views/department/DepartmentView.vue'
 import ExceptionView from '../views/exception/ExceptionView.vue'
 import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
+import ReviewView from '../views/review/ReviewView.vue'
 import RoleView from '../views/role/RoleView.vue'
 import StatisticsView from '../views/statistics/StatisticsView.vue'
 import UserView from '../views/user/UserView.vue'
@@ -125,7 +126,7 @@ export const protectedChildRoutes = [
   {
     path: 'review',
     name: 'review',
-    component: ModulePlaceholderView,
+    component: ReviewView,
     meta: {
       requiresAuth: true,
       title: '人工复核',
