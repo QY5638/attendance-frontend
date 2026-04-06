@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   getAttendanceDeviceOptionsRequest,
+  loadAmapSdk,
   getMyAttendanceRecordRequest,
   submitAttendanceCheckinRequest,
   submitAttendanceRepairRequest,
   verifyFaceRequest,
 } = vi.hoisted(() => ({
   getAttendanceDeviceOptionsRequest: vi.fn(),
+  loadAmapSdk: vi.fn(),
   getMyAttendanceRecordRequest: vi.fn(),
   submitAttendanceCheckinRequest: vi.fn(),
   submitAttendanceRepairRequest: vi.fn(),
@@ -21,6 +23,10 @@ vi.mock('../../src/api/attendance', () => ({
   submitAttendanceCheckinRequest,
   submitAttendanceRepairRequest,
   verifyFaceRequest,
+}))
+
+vi.mock('../../src/utils/amap', () => ({
+  loadAmapSdk,
 }))
 
 import AttendanceView from '../../src/views/attendance/AttendanceView.vue'
@@ -72,6 +78,17 @@ describe('attendance view', () => {
   beforeEach(() => {
     getAttendanceDeviceOptionsRequest.mockReset()
     getAttendanceDeviceOptionsRequest.mockResolvedValue(createApiResponse([]))
+    loadAmapSdk.mockReset()
+    loadAmapSdk.mockResolvedValue({
+      Map: vi.fn(() => ({
+        destroy: vi.fn(),
+        on: vi.fn(),
+        setCenter: vi.fn(),
+      })),
+      Marker: vi.fn(() => ({
+        setPosition: vi.fn(),
+      })),
+    })
     getMyAttendanceRecordRequest.mockReset()
     getMyAttendanceRecordRequest.mockResolvedValue(createRecordResponse())
     submitAttendanceCheckinRequest.mockReset()
@@ -114,6 +131,8 @@ describe('attendance view', () => {
         deviceId: 'DEVICE-01',
         name: '前台设备',
         location: '一楼前台',
+        longitude: 116.397128,
+        latitude: 39.916527,
       },
     ]))
     getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse())
@@ -143,6 +162,29 @@ describe('attendance view', () => {
       imageData: 'base64-image',
     })
     expect(wrapper.get('[data-testid="attendance-face-verify-result"]').text()).toContain('通过')
+  })
+
+  it('renders a real map preview for the selected device when coordinates are available', async () => {
+    getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
+      {
+        deviceId: 'DEVICE-01',
+        name: '前台设备',
+        location: '一楼前台',
+        longitude: 116.397128,
+        latitude: 39.916527,
+      },
+    ]))
+    getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse())
+
+    const wrapper = mount(AttendanceView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
+    await flushPromises()
+
+    expect(loadAmapSdk).toHaveBeenCalledTimes(1)
+    expect(wrapper.get('[data-testid="attendance-device-coordinate"]').text()).toContain('116.397128')
+    expect(wrapper.get('[data-testid="attendance-device-map"]').exists()).toBe(true)
   })
 
   it('submits checkin without implicitly triggering face verify and refreshes records after success', async () => {
@@ -252,6 +294,7 @@ describe('attendance view', () => {
         checkType: 'OUT',
         checkTime: '2026-04-04 18:00:00',
         status: 'NORMAL',
+        exceptionType: 'MULTI_LOCATION_CONFLICT',
       },
     ]
 
@@ -270,6 +313,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="attendance-record-total"]').text()).toContain('21')
+    expect(wrapper.text()).toContain('多地点异常')
     expect(getMyAttendanceRecordRequest).toHaveBeenNthCalledWith(2, {
       pageNum: 1,
       pageSize: 10,

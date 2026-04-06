@@ -195,6 +195,23 @@ describe('warning view', () => {
     expect(listText).toContain('CUSTOM_STATUS')
   })
 
+  it('renders multi location conflict label when warning list carries exception type', async () => {
+    fetchFe06WarningList.mockResolvedValueOnce(createListPayload([
+      createWarningRecord({
+        id: 5004,
+        exceptionId: 3004,
+        type: 'ATTENDANCE_WARNING',
+        exceptionType: 'MULTI_LOCATION_CONFLICT',
+      }),
+    ]))
+
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    const listText = wrapper.get('[data-testid="warning-list"]').text()
+    expect(listText).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
+  })
+
   it('keeps the latest advice selection when older slower advice requests resolve later', async () => {
     const firstAdvice = createDeferred()
     const secondAdvice = createDeferred()

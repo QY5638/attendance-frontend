@@ -23,6 +23,7 @@
             <option value="EARLY_LEAVE">EARLY_LEAVE</option>
             <option value="ILLEGAL_TIME">ILLEGAL_TIME</option>
             <option value="REPEAT_CHECK">REPEAT_CHECK</option>
+            <option value="MULTI_LOCATION_CONFLICT">MULTI_LOCATION_CONFLICT</option>
           </select>
         </label>
 
@@ -252,6 +253,7 @@ const EXCEPTION_TYPE_LABELS = {
   EARLY_LEAVE: '早退',
   ILLEGAL_TIME: '非法时间',
   REPEAT_CHECK: '重复打卡',
+  MULTI_LOCATION_CONFLICT: '多地点异常',
 }
 
 const RISK_LEVEL_LABELS = {

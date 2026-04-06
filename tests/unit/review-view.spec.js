@@ -133,6 +133,21 @@ describe('review view', () => {
     expect(wrapper.get('[data-testid="review-latest-card"]').text()).toContain('最新复核意见')
   })
 
+  it('renders multi location conflict with Chinese label in review exception detail', async () => {
+    routeState.query = {
+      exceptionId: '3001',
+    }
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionDetail({
+      type: 'MULTI_LOCATION_CONFLICT',
+      description: '短时间内在多个地点完成打卡，判定为空间冲突',
+    }))
+
+    const wrapper = mount(ReviewView)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
+  })
+
   it('blocks new review submit when assistant is missing but still allows feedback on the latest review', async () => {
     routeState.query = {
       exceptionId: '3001',

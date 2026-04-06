@@ -41,6 +41,15 @@ function trimString(value) {
   return typeof value === 'string' ? value.trim() : value
 }
 
+function normalizeCoordinate(value) {
+  if (typeof value !== 'string') {
+    return value
+  }
+
+  const trimmed = value.trim()
+  return trimmed === '' ? undefined : trimmed
+}
+
 function compactPayload(payload = {}) {
   return Object.fromEntries(
     Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''),
@@ -52,6 +61,8 @@ function normalizeDevicePayload(payload = {}) {
     deviceId: trimString(payload.deviceId),
     name: trimString(payload.name),
     location: trimString(payload.location),
+    longitude: normalizeCoordinate(payload.longitude),
+    latitude: normalizeCoordinate(payload.latitude),
     description: trimString(payload.description),
     status: payload.status,
   })
