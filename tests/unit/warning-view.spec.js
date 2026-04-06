@@ -144,6 +144,18 @@ describe('warning view', () => {
     })
   })
 
+  it('navigates to review page directly from warning list with stable exceptionId query', async () => {
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="warning-open-review-3001"]').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith({
+      path: '/review',
+      query: { exceptionId: '3001' },
+    })
+  })
+
   it('shows empty state, list error and advice error independently', async () => {
     fetchFe06WarningList.mockReset()
     fetchFe06WarningAdvice.mockReset()

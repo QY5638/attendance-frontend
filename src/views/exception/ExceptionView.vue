@@ -131,9 +131,19 @@
             <h3>异常 #{{ selectedExceptionId }}</h3>
           </div>
 
-          <button type="button" data-testid="exception-detail-close" class="exception-detail-dialog__close" @click="closeExceptionDetail">
-            关闭
-          </button>
+          <div class="exception-detail-dialog__actions">
+            <button
+              :data-testid="`exception-open-review-${selectedExceptionId}`"
+              type="button"
+              class="exception-detail-dialog__review"
+              @click="jumpToReview(selectedExceptionId)"
+            >
+              去复核
+            </button>
+            <button type="button" data-testid="exception-detail-close" class="exception-detail-dialog__close" @click="closeExceptionDetail">
+              关闭
+            </button>
+          </div>
         </header>
 
         <p v-if="detailLoading" data-testid="exception-detail-loading" class="exception-feedback">异常详情加载中...</p>
@@ -416,16 +426,32 @@ function closeExceptionDetail() {
   })
 }
 
+function jumpToReview(exceptionId) {
+  const normalizedId = exceptionId === null || exceptionId === undefined ? '' : `${exceptionId}`.trim()
+
+  if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+    return
+  }
+
+  router.push({
+    path: '/review',
+    query: {
+      exceptionId: normalizedId,
+    },
+  })
+}
+
 watch(
   () => route.query?.exceptionId,
   (exceptionId) => {
-    const normalizedId = exceptionId === null || exceptionId === undefined ? '' : `${exceptionId}`.trim()
+    const normalizedValue = Array.isArray(exceptionId) ? exceptionId[0] : exceptionId
+    const normalizedId = normalizedValue === null || normalizedValue === undefined ? '' : `${normalizedValue}`.trim()
 
     if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
       return
     }
 
-    openExceptionDetail(exceptionId)
+    openExceptionDetail(normalizedId)
   },
   { immediate: true },
 )
@@ -450,6 +476,12 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.exception-detail-dialog__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .exception-page__eyebrow {
@@ -479,6 +511,7 @@ onMounted(() => {
 .exception-page__refresh,
 .exception-filter-actions__primary,
 .exception-item__action,
+.exception-detail-dialog__review,
 .exception-detail-dialog__close {
   border: 0;
   border-radius: 12px;
@@ -490,8 +523,13 @@ onMounted(() => {
 .exception-page__refresh,
 .exception-filter-actions__primary,
 .exception-item__action,
+.exception-detail-dialog__review,
 .exception-detail-dialog__close {
   padding: 10px 16px;
+}
+
+.exception-detail-dialog__review {
+  background: #0f172a;
 }
 
 .exception-filter-card,

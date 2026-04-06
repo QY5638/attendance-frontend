@@ -134,22 +134,27 @@ describe('statistics view', () => {
     expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('研发部')
   })
 
-  it('exports report with basic trigger only', async () => {
-    const blob = new Blob(['report'])
+  it('exports report with backend provided filename', async () => {
+    const blob = new Blob(['report'], { type: 'text/csv;charset=UTF-8' })
     const click = vi.fn()
     const createObjectURL = vi.fn(() => 'blob:demo')
     const revokeObjectURL = vi.fn()
     const originalCreateElement = document.createElement.bind(document)
     const createElementSpy = vi.spyOn(document, 'createElement')
+    const anchor = {
+      click,
+      download: '',
+      href: '',
+    }
 
-    exportStatisticsReport.mockResolvedValue(blob)
+    exportStatisticsReport.mockResolvedValue({
+      blob,
+      filename: 'statistics-export.csv',
+      contentType: 'text/csv;charset=UTF-8',
+    })
     createElementSpy.mockImplementation((tagName) => {
       if (tagName === 'a') {
-        return {
-          click,
-          download: '',
-          href: '',
-        }
+        return anchor
       }
 
       return originalCreateElement(tagName)
@@ -164,6 +169,7 @@ describe('statistics view', () => {
 
     expect(exportStatisticsReport).toHaveBeenCalledTimes(1)
     expect(createObjectURL).toHaveBeenCalledWith(blob)
+    expect(anchor.download).toBe('statistics-export.csv')
     expect(click).toHaveBeenCalledTimes(1)
     expect(messageSuccess).toHaveBeenCalledTimes(1)
 

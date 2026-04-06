@@ -248,8 +248,8 @@ async function handleExport() {
   exporting.value = true
 
   try {
-    const blob = await exportStatisticsReport()
-    downloadBlob(blob, `statistics-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    const { blob, filename } = await exportStatisticsReport()
+    downloadBlob(blob, filename)
     ElMessage.success('报表导出已触发')
   } catch (error) {
     ElMessage.error(error?.message || '报表导出失败，请稍后重试')
