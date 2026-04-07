@@ -1,14 +1,25 @@
 import MainLayout from '../layout/MainLayout.vue'
+import DashboardView from '../views/dashboard/DashboardView.vue'
+import AttendanceView from '../views/attendance/AttendanceView.vue'
 import ForbiddenView from '../views/error/ForbiddenView.vue'
+import FaceCaptureView from '../views/face/FaceCaptureView.vue'
 import LoginView from '../views/login/LoginView.vue'
+import DepartmentView from '../views/department/DepartmentView.vue'
+import ExceptionView from '../views/exception/ExceptionView.vue'
 import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
+import ReviewView from '../views/review/ReviewView.vue'
+import RoleView from '../views/role/RoleView.vue'
+import StatisticsView from '../views/statistics/StatisticsView.vue'
+import SystemView from '../views/system/SystemView.vue'
+import UserView from '../views/user/UserView.vue'
+import WarningView from '../views/warning/WarningView.vue'
 import { buildMenuGroups } from './access'
 
 export const protectedChildRoutes = [
   {
     path: 'dashboard',
     name: 'dashboard',
-    component: ModulePlaceholderView,
+    component: DashboardView,
     meta: {
       requiresAuth: true,
       title: '概览工作台',
@@ -20,7 +31,7 @@ export const protectedChildRoutes = [
   {
     path: 'statistics',
     name: 'statistics',
-    component: ModulePlaceholderView,
+    component: StatisticsView,
     meta: {
       requiresAuth: true,
       title: '统计分析',
@@ -32,7 +43,7 @@ export const protectedChildRoutes = [
   {
     path: 'user',
     name: 'user',
-    component: ModulePlaceholderView,
+    component: UserView,
     meta: {
       requiresAuth: true,
       title: '用户管理',
@@ -44,7 +55,7 @@ export const protectedChildRoutes = [
   {
     path: 'department',
     name: 'department',
-    component: ModulePlaceholderView,
+    component: DepartmentView,
     meta: {
       requiresAuth: true,
       title: '部门管理',
@@ -56,7 +67,7 @@ export const protectedChildRoutes = [
   {
     path: 'system/role',
     name: 'system-role',
-    component: ModulePlaceholderView,
+    component: RoleView,
     meta: {
       requiresAuth: true,
       title: '角色管理',
@@ -68,7 +79,7 @@ export const protectedChildRoutes = [
   {
     path: 'face',
     name: 'face',
-    component: ModulePlaceholderView,
+    component: FaceCaptureView,
     meta: {
       requiresAuth: true,
       title: '人脸采集',
@@ -80,7 +91,7 @@ export const protectedChildRoutes = [
   {
     path: 'attendance',
     name: 'attendance',
-    component: ModulePlaceholderView,
+    component: AttendanceView,
     meta: {
       requiresAuth: true,
       title: '考勤记录',
@@ -92,7 +103,7 @@ export const protectedChildRoutes = [
   {
     path: 'exception',
     name: 'exception',
-    component: ModulePlaceholderView,
+    component: ExceptionView,
     meta: {
       requiresAuth: true,
       title: '异常中心',
@@ -104,7 +115,7 @@ export const protectedChildRoutes = [
   {
     path: 'warning',
     name: 'warning',
-    component: ModulePlaceholderView,
+    component: WarningView,
     meta: {
       requiresAuth: true,
       title: '预警列表',
@@ -116,7 +127,7 @@ export const protectedChildRoutes = [
   {
     path: 'review',
     name: 'review',
-    component: ModulePlaceholderView,
+    component: ReviewView,
     meta: {
       requiresAuth: true,
       title: '人工复核',
@@ -128,7 +139,7 @@ export const protectedChildRoutes = [
   {
     path: 'system',
     name: 'system',
-    component: ModulePlaceholderView,
+    component: SystemView,
     meta: {
       requiresAuth: true,
       title: '系统配置',
