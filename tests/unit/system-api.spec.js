@@ -88,6 +88,8 @@ describe('system api', () => {
       deviceId: ' DEV-009 ',
       name: ' 南门设备 ',
       location: ' 大厅 ',
+      longitude: ' 116.397128 ',
+      latitude: ' 39.916527 ',
       description: ' 新增设备 ',
       status: 1,
     })
@@ -96,6 +98,8 @@ describe('system api', () => {
       deviceId: 'DEV-009',
       name: '南门设备',
       location: '大厅',
+      longitude: '116.397128',
+      latitude: '39.916527',
       description: '新增设备',
       status: 1,
     })
@@ -256,6 +260,8 @@ describe('system api', () => {
       deviceId: ' DEV-011 ',
       name: ' 东门设备 ',
       location: ' 东门 ',
+      longitude: ' 121.473701 ',
+      latitude: ' 31.230416 ',
       description: ' 调整位置 ',
       status: 0,
     })
@@ -265,6 +271,8 @@ describe('system api', () => {
       deviceId: 'DEV-011',
       name: '东门设备',
       location: '东门',
+      longitude: '121.473701',
+      latitude: '31.230416',
       description: '调整位置',
       status: 0,
     })

@@ -230,6 +230,12 @@ describe('exception view', () => {
     fetchExceptionList.mockResolvedValueOnce(createListPayload([
       createExceptionRecord(),
       createExceptionRecord({
+        id: 3003,
+        type: 'MULTI_LOCATION_CONFLICT',
+        sourceType: 'RULE',
+        description: '短时间内在多个地点完成打卡，判定为空间冲突',
+      }),
+      createExceptionRecord({
         id: 3002,
         type: 'CUSTOM_TYPE',
         riskLevel: 'UNKNOWN_LEVEL',
@@ -242,7 +248,10 @@ describe('exception view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="exception-list"]').text()
+    const filterText = wrapper.get('[data-testid="exception-filter-type"]').text()
     expect(listText).toContain('PROXY_CHECKIN · 代打卡')
+    expect(listText).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
+    expect(filterText).toContain('MULTI_LOCATION_CONFLICT')
     expect(listText).toContain('HIGH · 高风险')
     expect(listText).toContain('PENDING · 待处理')
     expect(listText).toContain('CUSTOM_TYPE')

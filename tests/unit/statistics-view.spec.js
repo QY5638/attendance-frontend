@@ -100,7 +100,13 @@ describe('statistics view', () => {
     messageError.mockReset()
     messageSuccess.mockReset()
 
-    fetchDepartmentStatistics.mockResolvedValue({ attendanceRate: 0.92, exceptionRate: 0.06 })
+    fetchDepartmentStatistics.mockResolvedValue({
+      attendanceRate: 0.92,
+      exceptionRate: 0.06,
+      exceptionTypeDistribution: {
+        MULTI_LOCATION_CONFLICT: 2,
+      },
+    })
     fetchExceptionTrend.mockResolvedValue([
       { label: '周一', value: 2 },
       { label: '周二', value: 4 },
@@ -122,6 +128,8 @@ describe('statistics view', () => {
     expect(fetchDepartmentStatistics).toHaveBeenCalledTimes(1)
     expect(fetchExceptionTrend).toHaveBeenCalledTimes(1)
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('92%')
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('多地点异常')
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('2')
     expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('周一')
     expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('研发部')
   })

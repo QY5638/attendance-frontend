@@ -49,6 +49,10 @@ const PROCESS_STATUS_LABELS = {
   REVIEWED: '已复核',
 }
 
+const EXCEPTION_TYPE_LABELS = {
+  MULTI_LOCATION_CONFLICT: '多地点异常',
+}
+
 const route = useRoute()
 
 const detailLoading = ref(false)
@@ -366,7 +370,7 @@ watch(
           <dl class="review-detail-grid">
             <div>
               <dt>异常类型</dt>
-              <dd>{{ formatText(exceptionDetail?.type) }}</dd>
+              <dd>{{ formatDisplayValue(exceptionDetail?.type, EXCEPTION_TYPE_LABELS) }}</dd>
             </div>
             <div>
               <dt>风险等级</dt>

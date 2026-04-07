@@ -76,6 +76,10 @@
                 <dd>{{ item.exceptionId ?? '--' }}</dd>
               </div>
               <div>
+                <dt>异常类型</dt>
+                <dd>{{ formatDisplayValue(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS) }}</dd>
+              </div>
+              <div>
                 <dt>预警类型</dt>
                 <dd>{{ formatDisplayValue(item.type, WARNING_TYPE_LABELS) }}</dd>
               </div>
@@ -172,6 +176,10 @@ import { fetchFe06WarningAdvice, fetchFe06WarningList } from '../../api/fe06-war
 const WARNING_TYPE_LABELS = {
   RISK_WARNING: '风险预警',
   ATTENDANCE_WARNING: '考勤预警',
+}
+
+const WARNING_EXCEPTION_TYPE_LABELS = {
+  MULTI_LOCATION_CONFLICT: '多地点异常',
 }
 
 const WARNING_LEVEL_LABELS = {
