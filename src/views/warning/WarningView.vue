@@ -117,6 +117,14 @@
             >
               查看关联异常
             </button>
+            <button
+              :data-testid="`warning-open-review-${item.exceptionId}`"
+              type="button"
+              class="warning-item__action warning-item__action--review"
+              @click="jumpToReview(item.exceptionId)"
+            >
+              去复核
+            </button>
           </div>
         </article>
       </div>
@@ -315,6 +323,21 @@ function jumpToException(exceptionId) {
   })
 }
 
+function jumpToReview(exceptionId) {
+  const normalizedId = exceptionId === null || exceptionId === undefined ? '' : `${exceptionId}`.trim()
+
+  if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+    return
+  }
+
+  router.push({
+    path: '/review',
+    query: {
+      exceptionId: normalizedId,
+    },
+  })
+}
+
 onMounted(() => {
   loadWarningList()
 })
@@ -384,6 +407,10 @@ onMounted(() => {
 
 .warning-item__action--secondary {
   background: #0f172a;
+}
+
+.warning-item__action--review {
+  background: #0f766e;
 }
 
 .warning-filter-card,

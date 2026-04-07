@@ -53,11 +53,45 @@ describe('statistics api', () => {
     expect(requestGet).toHaveBeenNthCalledWith(3, '/statistics/department-risk-brief', undefined)
   })
 
-  it('requests export as blob without extra filters in v1', async () => {
+  it('preserves backend export filename and content type', async () => {
     const blob = new Blob(['demo'])
-    requestGet.mockResolvedValue(blob)
+    requestGet.mockResolvedValue({
+      blob,
+      headers: {
+        'content-disposition': 'attachment; filename=statistics-export.csv',
+        'content-type': 'text/csv;charset=UTF-8',
+      },
+    })
 
-    await expect(exportStatisticsReport()).resolves.toBe(blob)
-    expect(requestGet).toHaveBeenCalledWith('/statistics/export', { responseType: 'blob' })
+    const result = await exportStatisticsReport()
+
+    expect(result.filename).toBe('statistics-export.csv')
+    expect(result.contentType).toBe('text/csv;charset=UTF-8')
+    expect(result.blob).toBeInstanceOf(Blob)
+    expect(result.blob.type.toLowerCase()).toContain('text/csv')
+    expect(requestGet).toHaveBeenCalledWith(
+      '/statistics/export',
+      expect.objectContaining({
+        responseType: 'blob',
+        transformResponse: expect.any(Array),
+      }),
+    )
+  })
+
+  it('throws business error when export returns json blob', async () => {
+    requestGet.mockResolvedValue({
+      blob: new Blob([JSON.stringify({ code: 400, message: '导出数据量过大，请缩小查询范围' })], {
+        type: 'application/json;charset=UTF-8',
+      }),
+      headers: {
+        'content-type': 'application/json;charset=UTF-8',
+      },
+    })
+
+    await expect(exportStatisticsReport()).rejects.toEqual({
+      type: 'api',
+      field: '',
+      message: '导出数据量过大，请缩小查询范围',
+    })
   })
 })
