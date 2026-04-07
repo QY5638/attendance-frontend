@@ -76,6 +76,10 @@
                 <dd>{{ item.exceptionId ?? '--' }}</dd>
               </div>
               <div>
+                <dt>异常类型</dt>
+                <dd>{{ formatDisplayValue(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS) }}</dd>
+              </div>
+              <div>
                 <dt>预警类型</dt>
                 <dd>{{ formatDisplayValue(item.type, WARNING_TYPE_LABELS) }}</dd>
               </div>
@@ -112,6 +116,14 @@
               @click="jumpToException(item.exceptionId)"
             >
               查看关联异常
+            </button>
+            <button
+              :data-testid="`warning-open-review-${item.exceptionId}`"
+              type="button"
+              class="warning-item__action warning-item__action--review"
+              @click="jumpToReview(item.exceptionId)"
+            >
+              去复核
             </button>
           </div>
         </article>
@@ -172,6 +184,10 @@ import { fetchFe06WarningAdvice, fetchFe06WarningList } from '../../api/fe06-war
 const WARNING_TYPE_LABELS = {
   RISK_WARNING: '风险预警',
   ATTENDANCE_WARNING: '考勤预警',
+}
+
+const WARNING_EXCEPTION_TYPE_LABELS = {
+  MULTI_LOCATION_CONFLICT: '多地点异常',
 }
 
 const WARNING_LEVEL_LABELS = {
@@ -307,6 +323,21 @@ function jumpToException(exceptionId) {
   })
 }
 
+function jumpToReview(exceptionId) {
+  const normalizedId = exceptionId === null || exceptionId === undefined ? '' : `${exceptionId}`.trim()
+
+  if (!normalizedId || normalizedId === 'null' || normalizedId === 'undefined') {
+    return
+  }
+
+  router.push({
+    path: '/review',
+    query: {
+      exceptionId: normalizedId,
+    },
+  })
+}
+
 onMounted(() => {
   loadWarningList()
 })
@@ -376,6 +407,10 @@ onMounted(() => {
 
 .warning-item__action--secondary {
   background: #0f172a;
+}
+
+.warning-item__action--review {
+  background: #0f766e;
 }
 
 .warning-filter-card,

@@ -7,6 +7,7 @@ const {
   fetchExceptionDetail,
   fetchExceptionList,
   routeState,
+  routerPush,
   routerReplace,
 } = vi.hoisted(() => ({
   fetchExceptionAnalysisBrief: vi.fn(),
@@ -17,6 +18,7 @@ const {
     path: '/exception',
     query: {},
   },
+  routerPush: vi.fn(),
   routerReplace: vi.fn(),
 }))
 
@@ -34,6 +36,7 @@ vi.mock('vue-router', async () => {
     ...actual,
     useRoute: () => routeState,
     useRouter: () => ({
+      push: routerPush,
       replace: routerReplace,
     }),
   }
@@ -109,6 +112,7 @@ describe('exception view', () => {
   beforeEach(() => {
     routeState.path = '/exception'
     routeState.query = {}
+    routerPush.mockReset()
     routerReplace.mockReset()
     fetchExceptionList.mockReset()
     fetchExceptionDetail.mockReset()
@@ -174,6 +178,21 @@ describe('exception view', () => {
     expect(wrapper.get('[data-testid="exception-detail-dialog"]').text()).toContain('最终进入高风险复核')
   })
 
+  it('navigates to review page from exception detail with stable exceptionId query', async () => {
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-detail-3001"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-review-3001"]').trigger('click')
+
+    expect(routerPush).toHaveBeenCalledWith({
+      path: '/review',
+      query: { exceptionId: '3001' },
+    })
+  })
+
   it('auto opens detail when exceptionId exists in query and clears the query when closed', async () => {
     routeState.query = {
       exceptionId: '3001',
@@ -192,6 +211,19 @@ describe('exception view', () => {
       path: '/exception',
       query: { source: 'warning' },
     })
+  })
+
+  it('normalizes exceptionId from query before opening detail automatically', async () => {
+    routeState.query = {
+      exceptionId: [' 3001 ', '3002'],
+    }
+
+    mount(ExceptionView)
+    await flushPromises()
+
+    expect(fetchExceptionDetail).toHaveBeenCalledWith('3001')
+    expect(fetchExceptionAnalysisBrief).toHaveBeenCalledWith('3001')
+    expect(fetchExceptionDecisionTrace).toHaveBeenCalledWith('3001')
   })
 
   it('keeps detail available when analysis brief request fails and only downgrades the summary section', async () => {
@@ -230,6 +262,12 @@ describe('exception view', () => {
     fetchExceptionList.mockResolvedValueOnce(createListPayload([
       createExceptionRecord(),
       createExceptionRecord({
+        id: 3003,
+        type: 'MULTI_LOCATION_CONFLICT',
+        sourceType: 'RULE',
+        description: '短时间内在多个地点完成打卡，判定为空间冲突',
+      }),
+      createExceptionRecord({
         id: 3002,
         type: 'CUSTOM_TYPE',
         riskLevel: 'UNKNOWN_LEVEL',
@@ -242,7 +280,10 @@ describe('exception view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="exception-list"]').text()
+    const filterText = wrapper.get('[data-testid="exception-filter-type"]').text()
     expect(listText).toContain('PROXY_CHECKIN · 代打卡')
+    expect(listText).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
+    expect(filterText).toContain('MULTI_LOCATION_CONFLICT')
     expect(listText).toContain('HIGH · 高风险')
     expect(listText).toContain('PENDING · 待处理')
     expect(listText).toContain('CUSTOM_TYPE')

@@ -100,7 +100,13 @@ describe('statistics view', () => {
     messageError.mockReset()
     messageSuccess.mockReset()
 
-    fetchDepartmentStatistics.mockResolvedValue({ attendanceRate: 0.92, exceptionRate: 0.06 })
+    fetchDepartmentStatistics.mockResolvedValue({
+      attendanceRate: 0.92,
+      exceptionRate: 0.06,
+      exceptionTypeDistribution: {
+        MULTI_LOCATION_CONFLICT: 2,
+      },
+    })
     fetchExceptionTrend.mockResolvedValue([
       { label: '周一', value: 2 },
       { label: '周二', value: 4 },
@@ -122,26 +128,33 @@ describe('statistics view', () => {
     expect(fetchDepartmentStatistics).toHaveBeenCalledTimes(1)
     expect(fetchExceptionTrend).toHaveBeenCalledTimes(1)
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('92%')
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('多地点异常')
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('2')
     expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('周一')
     expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('研发部')
   })
 
-  it('exports report with basic trigger only', async () => {
-    const blob = new Blob(['report'])
+  it('exports report with backend provided filename', async () => {
+    const blob = new Blob(['report'], { type: 'text/csv;charset=UTF-8' })
     const click = vi.fn()
     const createObjectURL = vi.fn(() => 'blob:demo')
     const revokeObjectURL = vi.fn()
     const originalCreateElement = document.createElement.bind(document)
     const createElementSpy = vi.spyOn(document, 'createElement')
+    const anchor = {
+      click,
+      download: '',
+      href: '',
+    }
 
-    exportStatisticsReport.mockResolvedValue(blob)
+    exportStatisticsReport.mockResolvedValue({
+      blob,
+      filename: 'statistics-export.csv',
+      contentType: 'text/csv;charset=UTF-8',
+    })
     createElementSpy.mockImplementation((tagName) => {
       if (tagName === 'a') {
-        return {
-          click,
-          download: '',
-          href: '',
-        }
+        return anchor
       }
 
       return originalCreateElement(tagName)
@@ -156,6 +169,7 @@ describe('statistics view', () => {
 
     expect(exportStatisticsReport).toHaveBeenCalledTimes(1)
     expect(createObjectURL).toHaveBeenCalledWith(blob)
+    expect(anchor.download).toBe('statistics-export.csv')
     expect(click).toHaveBeenCalledTimes(1)
     expect(messageSuccess).toHaveBeenCalledTimes(1)
 

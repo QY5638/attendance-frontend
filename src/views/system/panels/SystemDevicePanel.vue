@@ -52,7 +52,14 @@
           <tr v-for="row in rows" :key="row.deviceId">
             <td>{{ row.deviceId }}</td>
             <td>{{ row.name || '-' }}</td>
-            <td>{{ row.location || '-' }}</td>
+            <td>
+              <div class="panel-card__location-cell">
+                <span>{{ row.location || '-' }}</span>
+                <small v-if="hasCoordinatePair(row)">
+                  经度 {{ formatCoordinate(row.longitude) }} / 纬度 {{ formatCoordinate(row.latitude) }}
+                </small>
+              </div>
+            </td>
             <td>
               <span :class="['panel-card__status', row.status === 1 ? 'is-active' : 'is-inactive']">
                 {{ row.status === 1 ? '启用' : '停用' }}
@@ -105,6 +112,36 @@
             <input v-model="form.location" type="text" placeholder="请输入设备位置" />
           </label>
           <label>
+            <span>设备经度</span>
+            <input
+              v-model="form.longitude"
+              data-testid="system-device-longitude-input"
+              type="text"
+              placeholder="点击地图自动回填或手动输入"
+            />
+          </label>
+          <label>
+            <span>设备纬度</span>
+            <input
+              v-model="form.latitude"
+              data-testid="system-device-latitude-input"
+              type="text"
+              placeholder="点击地图自动回填或手动输入"
+            />
+          </label>
+          <div class="panel-card__full-width panel-card__map-card">
+            <div class="panel-card__map-head">
+              <div>
+                <strong>地图选点</strong>
+                <p>已接入前端高德地图 Key，点击地图即可回填设备经纬度。</p>
+              </div>
+              <span>{{ coordinateSummary }}</span>
+            </div>
+            <p v-if="mapError" class="panel-card__feedback panel-card__feedback--error">{{ mapError }}</p>
+            <p v-else-if="mapLoading" class="panel-card__feedback">地图加载中...</p>
+            <div ref="mapContainerRef" data-testid="system-device-map" class="panel-card__map"></div>
+          </div>
+          <label>
             <span>状态</span>
             <select v-model="form.status">
               <option :value="1">启用</option>
@@ -128,9 +165,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import { addDevice, deleteDevice, fetchDeviceList, updateDevice, updateDeviceStatus } from '../../../api/system'
+import { loadAmapSdk } from '../../../utils/amap'
+
+const DEFAULT_MAP_CENTER = [116.397128, 39.916527]
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -139,6 +179,11 @@ const editingId = ref('')
 const rows = ref([])
 const error = ref('')
 const notice = ref('')
+const mapContainerRef = ref(null)
+const mapError = ref('')
+const mapLoading = ref(false)
+let dialogMap = null
+let dialogMarker = null
 
 const filters = reactive({
   keyword: '',
@@ -155,11 +200,20 @@ const form = reactive({
   deviceId: '',
   name: '',
   location: '',
+  longitude: '',
+  latitude: '',
   description: '',
   status: 1,
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize) || 1))
+const coordinateSummary = computed(() => {
+  if (!hasCoordinatePair(form)) {
+    return '未选择地图坐标'
+  }
+
+  return `经度 ${formatCoordinate(form.longitude)} / 纬度 ${formatCoordinate(form.latitude)}`
+})
 
 function buildListParams() {
   const params = {
@@ -183,8 +237,134 @@ function resetForm() {
   form.deviceId = ''
   form.name = ''
   form.location = ''
+  form.longitude = ''
+  form.latitude = ''
   form.description = ''
   form.status = 1
+}
+
+function formatCoordinate(value) {
+  if (value === null || value === undefined || value === '') {
+    return ''
+  }
+
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) {
+    return String(value)
+  }
+
+  return numericValue.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+function parseCoordinatePair(target = form) {
+  if (target.longitude === '' || target.longitude === null || target.longitude === undefined) {
+    return null
+  }
+
+  if (target.latitude === '' || target.latitude === null || target.latitude === undefined) {
+    return null
+  }
+
+  const longitude = Number(target.longitude)
+  const latitude = Number(target.latitude)
+
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+    return null
+  }
+
+  return [longitude, latitude]
+}
+
+function hasCoordinatePair(target = form) {
+  return Boolean(parseCoordinatePair(target))
+}
+
+function setFormCoordinates(longitude, latitude) {
+  form.longitude = formatCoordinate(longitude)
+  form.latitude = formatCoordinate(latitude)
+}
+
+function readMapClickCoordinates(event) {
+  const lnglat = event?.lnglat
+  if (!lnglat) {
+    return null
+  }
+
+  const longitude = typeof lnglat.getLng === 'function' ? lnglat.getLng() : lnglat.lng
+  const latitude = typeof lnglat.getLat === 'function' ? lnglat.getLat() : lnglat.lat
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+    return null
+  }
+
+  return [longitude, latitude]
+}
+
+function destroyDialogMap() {
+  if (dialogMap && typeof dialogMap.destroy === 'function') {
+    dialogMap.destroy()
+  }
+
+  dialogMap = null
+  dialogMarker = null
+}
+
+function syncDialogMapFromForm() {
+  const coordinates = parseCoordinatePair()
+  if (!dialogMap || !dialogMarker || !coordinates) {
+    return
+  }
+
+  dialogMap.setCenter?.(coordinates)
+  dialogMarker.setPosition?.(coordinates)
+}
+
+async function ensureDialogMap() {
+  if (!dialogVisible.value) {
+    return
+  }
+
+  await nextTick()
+  if (!mapContainerRef.value) {
+    return
+  }
+
+  try {
+    mapLoading.value = true
+    mapError.value = ''
+    const AMap = await loadAmapSdk()
+    if (!mapContainerRef.value) {
+      return
+    }
+
+    const coordinates = parseCoordinatePair() || DEFAULT_MAP_CENTER
+    if (!dialogMap) {
+      dialogMap = new AMap.Map(mapContainerRef.value, {
+        resizeEnable: true,
+        zoom: 15,
+        center: coordinates,
+      })
+      dialogMarker = new AMap.Marker({
+        map: dialogMap,
+        position: coordinates,
+      })
+      dialogMap.on?.('click', (event) => {
+        const clickedCoordinates = readMapClickCoordinates(event)
+        if (!clickedCoordinates) {
+          return
+        }
+
+        setFormCoordinates(clickedCoordinates[0], clickedCoordinates[1])
+        syncDialogMapFromForm()
+      })
+    }
+
+    syncDialogMapFromForm()
+  } catch (requestError) {
+    destroyDialogMap()
+    mapError.value = requestError?.message || '地图加载失败，请稍后重试'
+  } finally {
+    mapLoading.value = false
+  }
 }
 
 async function loadList() {
@@ -228,6 +408,8 @@ function openEditDialog(row) {
   form.deviceId = row.deviceId || ''
   form.name = row.name || ''
   form.location = row.location || ''
+  form.longitude = formatCoordinate(row.longitude)
+  form.latitude = formatCoordinate(row.latitude)
   form.description = row.description || ''
   form.status = row.status ?? 1
   dialogVisible.value = true
@@ -317,6 +499,25 @@ function changePage(step) {
 
 onMounted(() => {
   void loadList()
+})
+
+watch(dialogVisible, (visible) => {
+  if (!visible) {
+    mapError.value = ''
+    mapLoading.value = false
+    destroyDialogMap()
+    return
+  }
+
+  void ensureDialogMap()
+})
+
+watch(() => [form.longitude, form.latitude], () => {
+  syncDialogMapFromForm()
+})
+
+onBeforeUnmount(() => {
+  destroyDialogMap()
 })
 </script>
 
@@ -445,6 +646,15 @@ onMounted(() => {
   vertical-align: top;
 }
 
+.panel-card__location-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.panel-card__location-cell small {
+  color: #64748b;
+}
+
 .panel-card__status {
   display: inline-flex;
   padding: 4px 10px;
@@ -501,6 +711,32 @@ onMounted(() => {
   margin-top: 20px;
 }
 
+.panel-card__map-card {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-card__map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-card__map-head span {
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel-card__map {
+  min-height: 260px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.12));
+}
+
 .panel-card__full-width {
   grid-column: 1 / -1;
 }
@@ -519,6 +755,10 @@ onMounted(() => {
 
   .panel-card__dialog-form {
     grid-template-columns: 1fr;
+  }
+
+  .panel-card__map-head {
+    flex-direction: column;
   }
 }
 </style>

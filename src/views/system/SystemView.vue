@@ -53,10 +53,10 @@ const router = useRouter()
 const navItems = [
   { key: 'device', label: '设备管理', desc: '设备主数据与启停状态', component: SystemDevicePanel },
   { key: 'rule', label: '规则配置', desc: '考勤规则与阈值管理', component: SystemRulePanel },
-  { key: 'prompt', label: '提示词模板', desc: '契约已预留，等待后端补齐', component: SystemPromptPanel },
+  { key: 'prompt', label: '提示词模板', desc: '模板列表、编辑与启停管理', component: SystemPromptPanel },
   { key: 'risk-level', label: '风险等级', desc: '风险名称、说明与状态', component: SystemRiskLevelPanel },
   { key: 'exception-type', label: '异常类型', desc: '异常枚举说明与状态', component: SystemExceptionTypePanel },
-  { key: 'model-log', label: '模型日志', desc: '契约已预留，等待后端补齐', component: SystemModelLogPanel },
+  { key: 'model-log', label: '模型日志', desc: '模型调用记录查询与状态追踪', component: SystemModelLogPanel },
   { key: 'operation-log', label: '操作日志', desc: '用户操作审计查询', component: SystemOperationLogPanel },
 ]
 

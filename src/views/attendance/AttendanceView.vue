@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import {
   getAttendanceDeviceOptionsRequest,
@@ -8,6 +8,7 @@ import {
   submitAttendanceRepairRequest,
   verifyFaceRequest,
 } from '../../api/attendance'
+import { loadAmapSdk } from '../../utils/amap'
 
 const activeTab = ref('checkin')
 const deviceOptions = ref([])
@@ -23,7 +24,11 @@ const repairDialogVisible = ref(false)
 const repairError = ref('')
 const faceVerifyLoading = ref(false)
 const faceVerifyResult = ref('')
+const deviceMapContainer = ref(null)
+const deviceMapError = ref('')
 let latestRecordRequestId = 0
+let devicePreviewMap = null
+let devicePreviewMarker = null
 
 const checkinForm = reactive({
   checkType: 'IN',
@@ -71,6 +76,8 @@ function readDeviceOptions(response) {
     id: item.deviceId,
     name: item.name,
     location: item.location,
+    longitude: item.longitude,
+    latitude: item.latitude,
   }))
 }
 
@@ -101,11 +108,23 @@ function normalizeFaceVerifyResult(response) {
   return '人脸预检已完成'
 }
 
-const selectedDeviceLocation = computed(() => {
-  const selected = deviceOptions.value.find((item) => item.id === checkinForm.deviceId)
-
-  return selected?.location || ''
+const selectedDevice = computed(() => {
+  return deviceOptions.value.find((item) => item.id === checkinForm.deviceId) || null
 })
+
+const selectedDeviceLocation = computed(() => selectedDevice.value?.location || '')
+
+const selectedDeviceCoordinate = computed(() => {
+  const coordinates = readCoordinatePair(selectedDevice.value)
+
+  if (!coordinates) {
+    return ''
+  }
+
+  return `${formatCoordinate(coordinates[0])}, ${formatCoordinate(coordinates[1])}`
+})
+
+const hasSelectedDeviceCoordinates = computed(() => Boolean(readCoordinatePair(selectedDevice.value)))
 
 const isDeviceSelectDisabled = computed(() => Boolean(deviceOptionsError.value))
 
@@ -132,6 +151,91 @@ function buildRecordQuery() {
     pageSize: recordQuery.pageSize,
     startDate: recordQuery.startDate,
     endDate: recordQuery.endDate,
+  }
+}
+
+function formatCoordinate(value) {
+  if (value === null || value === undefined || value === '') {
+    return ''
+  }
+
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) {
+    return String(value)
+  }
+
+  return numericValue.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+function readCoordinatePair(device) {
+  if (!device) {
+    return null
+  }
+
+  if (device.longitude === '' || device.longitude === null || device.longitude === undefined) {
+    return null
+  }
+
+  if (device.latitude === '' || device.latitude === null || device.latitude === undefined) {
+    return null
+  }
+
+  const longitude = Number(device.longitude)
+  const latitude = Number(device.latitude)
+  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+    return null
+  }
+
+  return [longitude, latitude]
+}
+
+function destroyDevicePreviewMap() {
+  if (devicePreviewMap && typeof devicePreviewMap.destroy === 'function') {
+    devicePreviewMap.destroy()
+  }
+
+  devicePreviewMap = null
+  devicePreviewMarker = null
+}
+
+async function syncSelectedDeviceMap() {
+  const coordinates = readCoordinatePair(selectedDevice.value)
+
+  if (activeTab.value !== 'checkin' || !coordinates) {
+    deviceMapError.value = ''
+    destroyDevicePreviewMap()
+    return
+  }
+
+  await nextTick()
+  if (!deviceMapContainer.value) {
+    return
+  }
+
+  try {
+    deviceMapError.value = ''
+    const AMap = await loadAmapSdk()
+    if (!deviceMapContainer.value) {
+      return
+    }
+
+    if (!devicePreviewMap) {
+      devicePreviewMap = new AMap.Map(deviceMapContainer.value, {
+        resizeEnable: true,
+        zoom: 15,
+        center: coordinates,
+      })
+      devicePreviewMarker = new AMap.Marker({
+        map: devicePreviewMap,
+        position: coordinates,
+      })
+    }
+
+    devicePreviewMap.setCenter?.(coordinates)
+    devicePreviewMarker?.setPosition?.(coordinates)
+  } catch (error) {
+    destroyDevicePreviewMap()
+    deviceMapError.value = error?.message || '设备地图加载失败'
   }
 }
 
@@ -193,6 +297,18 @@ function changePage(nextPageNum) {
   recordQuery.pageNum = pageNum
 
   return loadRecords()
+}
+
+function formatExceptionType(exceptionType) {
+  if (!exceptionType) {
+    return '-'
+  }
+
+  if (exceptionType === 'MULTI_LOCATION_CONFLICT') {
+    return '多地点异常'
+  }
+
+  return exceptionType
 }
 
 function openRepairDialog(record) {
@@ -278,6 +394,23 @@ async function handleSubmitRepair() {
 onMounted(() => {
   void Promise.allSettled([loadDeviceOptions(), loadRecords()])
 })
+
+watch(() => checkinForm.deviceId, () => {
+  void syncSelectedDeviceMap()
+})
+
+watch(activeTab, (tab) => {
+  if (tab !== 'checkin') {
+    destroyDevicePreviewMap()
+    return
+  }
+
+  void syncSelectedDeviceMap()
+})
+
+onBeforeUnmount(() => {
+  destroyDevicePreviewMap()
+})
 </script>
 
 <template>
@@ -334,6 +467,20 @@ onMounted(() => {
       <p v-if="selectedDeviceLocation" data-testid="attendance-device-location" class="attendance-hint">
         设备位置：{{ selectedDeviceLocation }}
       </p>
+
+      <p v-if="selectedDeviceCoordinate" data-testid="attendance-device-coordinate" class="attendance-hint">
+        设备经纬度：{{ selectedDeviceCoordinate }}
+      </p>
+
+      <div v-if="checkinForm.deviceId" class="attendance-map-card">
+        <div v-if="deviceMapError" data-testid="attendance-device-map-error" class="attendance-error">
+          {{ deviceMapError }}
+        </div>
+        <p v-else-if="!hasSelectedDeviceCoordinates" data-testid="attendance-device-map-empty" class="attendance-hint">
+          当前设备未配置地图坐标，暂无法展示地图预览
+        </p>
+        <div v-else ref="deviceMapContainer" data-testid="attendance-device-map" class="attendance-device-map"></div>
+      </div>
 
       <label class="attendance-field">
         <span>人脸图像</span>
@@ -430,17 +577,19 @@ onMounted(() => {
             <th>打卡类型</th>
             <th>时间</th>
             <th>状态</th>
+            <th>异常识别</th>
             <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!recordError && !recordsLoading && recordList.length === 0">
-            <td data-testid="attendance-record-empty" colspan="4">暂无记录</td>
+            <td data-testid="attendance-record-empty" colspan="5">暂无记录</td>
           </tr>
           <tr v-for="record in recordList" :key="record.id">
             <td>{{ record.checkType }}</td>
             <td>{{ record.checkTime }}</td>
             <td>{{ record.status || '-' }}</td>
+            <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
             <td>
               <button
                 :data-testid="`attendance-repair-open-${record.id}`"
@@ -507,6 +656,21 @@ onMounted(() => {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.attendance-map-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.attendance-device-map {
+  min-height: 240px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .attendance-pagination {

@@ -154,6 +154,24 @@ function buildMetricCards(payload = {}, limit = 6) {
     }))
 }
 
+function buildOverviewCards(payload = {}) {
+  const cards = buildMetricCards(payload)
+  const distribution = payload?.exceptionTypeDistribution
+
+  if (!distribution || typeof distribution !== 'object') {
+    return cards
+  }
+
+  const multiLocationConflictCount = Number(distribution.MULTI_LOCATION_CONFLICT ?? 0)
+  cards.push({
+    key: 'multiLocationConflictCount',
+    label: '多地点异常',
+    value: Number.isFinite(multiLocationConflictCount) ? multiLocationConflictCount : 0,
+  })
+
+  return cards
+}
+
 function normalizeTrendPoints(payload) {
   const source = Array.isArray(payload)
     ? payload
@@ -215,7 +233,7 @@ async function loadStatistics() {
       fetchDepartmentRiskBrief(),
     ])
 
-    overviewCards.value = buildMetricCards(departmentData)
+    overviewCards.value = buildOverviewCards(departmentData)
     trendPoints.value = normalizeTrendPoints(trendData)
     summaryData.value = summary || {}
     riskItems.value = normalizeList(risks)
@@ -230,8 +248,8 @@ async function handleExport() {
   exporting.value = true
 
   try {
-    const blob = await exportStatisticsReport()
-    downloadBlob(blob, `statistics-report-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    const { blob, filename } = await exportStatisticsReport()
+    downloadBlob(blob, filename)
     ElMessage.success('报表导出已触发')
   } catch (error) {
     ElMessage.error(error?.message || '报表导出失败，请稍后重试')

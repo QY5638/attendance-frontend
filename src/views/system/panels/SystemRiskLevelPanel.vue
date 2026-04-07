@@ -7,7 +7,7 @@
       </div>
     </header>
 
-    <p class="panel-card__notice">当前非持久化配置：后端目前使用内存注册表，服务重启后会恢复默认值。</p>
+    <p class="panel-card__notice">当前配置已持久化到数据库：更新后会通过后端接口写入存储，服务重启后仍会保留。</p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
