@@ -100,7 +100,7 @@ describe('system view', () => {
 
     fetchDeviceList.mockResolvedValue({
       total: 1,
-      items: [{ deviceId: 'DEV-001', name: '前台考勤机1', location: '办公区A', status: 1, description: '默认设备' }],
+      items: [{ deviceId: 'DEV-001', name: '前台考勤机1', location: '办公区A', longitude: 116.397128, latitude: 39.916527, status: 1, description: '默认设备' }],
     })
     fetchRuleList.mockResolvedValue({
       total: 1,

@@ -108,9 +108,7 @@ function normalizeFaceVerifyResult(response) {
   return '人脸预检已完成'
 }
 
-const selectedDevice = computed(() => {
-  return deviceOptions.value.find((item) => item.id === checkinForm.deviceId) || null
-})
+const selectedDevice = computed(() => deviceOptions.value.find((item) => item.id === checkinForm.deviceId) || null)
 
 const selectedDeviceLocation = computed(() => selectedDevice.value?.location || '')
 
@@ -123,7 +121,6 @@ const selectedDeviceCoordinate = computed(() => {
 
   return `${formatCoordinate(coordinates[0])}, ${formatCoordinate(coordinates[1])}`
 })
-
 const hasSelectedDeviceCoordinates = computed(() => Boolean(readCoordinatePair(selectedDevice.value)))
 
 const isDeviceSelectDisabled = computed(() => Boolean(deviceOptionsError.value))
