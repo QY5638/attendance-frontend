@@ -90,12 +90,29 @@ function normalizeConfigPayload(payload = {}) {
   })
 }
 
+function normalizePromptTemplatePayload(payload = {}) {
+  return compactPayload({
+    id: payload.id,
+    code: trimString(payload.code),
+    name: trimString(payload.name),
+    sceneType: trimString(payload.sceneType),
+    version: trimString(payload.version),
+    content: trimString(payload.content),
+    status: trimString(payload.status),
+    remark: trimString(payload.remark),
+  })
+}
+
 function normalizeListQuery(params = {}) {
   return compactPayload({
     pageNum: params.pageNum,
     pageSize: params.pageSize,
     keyword: trimString(params.keyword),
+    businessType: trimString(params.businessType),
+    businessId: trimString(params.businessId),
+    promptTemplateId: trimString(params.promptTemplateId),
     status: params.status,
+    sceneType: trimString(params.sceneType),
     userId: params.userId,
     type: trimString(params.type),
     startDate: trimString(params.startDate),
@@ -133,6 +150,34 @@ export async function deleteDevice(deviceId) {
 
 export async function fetchRuleList(params = {}) {
   const result = ensureSuccess(await request.get('/rule/list', { params: normalizeListQuery(params) }))
+  return normalizeListData(result.data)
+}
+
+export async function fetchPromptTemplateList(params = {}) {
+  const result = ensureSuccess(await request.get('/system/prompt/list', { params: normalizeListQuery(params) }))
+  return normalizeListData(result.data)
+}
+
+export async function addPromptTemplate(payload) {
+  const result = ensureSuccess(await request.post('/system/prompt/add', normalizePromptTemplatePayload(payload)))
+  return result.data ?? null
+}
+
+export async function updatePromptTemplate(payload) {
+  const result = ensureSuccess(await request.put('/system/prompt/update', normalizePromptTemplatePayload(payload)))
+  return result.data ?? null
+}
+
+export async function updatePromptTemplateStatus(payload) {
+  const result = ensureSuccess(await request.put('/system/prompt/status', {
+    id: payload?.id,
+    status: trimString(payload?.status),
+  }))
+  return result.data ?? null
+}
+
+export async function fetchModelLogList(params = {}) {
+  const result = ensureSuccess(await request.get('/system/model-log/list', { params: normalizeListQuery(params) }))
   return normalizeListData(result.data)
 }
 

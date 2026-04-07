@@ -133,6 +133,19 @@ describe('review view', () => {
     expect(wrapper.get('[data-testid="review-latest-card"]').text()).toContain('最新复核意见')
   })
 
+  it('normalizes exceptionId from query before initializing the review page', async () => {
+    routeState.query = {
+      exceptionId: [' 3001 ', '3002'],
+    }
+
+    const wrapper = mount(ReviewView)
+    await flushPromises()
+
+    expect(fetchExceptionDetail).toHaveBeenCalledWith('3001')
+    expect(fetchLatestReview).toHaveBeenCalledWith('3001')
+    expect(fetchReviewAssistant).toHaveBeenCalledWith('3001')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('异常 #3001')
+  })
   it('renders multi location conflict with Chinese label in review exception detail', async () => {
     routeState.query = {
       exceptionId: '3001',
@@ -147,21 +160,6 @@ describe('review view', () => {
 
     expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
   })
-
-  it('normalizes exceptionId from query before initializing the review page', async () => {
-    routeState.query = {
-      exceptionId: [' 3001 ', '3002'],
-    }
-
-    const wrapper = mount(ReviewView)
-    await flushPromises()
-
-    expect(fetchExceptionDetail).toHaveBeenCalledWith('3001')
-    expect(fetchLatestReview).toHaveBeenCalledWith('3001')
-    expect(fetchReviewAssistant).toHaveBeenCalledWith('3001')
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('异常 #3001')
-  })
-
   it('blocks new review submit when assistant is missing but still allows feedback on the latest review', async () => {
     routeState.query = {
       exceptionId: '3001',

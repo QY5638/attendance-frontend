@@ -121,7 +121,6 @@ const selectedDeviceCoordinate = computed(() => {
 
   return `${formatCoordinate(coordinates[0])}, ${formatCoordinate(coordinates[1])}`
 })
-
 const hasSelectedDeviceCoordinates = computed(() => Boolean(readCoordinatePair(selectedDevice.value)))
 
 const isDeviceSelectDisabled = computed(() => Boolean(deviceOptionsError.value))

@@ -737,6 +737,32 @@ onBeforeUnmount(() => {
   margin-top: 20px;
 }
 
+.panel-card__map-card {
+  display: grid;
+  gap: 12px;
+}
+
+.panel-card__map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-card__map-head span {
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel-card__map {
+  min-height: 260px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.12));
+}
+
 .panel-card__full-width {
   grid-column: 1 / -1;
 }

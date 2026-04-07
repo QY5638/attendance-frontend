@@ -4,34 +4,49 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   addDevice,
+  addPromptTemplate,
   fetchDeviceList,
   fetchExceptionTypeList,
+  fetchModelLogList,
   fetchOperationLogList,
+  fetchPromptTemplateList,
   fetchRiskLevelList,
   fetchRuleList,
   loadAmapSdk,
+  updatePromptTemplate,
+  updatePromptTemplateStatus,
 } = vi.hoisted(() => ({
   addDevice: vi.fn(),
+  addPromptTemplate: vi.fn(),
   fetchDeviceList: vi.fn(),
   fetchExceptionTypeList: vi.fn(),
+  fetchModelLogList: vi.fn(),
   fetchOperationLogList: vi.fn(),
+  fetchPromptTemplateList: vi.fn(),
   fetchRiskLevelList: vi.fn(),
   fetchRuleList: vi.fn(),
   loadAmapSdk: vi.fn(),
+  updatePromptTemplate: vi.fn(),
+  updatePromptTemplateStatus: vi.fn(),
 }))
 
 vi.mock('../../src/api/system', () => ({
   addDevice,
+  addPromptTemplate,
   addRule: vi.fn(),
   deleteDevice: vi.fn(),
   fetchDeviceList,
   fetchExceptionTypeList,
+  fetchModelLogList,
   fetchOperationLogList,
+  fetchPromptTemplateList,
   fetchRiskLevelList,
   fetchRuleList,
   updateDevice: vi.fn(),
   updateDeviceStatus: vi.fn(),
   updateExceptionType: vi.fn(),
+  updatePromptTemplate,
+  updatePromptTemplateStatus,
   updateRiskLevel: vi.fn(),
   updateRule: vi.fn(),
   updateRuleStatus: vi.fn(),
@@ -71,12 +86,17 @@ async function mountSystemView(path = '/system') {
 describe('system view', () => {
   beforeEach(() => {
     addDevice.mockReset()
+    addPromptTemplate.mockReset()
     fetchDeviceList.mockReset()
     fetchExceptionTypeList.mockReset()
+    fetchModelLogList.mockReset()
     fetchOperationLogList.mockReset()
+    fetchPromptTemplateList.mockReset()
     fetchRiskLevelList.mockReset()
     fetchRuleList.mockReset()
     loadAmapSdk.mockReset()
+    updatePromptTemplate.mockReset()
+    updatePromptTemplateStatus.mockReset()
 
     fetchDeviceList.mockResolvedValue({
       total: 1,
@@ -98,7 +118,43 @@ describe('system view', () => {
       total: 1,
       items: [{ id: 1, userId: 1001, type: 'LOGIN', content: '管理员登录系统', operationTime: '2026-04-04 09:00:00' }],
     })
+    fetchModelLogList.mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: 11,
+          businessType: 'ATTENDANCE_ANALYSIS',
+          businessId: 20260405001,
+          promptTemplateId: 1,
+          inputSummary: '近 7 日打卡摘要',
+          outputSummary: '识别出连续晚到风险',
+          status: 'SUCCESS',
+          latencyMs: 520,
+          errorMessage: '',
+          createTime: '2026-04-05T10:30:00',
+        },
+      ],
+    })
+    fetchPromptTemplateList.mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: 1,
+          code: 'ATTENDANCE_ANALYSIS',
+          name: '复杂异常分析',
+          sceneType: 'ATTENDANCE_ANALYSIS',
+          version: 'v1',
+          content: '请结合打卡记录分析异常原因',
+          status: 'ENABLED',
+          remark: '默认模板',
+          updateTime: '2026-04-05T12:00:00',
+        },
+      ],
+    })
     addDevice.mockResolvedValue(null)
+    addPromptTemplate.mockResolvedValue(null)
+    updatePromptTemplate.mockResolvedValue(null)
+    updatePromptTemplateStatus.mockResolvedValue(null)
     loadAmapSdk.mockResolvedValue({
       Map: vi.fn(() => ({
         destroy: vi.fn(),
@@ -145,41 +201,42 @@ describe('system view', () => {
     expect(fetchRuleList).not.toHaveBeenCalled()
   })
 
-  it('shows contract empty states for prompt and model log without new requests', async () => {
+  it('loads prompt template panel with real backend data', async () => {
     const { wrapper } = await mountSystemView('/system')
-
-    fetchDeviceList.mockClear()
-    fetchRuleList.mockClear()
-    fetchRiskLevelList.mockClear()
-    fetchExceptionTypeList.mockClear()
-    fetchOperationLogList.mockClear()
 
     await wrapper.get('[data-tab="prompt"]').trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('/api/system/prompt/list')
-    expect(fetchDeviceList).not.toHaveBeenCalled()
-    expect(fetchRuleList).not.toHaveBeenCalled()
-    expect(fetchRiskLevelList).not.toHaveBeenCalled()
-    expect(fetchExceptionTypeList).not.toHaveBeenCalled()
-    expect(fetchOperationLogList).not.toHaveBeenCalled()
+
+    expect(fetchPromptTemplateList).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+    })
+    expect(wrapper.text()).toContain('复杂异常分析')
+    expect(wrapper.get('[data-tab="prompt"]').text()).toContain('模板列表、编辑与启停管理')
+  })
+
+  it('loads model log panel with real backend data', async () => {
+    const { wrapper } = await mountSystemView('/system')
 
     await wrapper.get('[data-tab="model-log"]').trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('/api/system/model-log/list')
-    expect(fetchDeviceList).not.toHaveBeenCalled()
-    expect(fetchRuleList).not.toHaveBeenCalled()
-    expect(fetchRiskLevelList).not.toHaveBeenCalled()
-    expect(fetchExceptionTypeList).not.toHaveBeenCalled()
-    expect(fetchOperationLogList).not.toHaveBeenCalled()
+
+    expect(fetchModelLogList).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+    })
+    expect(wrapper.text()).toContain('ATTENDANCE_ANALYSIS')
+    expect(wrapper.text()).toContain('识别出连续晚到风险')
+    expect(wrapper.get('[data-tab="model-log"]').text()).toContain('模型调用记录查询与状态追踪')
   })
 
-  it('shows non persistent notice on risk level panel', async () => {
+  it('shows persisted notice on risk level panel', async () => {
     const { wrapper } = await mountSystemView('/system')
 
     await wrapper.get('[data-tab="risk-level"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('当前非持久化配置')
+    expect(wrapper.text()).toContain('当前配置已持久化到数据库')
     expect(wrapper.text()).toContain('高风险')
     expect(fetchRiskLevelList).toHaveBeenCalledWith({
       pageNum: 1,
