@@ -1,5 +1,13 @@
 <template>
   <section class="crud-page">
+    <ConsoleHero
+      eyebrow="基础资料"
+      title="部门管理"
+      description="维护部门基础资料，用于用户归属、统计分析和风险画像维度映射。"
+      theme="sky"
+      :cards="heroCards"
+    />
+
     <el-card shadow="never">
       <template #header>
         <div class="crud-page__header">
@@ -62,9 +70,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import {
   addDepartment,
   deleteDepartment,
@@ -88,6 +98,19 @@ const pagination = reactive({
   pageSize: 10,
   total: 0,
 })
+
+const heroCards = computed(() => [
+  {
+    key: 'total',
+    label: '当前列表',
+    value: `${pagination.total} 个部门`,
+  },
+  {
+    key: 'scope',
+    label: '配置范围',
+    value: '名称 / 说明',
+  },
+])
 
 const form = reactive({
   name: '',

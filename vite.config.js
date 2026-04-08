@@ -22,6 +22,32 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, '/')
+
+            if (!normalizedId.includes('/node_modules/')) {
+              return
+            }
+
+            if (
+              normalizedId.includes('/node_modules/vue/') ||
+              normalizedId.includes('/node_modules/@vue/') ||
+              normalizedId.includes('/node_modules/vue-router/') ||
+              normalizedId.includes('/node_modules/pinia/')
+            ) {
+              return 'vue-core'
+            }
+
+            if (normalizedId.includes('/node_modules/axios/')) {
+              return 'network'
+            }
+          },
+        },
+      },
+    },
     test: {
       environment: 'jsdom',
       globals: true,

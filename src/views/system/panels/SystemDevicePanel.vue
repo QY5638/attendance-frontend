@@ -3,10 +3,21 @@
     <header class="panel-card__header">
       <div>
         <h2>设备管理</h2>
-        <p>只使用 `/api/device/*` 管理设备主数据，不复用 FE-05 的打卡设备选项接口。</p>
+        <p>维护设备基础资料，用于点位管理、地图展示和启停控制。</p>
       </div>
       <button type="button" class="panel-card__primary" @click="openCreateDialog">新增设备</button>
     </header>
+
+    <section class="panel-card__hero-strip">
+      <article>
+        <span>配置目标</span>
+        <strong>设备主数据</strong>
+      </article>
+      <article>
+        <span>能力范围</span>
+        <strong>位置 / 坐标 / 启停</strong>
+      </article>
+    </section>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
@@ -525,8 +536,36 @@ onBeforeUnmount(() => {
 .panel-card {
   padding: 24px;
   border-radius: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+}
+
+.panel-card__hero-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-card__hero-strip article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.panel-card__hero-strip span,
+.panel-card__hero-strip strong {
+  display: block;
+}
+
+.panel-card__hero-strip span {
+  font-size: 12px;
+  color: #6366f1;
+}
+
+.panel-card__hero-strip strong {
+  margin-top: 8px;
+  color: #0f172a;
 }
 
 .panel-card__header,

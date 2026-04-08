@@ -530,8 +530,26 @@ onBeforeUnmount(() => {
 <template>
   <section class="attendance-view">
     <header class="attendance-view__header">
-      <h1>考勤自助</h1>
-      <p>同页完成打卡与个人记录查询。</p>
+      <div>
+        <p class="attendance-view__eyebrow">考勤业务</p>
+        <h1>考勤自助</h1>
+        <p>把设备选择、人脸预检、正式打卡和个人记录查询收敛到一页完成。</p>
+      </div>
+
+      <div class="attendance-view__status-grid">
+        <article class="attendance-view__status-card">
+          <span>当前标签</span>
+          <strong>{{ activeTab === 'checkin' ? '打卡' : '记录' }}</strong>
+        </article>
+        <article class="attendance-view__status-card">
+          <span>设备状态</span>
+          <strong>{{ selectedDevice ? (selectedDevice.name || selectedDevice.id) : '未选择设备' }}</strong>
+        </article>
+        <article class="attendance-view__status-card">
+          <span>图像状态</span>
+          <strong>{{ checkinForm.imageData ? '已就绪' : '待采集' }}</strong>
+        </article>
+      </div>
     </header>
 
     <div class="attendance-tabs" role="tablist" aria-label="考勤功能切换">
@@ -556,49 +574,62 @@ onBeforeUnmount(() => {
     </div>
 
     <section v-if="activeTab === 'checkin'" data-testid="attendance-checkin-panel" class="attendance-panel">
-      <div v-if="deviceOptionsError" data-testid="attendance-device-blocking-error" class="attendance-error">
-        {{ deviceOptionsError }}
-      </div>
-
-      <label class="attendance-field">
-        <span>打卡类型</span>
-        <select v-model="checkinForm.checkType" data-testid="attendance-check-type-select">
-          <option value="IN">上班打卡</option>
-          <option value="OUT">下班打卡</option>
-        </select>
-      </label>
-
-      <label class="attendance-field">
-        <span>考勤设备</span>
-        <select v-model="checkinForm.deviceId" data-testid="attendance-device-select" :disabled="isDeviceSelectDisabled">
-          <option value="">请选择设备</option>
-          <option v-for="item in deviceOptions" :key="item.id" :value="item.id">
-            {{ item.name || item.id }}
-          </option>
-        </select>
-      </label>
-
-      <p v-if="selectedDeviceLocation" data-testid="attendance-device-location" class="attendance-hint">
-        设备位置：{{ selectedDeviceLocation }}
-      </p>
-
-      <p v-if="selectedDeviceCoordinate" data-testid="attendance-device-coordinate" class="attendance-hint">
-        设备经纬度：{{ selectedDeviceCoordinate }}
-      </p>
-
-      <div v-if="checkinForm.deviceId" class="attendance-map-card">
-        <div v-if="deviceMapError" data-testid="attendance-device-map-error" class="attendance-error">
-          {{ deviceMapError }}
+      <section class="attendance-card attendance-card--soft">
+        <div class="attendance-card__head">
+          <div>
+            <p class="attendance-card__eyebrow">步骤 1</p>
+            <h2>选择打卡类型与设备</h2>
+          </div>
+          <span class="attendance-card__badge">设备校验</span>
         </div>
-        <p v-else-if="!hasSelectedDeviceCoordinates" data-testid="attendance-device-map-empty" class="attendance-hint">
-          当前设备未配置地图坐标，暂无法展示地图预览
-        </p>
-        <div v-else ref="deviceMapContainer" data-testid="attendance-device-map" class="attendance-device-map"></div>
-      </div>
 
-      <section class="attendance-face-card">
+        <div v-if="deviceOptionsError" data-testid="attendance-device-blocking-error" class="attendance-error">
+          {{ deviceOptionsError }}
+        </div>
+
+        <label class="attendance-field">
+          <span>打卡类型</span>
+          <select v-model="checkinForm.checkType" data-testid="attendance-check-type-select">
+            <option value="IN">上班打卡</option>
+            <option value="OUT">下班打卡</option>
+          </select>
+        </label>
+
+        <label class="attendance-field">
+          <span>考勤设备</span>
+          <select v-model="checkinForm.deviceId" data-testid="attendance-device-select" :disabled="isDeviceSelectDisabled">
+            <option value="">请选择设备</option>
+            <option v-for="item in deviceOptions" :key="item.id" :value="item.id">
+              {{ item.name || item.id }}
+            </option>
+          </select>
+        </label>
+
+        <p v-if="selectedDeviceLocation" data-testid="attendance-device-location" class="attendance-hint">
+          设备位置：{{ selectedDeviceLocation }}
+        </p>
+
+        <p v-if="selectedDeviceCoordinate" data-testid="attendance-device-coordinate" class="attendance-hint">
+          设备经纬度：{{ selectedDeviceCoordinate }}
+        </p>
+
+        <div v-if="checkinForm.deviceId" class="attendance-map-card">
+          <div v-if="deviceMapError" data-testid="attendance-device-map-error" class="attendance-error">
+            {{ deviceMapError }}
+          </div>
+          <p v-else-if="!hasSelectedDeviceCoordinates" data-testid="attendance-device-map-empty" class="attendance-hint">
+            当前设备未配置地图坐标，暂无法展示地图预览
+          </p>
+          <div v-else ref="deviceMapContainer" data-testid="attendance-device-map" class="attendance-device-map"></div>
+        </div>
+      </section>
+
+      <section class="attendance-face-card attendance-card">
         <div class="attendance-face-card__header">
-          <span>人脸图像</span>
+          <div>
+            <p class="attendance-card__eyebrow">步骤 2</p>
+            <h2>采集人脸图像</h2>
+          </div>
           <div class="attendance-face-source-switch">
             <button
               type="button"
@@ -683,66 +714,90 @@ onBeforeUnmount(() => {
         <p v-else data-testid="attendance-image-input" class="attendance-hint">请先拍照或上传图片</p>
       </section>
 
-      <button
-        data-testid="attendance-face-verify-button"
-        type="button"
-        :disabled="faceVerifyLoading || !checkinForm.imageData"
-        @click="handleVerifyFace"
-      >
-        辅助预检
-      </button>
+      <section class="attendance-card attendance-card--soft">
+        <div class="attendance-card__head">
+          <div>
+            <p class="attendance-card__eyebrow">步骤 3</p>
+            <h2>执行预检并提交打卡</h2>
+          </div>
+          <span class="attendance-card__badge">提交动作</span>
+        </div>
 
-      <p v-if="faceVerifyResult" data-testid="attendance-face-verify-result" class="attendance-hint">
-        {{ faceVerifyResult }}
-      </p>
+        <button
+          data-testid="attendance-face-verify-button"
+          type="button"
+          :disabled="faceVerifyLoading || !checkinForm.imageData"
+          @click="handleVerifyFace"
+        >
+          辅助预检
+        </button>
 
-      <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
-        {{ checkinError }}
-      </div>
+        <p v-if="faceVerifyResult" data-testid="attendance-face-verify-result" class="attendance-hint">
+          {{ faceVerifyResult }}
+        </p>
 
-      <button
-        data-testid="attendance-checkin-submit"
-        type="button"
-        :disabled="isCheckinDisabled"
-        @click="handleSubmitCheckin"
-      >
-        提交打卡
-      </button>
+        <div class="attendance-face-card__tips">
+          <span>建议先执行辅助预检，再正式提交打卡。</span>
+          <span>若摄像头不可用，可切换为本地图片上传。</span>
+        </div>
+
+        <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
+          {{ checkinError }}
+        </div>
+
+        <button
+          data-testid="attendance-checkin-submit"
+          type="button"
+          :disabled="isCheckinDisabled"
+          @click="handleSubmitCheckin"
+        >
+          提交打卡
+        </button>
+      </section>
     </section>
 
     <section v-else data-testid="attendance-record-panel" class="attendance-panel">
-      <div class="attendance-record-filters">
-        <label class="attendance-field">
-          <span>开始日期</span>
-          <input v-model="recordQuery.startDate" data-testid="attendance-start-date-input" type="date" />
-        </label>
+      <section class="attendance-card attendance-card--soft">
+        <div class="attendance-card__head">
+          <div>
+            <p class="attendance-card__eyebrow">记录检索</p>
+            <h2>查询个人考勤记录</h2>
+          </div>
+          <span class="attendance-card__badge">支持补卡申请</span>
+        </div>
 
-        <label class="attendance-field">
-          <span>结束日期</span>
-          <input v-model="recordQuery.endDate" data-testid="attendance-end-date-input" type="date" />
-        </label>
+        <div class="attendance-record-filters">
+          <label class="attendance-field">
+            <span>开始日期</span>
+            <input v-model="recordQuery.startDate" data-testid="attendance-start-date-input" type="date" />
+          </label>
 
-        <label class="attendance-field">
-          <span>每页条数</span>
-          <select v-model.number="recordQuery.pageSize" data-testid="attendance-page-size-select">
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
-          </select>
-        </label>
+          <label class="attendance-field">
+            <span>结束日期</span>
+            <input v-model="recordQuery.endDate" data-testid="attendance-end-date-input" type="date" />
+          </label>
 
-        <button data-testid="attendance-record-search" type="button" @click="handleSearchRecords">
-          查询记录
-        </button>
-      </div>
+          <label class="attendance-field">
+            <span>每页条数</span>
+            <select v-model.number="recordQuery.pageSize" data-testid="attendance-page-size-select">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+            </select>
+          </label>
 
-      <div v-if="recordError" data-testid="attendance-record-error" class="attendance-error">
-        {{ recordError }}
-      </div>
+          <button data-testid="attendance-record-search" type="button" @click="handleSearchRecords">
+            查询记录
+          </button>
+        </div>
 
-      <p data-testid="attendance-record-total">共 {{ recordTotal }} 条</p>
+        <div v-if="recordError" data-testid="attendance-record-error" class="attendance-error">
+          {{ recordError }}
+        </div>
 
-      <div class="attendance-pagination">
+        <p data-testid="attendance-record-total">共 {{ recordTotal }} 条</p>
+
+        <div class="attendance-pagination">
         <button
           data-testid="attendance-page-prev"
           type="button"
@@ -760,9 +815,9 @@ onBeforeUnmount(() => {
         >
           下一页
         </button>
-      </div>
+        </div>
 
-      <table class="attendance-record-table">
+        <table class="attendance-record-table">
         <thead>
           <tr>
             <th>打卡类型</th>
@@ -792,7 +847,8 @@ onBeforeUnmount(() => {
             </td>
           </tr>
         </tbody>
-      </table>
+        </table>
+      </section>
     </section>
 
     <div v-if="repairDialogVisible" data-testid="attendance-repair-dialog" class="attendance-repair-dialog">
@@ -820,7 +876,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .attendance-view {
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .attendance-view__header h1,
@@ -828,19 +884,193 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+.attendance-view__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  padding: 28px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+  color: #f8fafc;
+  box-shadow: 0 24px 60px rgba(30, 64, 175, 0.16);
+}
+
+.attendance-view__eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.86);
+}
+
+.attendance-view__header h1 {
+  font-size: clamp(30px, 4vw, 38px);
+}
+
+.attendance-view__header p:last-child {
+  margin-top: 12px;
+  max-width: 640px;
+  line-height: 1.8;
+  color: rgba(226, 232, 240, 0.92);
+}
+
+.attendance-view__status-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.attendance-view__status-card {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.attendance-view__status-card span,
+.attendance-view__status-card strong {
+  display: block;
+}
+
+.attendance-view__status-card span {
+  font-size: 12px;
+  color: rgba(191, 219, 254, 0.8);
+}
+
+.attendance-view__status-card strong {
+  margin-top: 10px;
+  font-size: 20px;
+  line-height: 1.3;
+}
+
 .attendance-tabs {
   display: flex;
   gap: 8px;
 }
 
+.attendance-tabs button {
+  min-width: 120px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(99, 102, 241, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #334155;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  transition: all 0.2s ease;
+}
+
+.attendance-tabs button[aria-pressed='true'] {
+  border-color: transparent;
+  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  color: #ffffff;
+}
+
 .attendance-panel {
   display: grid;
-  gap: 12px;
+  gap: 18px;
+}
+
+.attendance-card {
+  padding: 22px;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.attendance-card--soft {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.attendance-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.attendance-card__eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #6366f1;
+}
+
+.attendance-card__head h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.attendance-card__badge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.08);
+  color: #4338ca;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .attendance-field {
   display: grid;
-  gap: 4px;
+  gap: 8px;
+}
+
+.attendance-field span {
+  color: #334155;
+  font-size: 13px;
+}
+
+.attendance-field select,
+.attendance-field input,
+.attendance-field textarea,
+.attendance-record-filters button,
+.attendance-panel > button,
+.attendance-face-actions button,
+.attendance-face-upload,
+.attendance-pagination button,
+.attendance-record-table button,
+.attendance-repair-dialog button {
+  font: inherit;
+}
+
+.attendance-field select,
+.attendance-field input,
+.attendance-field textarea,
+.attendance-record-filters button,
+.attendance-panel > button,
+.attendance-face-actions button,
+.attendance-face-upload,
+.attendance-pagination button,
+.attendance-record-table button,
+.attendance-repair-dialog button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.attendance-record-filters button,
+.attendance-panel > button,
+.attendance-face-actions button,
+.attendance-face-upload,
+.attendance-pagination button,
+.attendance-record-table button,
+.attendance-repair-dialog button {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.attendance-panel > button,
+.attendance-record-filters button,
+.attendance-repair-dialog button[data-testid='attendance-repair-submit'] {
+  border-color: transparent;
+  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.2);
 }
 
 .attendance-record-filters {
@@ -853,18 +1083,14 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 12px;
-  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
 }
 
 .attendance-face-card {
   display: grid;
   gap: 12px;
-  padding: 12px;
-  border: 1px solid #dcdfe6;
-  border-radius: 12px;
-  background: #ffffff;
 }
 
 .attendance-face-card__header {
@@ -883,7 +1109,7 @@ onBeforeUnmount(() => {
 
 .attendance-face-source-switch__button--active {
   color: #ffffff;
-  background: #409eff;
+  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
 }
 
 .attendance-face-capture {
@@ -895,7 +1121,7 @@ onBeforeUnmount(() => {
 .attendance-face-preview {
   width: 100%;
   min-height: 240px;
-  border-radius: 12px;
+  border-radius: 18px;
   background: #f5f7fa;
   overflow: hidden;
 }
@@ -913,10 +1139,8 @@ onBeforeUnmount(() => {
 .attendance-face-upload {
   display: inline-flex;
   width: fit-content;
-  padding: 8px 12px;
   color: #ffffff;
-  background: #409eff;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
   cursor: pointer;
 }
 
@@ -929,7 +1153,7 @@ onBeforeUnmount(() => {
 
 .attendance-device-map {
   min-height: 240px;
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
 }
 
@@ -937,37 +1161,70 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .attendance-record-table {
   width: 100%;
   border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
 }
 
 .attendance-record-table th,
 .attendance-record-table td {
-  padding: 8px;
-  border: 1px solid #dcdfe6;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   text-align: left;
 }
 
+.attendance-record-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+}
+
 .attendance-error {
-  padding: 12px;
-  color: #c45656;
-  background: #fef0f0;
-  border: 1px solid #fbc4c4;
+  padding: 12px 14px;
+  color: #b91c1c;
+  background: rgba(248, 113, 113, 0.12);
+  border-radius: 16px;
 }
 
 .attendance-hint {
   margin: 0;
-  color: #606266;
+  color: #64748b;
+  line-height: 1.7;
 }
 
 .attendance-repair-dialog {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid #dcdfe6;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 24px;
   background: #ffffff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.attendance-face-card__tips {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #4338ca;
+  font-size: 13px;
+}
+
+@media (max-width: 960px) {
+  .attendance-view__header {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .attendance-card__head {
+    flex-direction: column;
+  }
 }
 </style>

@@ -3,9 +3,20 @@
     <header class="panel-card__header">
       <div>
         <h2>操作日志</h2>
-        <p>对接 `GET /api/log/operation/list`，用于系统审计查询。</p>
+        <p>用于查询系统关键操作记录，便于审计和问题追踪。</p>
       </div>
     </header>
+
+    <section class="panel-card__hero-strip">
+      <article>
+        <span>日志类型</span>
+        <strong>操作审计日志</strong>
+      </article>
+      <article>
+        <span>覆盖范围</span>
+        <strong>登录 / 打卡 / 复核等关键动作</strong>
+      </article>
+    </section>
 
     <p class="panel-card__notice">
       当前日志覆盖范围以登录、打卡、补卡申请、预警重评估、复核提交和复核反馈为主，不承诺覆盖系统配置修改日志。
@@ -175,8 +186,36 @@ onMounted(() => {
 .panel-card {
   padding: 24px;
   border-radius: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+}
+
+.panel-card__hero-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-card__hero-strip article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.panel-card__hero-strip span,
+.panel-card__hero-strip strong {
+  display: block;
+}
+
+.panel-card__hero-strip span {
+  font-size: 12px;
+  color: #6366f1;
+}
+
+.panel-card__hero-strip strong {
+  margin-top: 8px;
+  color: #0f172a;
 }
 
 .panel-card__header,

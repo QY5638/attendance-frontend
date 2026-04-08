@@ -1,24 +1,26 @@
 <template>
   <section class="statistics-page">
-    <header class="statistics-page__header">
-      <div>
-        <p class="statistics-page__eyebrow">FE-02 概览与统计模块</p>
-        <h2 class="statistics-page__title">统计分析</h2>
-        <p class="statistics-page__desc">聚焦部门统计、异常趋势、AI 解读与基础导出能力。</p>
-      </div>
-
-      <div class="statistics-page__actions">
-        <el-button plain @click="loadStatistics">刷新</el-button>
-        <el-button
-          type="primary"
-          :loading="exporting"
-          data-testid="statistics-export-button"
-          @click="handleExport"
-        >
-          导出报表
-        </el-button>
-      </div>
-    </header>
+    <ConsoleHero
+      eyebrow="统计分析"
+      title="统计分析"
+      description="聚焦部门统计、异常趋势、智能解读和报表导出。"
+      theme="sky"
+      :cards="heroCards"
+    >
+      <template #actions>
+        <div class="statistics-page__actions">
+          <el-button plain @click="loadStatistics">刷新</el-button>
+          <el-button
+            type="primary"
+            :loading="exporting"
+            data-testid="statistics-export-button"
+            @click="handleExport"
+          >
+            导出报表
+          </el-button>
+        </div>
+      </template>
+    </ConsoleHero>
 
     <el-alert
       v-if="errorMessage"
@@ -30,6 +32,16 @@
     <el-skeleton v-else-if="loading" :rows="8" animated />
 
     <template v-else>
+      <section class="statistics-spotlight">
+        <div class="statistics-spotlight__lead">
+          <p class="statistics-spotlight__eyebrow">分析概览</p>
+          <h3>先看总体指标，再结合趋势与风险画像判断当天重点</h3>
+          <p>统计页用于承接管理者的汇总分析、风险判断和报表导出，和首页工作台保持同一套解读逻辑。</p>
+        </div>
+
+        <ConsoleOverviewCards :items="spotlightCards" accent="#0f766e" />
+      </section>
+
       <section data-testid="statistics-overview" class="statistics-section">
         <div class="statistics-section__head">
           <h3>部门统计总览</h3>
@@ -64,7 +76,7 @@
 
       <section data-testid="statistics-summary" class="statistics-section statistics-summary-card">
         <div class="statistics-section__head">
-          <h3>AI 统计解读</h3>
+          <h3>智能统计解读</h3>
           <span>趋势摘要</span>
         </div>
 
@@ -97,9 +109,11 @@
 </template>
 
 <script setup>
-import { ElMessage } from 'element-plus'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { computed, onMounted, ref } from 'vue'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
+import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import {
   exportStatisticsReport,
   fetchDepartmentRiskBrief,
@@ -119,6 +133,38 @@ const summaryData = ref({
   highlightRisks: '',
   manageSuggestion: '',
 })
+const heroCards = computed(() => [
+  {
+    key: 'dimension',
+    label: '分析维度',
+    value: '总览 / 趋势 / 风险',
+  },
+  {
+    key: 'export',
+    label: '导出能力',
+    value: exporting.value ? '导出中' : '可导出',
+  },
+])
+const spotlightCards = computed(() => [
+  {
+    key: 'overview',
+    label: '总览指标',
+    value: `${overviewCards.value.length} 项`,
+    desc: '覆盖出勤、异常、比例等关键管理指标',
+  },
+  {
+    key: 'trend',
+    label: '趋势样本',
+    value: `${trendPoints.value.length} 组`,
+    desc: '用于观察异常变化和周期性波动',
+  },
+  {
+    key: 'risk',
+    label: '风险画像',
+    value: `${riskItems.value.length} 个`,
+    desc: '聚焦部门风险热区和管理建议',
+  },
+])
 
 const METRIC_LABELS = {
   attendanceCount: '出勤次数',
@@ -270,34 +316,6 @@ onMounted(() => {
   gap: 20px;
 }
 
-.statistics-page__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 24px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
-  color: #f8fafc;
-}
-
-.statistics-page__eyebrow {
-  margin: 0 0 8px;
-  font-size: 13px;
-  color: rgba(226, 232, 240, 0.82);
-}
-
-.statistics-page__title {
-  margin: 0;
-  font-size: 30px;
-}
-
-.statistics-page__desc {
-  margin: 10px 0 0;
-  line-height: 1.7;
-  color: rgba(226, 232, 240, 0.9);
-}
-
 .statistics-page__actions {
   display: flex;
   align-items: center;
@@ -309,6 +327,41 @@ onMounted(() => {
   border-radius: 24px;
   background: #ffffff;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.statistics-spotlight {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 18px;
+}
+
+.statistics-spotlight__lead,
+.statistics-spotlight__cards {
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+}
+
+.statistics-spotlight__eyebrow {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0f766e;
+}
+
+.statistics-spotlight__lead h3 {
+  margin: 0;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.statistics-spotlight__lead p:last-child {
+  margin: 14px 0 0;
+  line-height: 1.8;
+  color: #475569;
 }
 
 .statistics-section__head {
@@ -422,8 +475,8 @@ onMounted(() => {
 }
 
 @media (max-width: 960px) {
-  .statistics-page__header {
-    flex-direction: column;
+  .statistics-spotlight {
+    grid-template-columns: 1fr;
   }
 
   .statistics-page__actions {

@@ -2,9 +2,9 @@
   <section class="exception-page">
     <header class="exception-page__header">
       <div>
-        <p class="exception-page__eyebrow">FE-06 异常与预警模块</p>
+        <p class="exception-page__eyebrow">异常处理</p>
         <h2 class="exception-page__title">异常中心</h2>
-        <p class="exception-page__desc">查看异常列表、AI 判定摘要与决策链，仅提供只读分析能力。</p>
+        <p class="exception-page__desc">查看异常列表、智能判定摘要和处置依据，支持进入复核流程。</p>
       </div>
 
       <button type="button" data-testid="exception-refresh" class="exception-page__refresh" @click="loadExceptionList">
@@ -12,18 +12,20 @@
       </button>
     </header>
 
+    <ConsoleOverviewCards :items="overviewItems" />
+
     <section class="exception-filter-card">
       <div class="exception-filter-grid">
         <label class="exception-filter-field">
           <span>异常类型</span>
           <select v-model="queryForm.type" data-testid="exception-filter-type">
             <option value="">全部</option>
-            <option value="PROXY_CHECKIN">PROXY_CHECKIN</option>
-            <option value="LATE">LATE</option>
-            <option value="EARLY_LEAVE">EARLY_LEAVE</option>
-            <option value="ILLEGAL_TIME">ILLEGAL_TIME</option>
-            <option value="REPEAT_CHECK">REPEAT_CHECK</option>
-            <option value="MULTI_LOCATION_CONFLICT">MULTI_LOCATION_CONFLICT</option>
+            <option value="PROXY_CHECKIN">代打卡</option>
+            <option value="LATE">迟到</option>
+            <option value="EARLY_LEAVE">早退</option>
+            <option value="ILLEGAL_TIME">非规定时间打卡</option>
+            <option value="REPEAT_CHECK">重复打卡</option>
+            <option value="MULTI_LOCATION_CONFLICT">多地点异常</option>
           </select>
         </label>
 
@@ -31,9 +33,9 @@
           <span>风险等级</span>
           <select v-model="queryForm.riskLevel" data-testid="exception-filter-risk-level">
             <option value="">全部</option>
-            <option value="HIGH">HIGH</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="LOW">LOW</option>
+            <option value="HIGH">高风险</option>
+            <option value="MEDIUM">中风险</option>
+            <option value="LOW">低风险</option>
           </select>
         </label>
 
@@ -41,8 +43,8 @@
           <span>处理状态</span>
           <select v-model="queryForm.processStatus" data-testid="exception-filter-process-status">
             <option value="">全部</option>
-            <option value="PENDING">PENDING</option>
-            <option value="REVIEWED">REVIEWED</option>
+            <option value="PENDING">待处理</option>
+            <option value="REVIEWED">已复核</option>
           </select>
         </label>
 
@@ -188,7 +190,7 @@
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
-              <h4>AI 判定摘要</h4>
+              <h4>智能判定摘要</h4>
               <span>{{ analysisBrief?.promptVersion || '无 Prompt 版本' }}</span>
             </div>
 
@@ -217,7 +219,7 @@
                 <dd>{{ analysisBrief.similarCaseSummary || '--' }}</dd>
               </div>
             </div>
-            <p v-else class="exception-feedback">暂无 AI 摘要</p>
+            <p v-else class="exception-feedback">暂无智能摘要</p>
           </section>
 
           <section class="exception-detail-section">
@@ -247,9 +249,10 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import {
   fetchExceptionAnalysisBrief,
   fetchExceptionDecisionTrace,
@@ -261,7 +264,7 @@ const EXCEPTION_TYPE_LABELS = {
   PROXY_CHECKIN: '代打卡',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非法时间',
+  ILLEGAL_TIME: '非规定时间打卡',
   REPEAT_CHECK: '重复打卡',
   MULTI_LOCATION_CONFLICT: '多地点异常',
 }
@@ -311,6 +314,32 @@ const decisionTraceList = ref([])
 const decisionTraceError = ref('')
 let latestDetailRequestId = 0
 
+const overviewItems = computed(() => [
+  {
+    key: 'total',
+    label: '异常总数',
+    value: `${listTotal.value}`,
+    desc: '按当前筛选条件汇总',
+  },
+  {
+    key: 'filter',
+    label: '当前筛选',
+    value:
+      EXCEPTION_TYPE_LABELS[queryForm.type] ||
+      RISK_LEVEL_LABELS[queryForm.riskLevel] ||
+      PROCESS_STATUS_LABELS[queryForm.processStatus] ||
+      queryForm.userId ||
+      '全部异常',
+    desc: '支持按类型、风险、状态、用户维度组合分析',
+  },
+  {
+    key: 'entry',
+    label: '处置入口',
+    value: detailVisible.value ? `异常 #${selectedExceptionId.value}` : '待选择异常',
+    desc: '详情中可直接跳转到人工复核页',
+  },
+])
+
 function buildListQuery() {
   return {
     pageNum: queryForm.pageNum,
@@ -328,7 +357,7 @@ function formatDisplayValue(value, labelMap) {
   }
 
   const label = labelMap[value]
-  return label ? `${value} · ${label}` : value
+  return label || value
 }
 
 function formatDateTime(value) {
@@ -478,6 +507,14 @@ onMounted(() => {
   gap: 16px;
 }
 
+.exception-page__header {
+  padding: 28px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #0f172a 0%, #4338ca 100%);
+  color: #f8fafc;
+  box-shadow: 0 24px 60px rgba(67, 56, 202, 0.16);
+}
+
 .exception-detail-dialog__actions {
   display: flex;
   align-items: center;
@@ -501,11 +538,19 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.exception-page__title {
+  color: #ffffff;
+}
+
 .exception-page__desc,
 .exception-list-card__head span,
 .exception-detail-section__head span {
   margin: 8px 0 0;
   color: #64748b;
+}
+
+.exception-page__desc {
+  color: rgba(226, 232, 240, 0.88);
 }
 
 .exception-page__refresh,
@@ -518,6 +563,7 @@ onMounted(() => {
   background: #4f46e5;
   color: #ffffff;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .exception-page__refresh,
@@ -611,7 +657,8 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   border-radius: 18px;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   padding: 18px;
 }
 
@@ -667,6 +714,8 @@ onMounted(() => {
   overflow-y: auto;
   margin: 16px auto;
   padding: 24px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .exception-detail-section + .exception-detail-section {
@@ -681,7 +730,7 @@ onMounted(() => {
 
 .exception-trace-item {
   border-radius: 16px;
-  background: #f8fafc;
+  background: rgba(79, 70, 229, 0.05);
   padding: 16px;
 }
 

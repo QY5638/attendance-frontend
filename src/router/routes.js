@@ -1,19 +1,19 @@
-import MainLayout from '../layout/MainLayout.vue'
-import DashboardView from '../views/dashboard/DashboardView.vue'
-import AttendanceView from '../views/attendance/AttendanceView.vue'
-import ForbiddenView from '../views/error/ForbiddenView.vue'
-import FaceCaptureView from '../views/face/FaceCaptureView.vue'
-import LoginView from '../views/login/LoginView.vue'
-import DepartmentView from '../views/department/DepartmentView.vue'
-import ExceptionView from '../views/exception/ExceptionView.vue'
-import ModulePlaceholderView from '../views/placeholder/ModulePlaceholderView.vue'
-import ReviewView from '../views/review/ReviewView.vue'
-import RoleView from '../views/role/RoleView.vue'
-import StatisticsView from '../views/statistics/StatisticsView.vue'
-import SystemView from '../views/system/SystemView.vue'
-import UserView from '../views/user/UserView.vue'
-import WarningView from '../views/warning/WarningView.vue'
 import { buildMenuGroups } from './access'
+
+const MainLayout = () => import('../layout/MainLayout.vue')
+const DashboardView = () => import('../views/dashboard/DashboardView.vue')
+const StatisticsView = () => import('../views/statistics/StatisticsView.vue')
+const UserView = () => import('../views/user/UserView.vue')
+const DepartmentView = () => import('../views/department/DepartmentView.vue')
+const RoleView = () => import('../views/role/RoleView.vue')
+const FaceCaptureView = () => import('../views/face/FaceCaptureView.vue')
+const AttendanceView = () => import('../views/attendance/AttendanceView.vue')
+const ExceptionView = () => import('../views/exception/ExceptionView.vue')
+const WarningView = () => import('../views/warning/WarningView.vue')
+const ReviewView = () => import('../views/review/ReviewView.vue')
+const SystemView = () => import('../views/system/SystemView.vue')
+const LoginView = () => import('../views/login/LoginView.vue')
+const ForbiddenView = () => import('../views/error/ForbiddenView.vue')
 
 export const protectedChildRoutes = [
   {

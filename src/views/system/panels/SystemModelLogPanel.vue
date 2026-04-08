@@ -8,10 +8,21 @@
       <span class="panel-card__summary">共 {{ pagination.total }} 条</span>
     </header>
 
+    <section class="panel-card__hero-strip">
+      <article>
+        <span>日志类型</span>
+        <strong>模型调用记录</strong>
+      </article>
+      <article>
+        <span>主要用途</span>
+        <strong>排查模板、状态与耗时</strong>
+      </article>
+    </section>
+
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
         <span>业务类型</span>
-        <input v-model="filters.businessType" type="text" placeholder="如 ATTENDANCE_ANALYSIS" />
+        <input v-model="filters.businessType" type="text" placeholder="请输入业务类型" />
       </label>
       <label>
         <span>业务 ID</span>
@@ -227,8 +238,36 @@ onMounted(() => {
 .panel-card {
   padding: 24px;
   border-radius: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+}
+
+.panel-card__hero-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-card__hero-strip article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.panel-card__hero-strip span,
+.panel-card__hero-strip strong {
+  display: block;
+}
+
+.panel-card__hero-strip span {
+  font-size: 12px;
+  color: #6366f1;
+}
+
+.panel-card__hero-strip strong {
+  margin-top: 8px;
+  color: #0f172a;
 }
 
 .panel-card__header,

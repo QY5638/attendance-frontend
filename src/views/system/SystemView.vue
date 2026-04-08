@@ -2,17 +2,19 @@
   <section class="system-view">
     <header class="system-view__hero">
       <div>
-        <p class="system-view__eyebrow">FE-08 系统配置模块</p>
+        <p class="system-view__eyebrow">系统管理</p>
         <h1>系统配置</h1>
         <p class="system-view__desc">
-          保持 `/system` 单路由，在页面内部组织二级导航和子页容器，避免侵入全局菜单与壳层逻辑。
+          集中维护设备、规则、模板、风险等级和日志信息，便于统一管理系统配置。
         </p>
       </div>
       <div class="system-view__meta">
-        <span>当前入口：/system</span>
+        <span>当前分类</span>
         <strong>{{ activeItem.label }}</strong>
       </div>
     </header>
+
+    <ConsoleOverviewCards :items="overviewItems" />
 
     <nav class="system-view__tabs" aria-label="系统配置子页切换">
       <button
@@ -36,16 +38,18 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, defineAsyncComponent, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import SystemDevicePanel from './panels/SystemDevicePanel.vue'
-import SystemExceptionTypePanel from './panels/SystemExceptionTypePanel.vue'
-import SystemModelLogPanel from './panels/SystemModelLogPanel.vue'
-import SystemOperationLogPanel from './panels/SystemOperationLogPanel.vue'
-import SystemPromptPanel from './panels/SystemPromptPanel.vue'
-import SystemRiskLevelPanel from './panels/SystemRiskLevelPanel.vue'
-import SystemRulePanel from './panels/SystemRulePanel.vue'
+import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
+
+const SystemDevicePanel = defineAsyncComponent(() => import('./panels/SystemDevicePanel.vue'))
+const SystemRulePanel = defineAsyncComponent(() => import('./panels/SystemRulePanel.vue'))
+const SystemPromptPanel = defineAsyncComponent(() => import('./panels/SystemPromptPanel.vue'))
+const SystemRiskLevelPanel = defineAsyncComponent(() => import('./panels/SystemRiskLevelPanel.vue'))
+const SystemExceptionTypePanel = defineAsyncComponent(() => import('./panels/SystemExceptionTypePanel.vue'))
+const SystemModelLogPanel = defineAsyncComponent(() => import('./panels/SystemModelLogPanel.vue'))
+const SystemOperationLogPanel = defineAsyncComponent(() => import('./panels/SystemOperationLogPanel.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -70,6 +74,27 @@ const activeTab = computed(() => {
 const activeItem = computed(() => {
   return navItems.find((item) => item.key === activeTab.value) || navItems[0]
 })
+
+const overviewItems = computed(() => [
+  {
+    key: 'current',
+    label: '当前子页',
+    value: activeItem.value.label,
+    desc: activeItem.value.desc,
+  },
+  {
+    key: 'scope',
+    label: '配置范围',
+    value: '7 个配置域',
+    desc: '覆盖设备、规则、模板、风险枚举与审计日志。',
+  },
+  {
+    key: 'suggestion',
+    label: '使用建议',
+    value: '先主数据后日志',
+    desc: '先维护基础配置，再通过模型日志和操作日志做排查与追踪。',
+  },
+])
 
 watch(
   () => route.query.tab,

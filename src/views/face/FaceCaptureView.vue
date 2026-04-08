@@ -2,7 +2,7 @@
   <section class="face-card">
     <header class="face-card__header">
       <div>
-        <p class="face-card__eyebrow">考勤业务 / FE-04</p>
+        <p class="face-card__eyebrow">考勤业务</p>
         <h2>人脸采集</h2>
         <p class="face-card__desc">当前页面按当前登录用户自助语义工作，录入与验证请求都只提交当前采集到的人脸图像。</p>
       </div>

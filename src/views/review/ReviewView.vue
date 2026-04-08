@@ -135,7 +135,7 @@ function formatDisplayValue(value, labelMap) {
   }
 
   const label = labelMap[value]
-  return label ? `${value} · ${label}` : value
+  return label || value
 }
 
 function formatText(value) {
@@ -341,25 +341,40 @@ watch(
   <section class="review-page">
     <header class="review-page__header">
       <div>
-        <p class="review-page__eyebrow">FE-07 人工复核模块</p>
+        <p class="review-page__eyebrow">人工复核</p>
         <h1>人工复核</h1>
-        <p>基于 `exceptionId` 查看异常详情、AI 辅助信息，并完成最新复核与反馈学习。</p>
+        <p>查看异常详情和智能辅助信息，并完成复核处理与反馈记录。</p>
+      </div>
+
+      <div class="review-page__summary-grid">
+        <article class="review-page__summary-card">
+          <span>异常编号</span>
+          <strong>{{ hasExceptionId ? exceptionId : '待选择' }}</strong>
+        </article>
+        <article class="review-page__summary-card">
+          <span>智能辅助</span>
+          <strong>{{ assistantMissing ? '缺失' : '可用' }}</strong>
+        </article>
+        <article class="review-page__summary-card">
+          <span>最新记录</span>
+          <strong>{{ latestReview?.id ? `#${latestReview.id}` : '暂无' }}</strong>
+        </article>
       </div>
     </header>
 
     <section v-if="!hasExceptionId" data-testid="review-empty-state" class="review-panel review-panel--empty">
       <h2>请选择待复核异常</h2>
-      <p>当前入口固定为 `/review?exceptionId=`。请从异常详情或预警入口携带 `exceptionId` 后进入。</p>
+      <p>请从异常中心或预警列表进入当前页面。</p>
     </section>
 
     <section v-else data-testid="review-detail-state" class="review-layout">
-      <section class="review-panel">
+      <section class="review-panel review-panel--detail">
         <div class="review-panel__head">
           <div>
             <p class="review-panel__eyebrow">异常详情</p>
             <h2>异常 #{{ exceptionId }}</h2>
           </div>
-          <span class="review-panel__tag">/review?exceptionId={{ exceptionId }}</span>
+          <span class="review-panel__tag">复核任务</span>
         </div>
 
         <p v-if="detailLoading" class="review-feedback">异常详情加载中...</p>
@@ -398,10 +413,10 @@ watch(
         </template>
       </section>
 
-      <section data-testid="review-assistant-card" class="review-panel">
+      <section data-testid="review-assistant-card" class="review-panel review-panel--assistant">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">AI 复核辅助</p>
+            <p class="review-panel__eyebrow">智能复核辅助</p>
             <h2>辅助建议</h2>
           </div>
           <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">缺失</span>
@@ -413,7 +428,7 @@ watch(
         </p>
         <dl v-else class="review-detail-grid">
           <div>
-            <dt>AI 建议</dt>
+            <dt>智能建议</dt>
             <dd>{{ formatText(assistant?.aiReviewSuggestion) }}</dd>
           </div>
           <div>
@@ -431,7 +446,7 @@ watch(
         </dl>
       </section>
 
-      <section class="review-panel">
+      <section class="review-panel review-panel--history">
         <div class="review-panel__head">
           <div>
             <p class="review-panel__eyebrow">最新复核记录</p>
@@ -464,7 +479,7 @@ watch(
               <dd>{{ formatText(latestReview.reviewComment) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
-              <dt>AI 建议快照</dt>
+              <dt>智能建议快照</dt>
               <dd>{{ formatText(latestReview.aiReviewSuggestion) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
@@ -476,7 +491,7 @@ watch(
         <p v-else class="review-feedback">暂无最新复核记录。</p>
       </section>
 
-      <section class="review-panel">
+      <section class="review-panel review-panel--decision">
         <div class="review-panel__head">
           <div>
             <p class="review-panel__eyebrow">新建复核</p>
@@ -486,7 +501,7 @@ watch(
         </div>
 
         <p v-if="assistantMissing" class="review-feedback review-feedback--warning">
-          AI assistant 缺失，当前只允许查看页面；如已有最新复核记录，仍可提交反馈标签。
+          当前缺少智能辅助信息，仅支持查看页面内容；如已有最新复核记录，仍可继续提交反馈标签。
         </p>
 
         <div class="review-form-grid">
@@ -499,7 +514,7 @@ watch(
             >
               <option value="">请选择</option>
               <option v-for="option in REVIEW_RESULT_OPTIONS" :key="option.value" :value="option.value">
-                {{ option.value }} · {{ option.label }}
+                {{ option.label }}
               </option>
             </select>
           </label>
@@ -561,7 +576,7 @@ watch(
         </div>
       </section>
 
-      <section class="review-panel">
+      <section class="review-panel review-panel--feedback-panel">
         <div class="review-panel__head">
           <div>
             <p class="review-panel__eyebrow">反馈学习</p>
@@ -628,16 +643,55 @@ watch(
   gap: 24px;
 }
 
+.review-page__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 18px;
+  padding: 28px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #111827 0%, #4f46e5 100%);
+  color: #f8fafc;
+  box-shadow: 0 24px 60px rgba(79, 70, 229, 0.16);
+}
+
 .review-page__header h1 {
   margin: 0;
   font-size: 32px;
-  color: #0f172a;
+  color: #ffffff;
 }
 
 .review-page__header p:last-child {
   margin: 12px 0 0;
-  color: #475569;
+  color: rgba(226, 232, 240, 0.9);
   line-height: 1.7;
+}
+
+.review-page__summary-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.review-page__summary-card {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.review-page__summary-card span,
+.review-page__summary-card strong {
+  display: block;
+}
+
+.review-page__summary-card span {
+  font-size: 12px;
+  color: rgba(191, 219, 254, 0.82);
+}
+
+.review-page__summary-card strong {
+  margin-top: 10px;
+  font-size: 22px;
+  line-height: 1.3;
 }
 
 .review-page__eyebrow,
@@ -647,9 +701,16 @@ watch(
   color: #6366f1;
 }
 
+.review-page__eyebrow {
+  color: #c7d2fe;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .review-layout {
   display: grid;
   gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .review-panel {
@@ -661,6 +722,17 @@ watch(
 
 .review-panel--empty {
   text-align: center;
+}
+
+.review-panel--detail,
+.review-panel--decision,
+.review-panel--feedback-panel {
+  grid-column: 1 / -1;
+}
+
+.review-panel--decision,
+.review-panel--feedback-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
 .review-panel__head {
@@ -816,6 +888,11 @@ watch(
 }
 
 @media (max-width: 768px) {
+  .review-page__header,
+  .review-layout {
+    grid-template-columns: 1fr;
+  }
+
   .review-panel {
     padding: 18px;
   }

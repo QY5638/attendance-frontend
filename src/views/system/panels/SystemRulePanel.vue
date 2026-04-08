@@ -8,6 +8,17 @@
       <button type="button" class="panel-card__primary" @click="openCreateDialog">新增规则</button>
     </header>
 
+    <section class="panel-card__hero-strip">
+      <article>
+        <span>配置目标</span>
+        <strong>考勤规则</strong>
+      </article>
+      <article>
+        <span>关键字段</span>
+        <strong>时间窗 / 阈值 / 重复限制</strong>
+      </article>
+    </section>
+
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
         <span>关键词</span>
@@ -89,7 +100,7 @@
         <div class="panel-card__dialog-head">
           <div>
             <strong>{{ editingId ? '编辑规则' : '新增规则' }}</strong>
-            <p>规则配置属于 FE-08 管理能力，不承载异常处理和复核流程。</p>
+            <p>请根据企业考勤制度维护时间窗、阈值和重复打卡限制。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
@@ -320,8 +331,36 @@ onMounted(() => {
 .panel-card {
   padding: 24px;
   border-radius: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+}
+
+.panel-card__hero-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-card__hero-strip article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.panel-card__hero-strip span,
+.panel-card__hero-strip strong {
+  display: block;
+}
+
+.panel-card__hero-strip span {
+  font-size: 12px;
+  color: #6366f1;
+}
+
+.panel-card__hero-strip strong {
+  margin-top: 8px;
+  color: #0f172a;
 }
 
 .panel-card__header,

@@ -1,5 +1,13 @@
 <template>
   <section class="crud-page">
+    <ConsoleHero
+      eyebrow="基础资料"
+      title="角色管理"
+      description="维护角色主数据，为登录后默认工作区、菜单可见范围和人员分类提供基础。"
+      theme="violet"
+      :cards="heroCards"
+    />
+
     <el-card shadow="never">
       <template #header>
         <div class="crud-page__header">
@@ -85,9 +93,11 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { addRole, deleteRole, fetchRoleList, updateRole } from '../../api/role'
 
 const formRef = ref()
@@ -107,6 +117,19 @@ const pagination = reactive({
   pageSize: 10,
   total: 0,
 })
+
+const heroCards = computed(() => [
+  {
+    key: 'total',
+    label: '当前列表',
+    value: `${pagination.total} 个角色`,
+  },
+  {
+    key: 'scope',
+    label: '配置范围',
+    value: '编码 / 名称 / 状态',
+  },
+])
 
 const form = reactive({
   code: '',

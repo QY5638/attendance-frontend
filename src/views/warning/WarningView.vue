@@ -2,7 +2,7 @@
   <section class="warning-page">
     <header class="warning-page__header">
       <div>
-        <p class="warning-page__eyebrow">FE-06 异常与预警模块</p>
+        <p class="warning-page__eyebrow">风险预警</p>
         <h2 class="warning-page__title">预警列表</h2>
         <p class="warning-page__desc">展示预警摘要、优先级和处置建议，并支持只读跳转到异常详情。</p>
       </div>
@@ -12,15 +12,17 @@
       </button>
     </header>
 
+    <ConsoleOverviewCards :items="overviewItems" accent="#0f766e" />
+
     <section class="warning-filter-card">
       <div class="warning-filter-grid">
         <label class="warning-filter-field">
           <span>风险等级</span>
           <select v-model="queryForm.level" data-testid="warning-filter-level">
             <option value="">全部</option>
-            <option value="HIGH">HIGH</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="LOW">LOW</option>
+            <option value="HIGH">高风险</option>
+            <option value="MEDIUM">中风险</option>
+            <option value="LOW">低风险</option>
           </select>
         </label>
 
@@ -28,8 +30,8 @@
           <span>处理状态</span>
           <select v-model="queryForm.status" data-testid="warning-filter-status">
             <option value="">全部</option>
-            <option value="UNPROCESSED">UNPROCESSED</option>
-            <option value="PROCESSED">PROCESSED</option>
+            <option value="UNPROCESSED">待处理</option>
+            <option value="PROCESSED">已处理</option>
           </select>
         </label>
 
@@ -37,8 +39,8 @@
           <span>预警类型</span>
           <select v-model="queryForm.type" data-testid="warning-filter-type">
             <option value="">全部</option>
-            <option value="RISK_WARNING">RISK_WARNING</option>
-            <option value="ATTENDANCE_WARNING">ATTENDANCE_WARNING</option>
+            <option value="RISK_WARNING">风险预警</option>
+            <option value="ATTENDANCE_WARNING">考勤预警</option>
           </select>
         </label>
       </div>
@@ -161,7 +163,7 @@
             <dd>{{ formatDisplayValue(adviceDetail.decisionSource, DECISION_SOURCE_LABELS) }}</dd>
           </div>
           <div>
-            <dt>AI 摘要</dt>
+            <dt>智能摘要</dt>
             <dd>{{ adviceDetail.aiSummary || '--' }}</dd>
           </div>
           <div>
@@ -176,9 +178,10 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import { fetchFe06WarningAdvice, fetchFe06WarningList } from '../../api/fe06-warning'
 
 const WARNING_TYPE_LABELS = {
@@ -228,6 +231,31 @@ const selectedWarningId = ref('')
 const adviceDetail = ref(null)
 let latestAdviceRequestId = 0
 
+const overviewItems = computed(() => [
+  {
+    key: 'total',
+    label: '预警总数',
+    value: `${listTotal.value}`,
+    desc: '按当前筛选条件统计',
+  },
+  {
+    key: 'filter',
+    label: '当前筛选',
+    value:
+      WARNING_LEVEL_LABELS[queryForm.level] ||
+      WARNING_STATUS_LABELS[queryForm.status] ||
+      WARNING_TYPE_LABELS[queryForm.type] ||
+      '全部预警',
+    desc: '支持按风险等级、状态与预警类型组合查看',
+  },
+  {
+    key: 'advice',
+    label: '建议弹层',
+    value: adviceVisible.value ? `预警 #${selectedWarningId.value}` : '待查看建议',
+    desc: '可在建议中直接跳转异常详情或人工复核',
+  },
+])
+
 function buildListQuery() {
   return {
     pageNum: queryForm.pageNum,
@@ -244,7 +272,7 @@ function formatDisplayValue(value, labelMap) {
   }
 
   const label = labelMap[value]
-  return label ? `${value} · ${label}` : value
+  return label || value
 }
 
 function formatDateTime(value) {
@@ -350,6 +378,10 @@ onMounted(() => {
   gap: 20px;
 }
 
+.warning-overview-item {
+  --console-overview-accent: #0f766e;
+}
+
 .warning-page__header,
 .warning-list-card__head,
 .warning-advice-dialog__header {
@@ -357,6 +389,14 @@ onMounted(() => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.warning-page__header {
+  padding: 28px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #052e2b 0%, #0f766e 100%);
+  color: #f8fafc;
+  box-shadow: 0 24px 60px rgba(15, 118, 110, 0.16);
 }
 
 .warning-page__eyebrow {
@@ -375,10 +415,18 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.warning-page__title {
+  color: #ffffff;
+}
+
 .warning-page__desc,
 .warning-list-card__head span {
   margin: 8px 0 0;
   color: #64748b;
+}
+
+.warning-page__desc {
+  color: rgba(226, 232, 240, 0.88);
 }
 
 .warning-page__refresh,
@@ -388,6 +436,7 @@ onMounted(() => {
   border: 0;
   border-radius: 12px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .warning-page__refresh,
@@ -490,7 +539,8 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   border-radius: 18px;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   padding: 18px;
 }
 
@@ -546,6 +596,8 @@ onMounted(() => {
   overflow-y: auto;
   margin: 16px auto;
   padding: 24px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
 @media (max-width: 960px) {

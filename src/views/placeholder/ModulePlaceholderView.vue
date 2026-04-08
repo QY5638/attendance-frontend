@@ -2,33 +2,56 @@
   <section class="placeholder-card">
     <div class="placeholder-card__head">
       <div>
-        <p class="placeholder-card__eyebrow">{{ route.meta.menuGroup || '模块入口' }}</p>
+        <p class="placeholder-card__eyebrow">{{ route.meta.menuGroup || '功能页面' }}</p>
         <h2>{{ route.meta.title || '页面开发中' }}</h2>
       </div>
-      <el-tag type="warning">{{ route.meta.moduleCode || 'FE-01' }}</el-tag>
+      <el-tag type="warning">待完善</el-tag>
     </div>
 
     <p class="placeholder-card__desc">
-      当前页面已预留为并发开发入口，后续由对应模块继续补齐真实页面与接口联调。
+      当前页面正在完善中，后续会继续补齐功能内容。
     </p>
 
     <div class="placeholder-card__meta">
       <div>
-        <span>当前路由</span>
-        <strong>{{ route.path }}</strong>
+        <span>页面状态</span>
+        <strong>建设中</strong>
       </div>
       <div>
-        <span>可见角色</span>
-        <strong>{{ (route.meta.roles || []).join(' / ') }}</strong>
+        <span>适用对象</span>
+        <strong>{{ roleLabels }}</strong>
       </div>
     </div>
   </section>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
+
+const roleLabels = computed(() => {
+  const roles = Array.isArray(route.meta.roles) ? route.meta.roles : []
+
+  if (!roles.length) {
+    return '全部用户'
+  }
+
+  return roles
+    .map((role) => {
+      if (role === 'ADMIN') {
+        return '管理员'
+      }
+
+      if (role === 'EMPLOYEE') {
+        return '员工'
+      }
+
+      return role
+    })
+    .join(' / ')
+})
 </script>
 
 <style scoped>

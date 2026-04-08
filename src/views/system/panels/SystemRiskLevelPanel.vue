@@ -7,6 +7,13 @@
       </div>
     </header>
 
+    <section class="panel-card__hero-strip panel-card__hero-strip--single">
+      <article>
+        <span>配置目标</span>
+        <strong>风险等级枚举</strong>
+      </article>
+    </section>
+
     <p class="panel-card__notice">当前配置已持久化到数据库：更新后会通过后端接口写入存储，服务重启后仍会保留。</p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
@@ -239,8 +246,35 @@ onMounted(() => {
 .panel-card {
   padding: 24px;
   border-radius: 24px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
+}
+
+.panel-card__hero-strip {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.panel-card__hero-strip article {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.panel-card__hero-strip span,
+.panel-card__hero-strip strong {
+  display: block;
+}
+
+.panel-card__hero-strip span {
+  font-size: 12px;
+  color: #6366f1;
+}
+
+.panel-card__hero-strip strong {
+  margin-top: 8px;
+  color: #0f172a;
 }
 
 .panel-card__header,
