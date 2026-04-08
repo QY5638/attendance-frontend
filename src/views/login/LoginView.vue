@@ -2,25 +2,36 @@
   <section class="login-page">
     <div class="login-page__panel">
       <div class="login-page__hero">
-        <p class="login-page__eyebrow">企业考勤管理平台</p>
-        <h1>欢迎登录考勤管理平台</h1>
+        <div class="login-page__hero-head">
+          <div class="login-page__brand-mark">勤</div>
+          <div>
+            <p class="login-page__eyebrow">企业考勤管理系统</p>
+            <h1>统一登录入口</h1>
+          </div>
+        </div>
+
         <p>
-          请使用企业账号登录系统。登录后会根据身份进入对应的工作页面。
+          请使用分配的账号和密码登录。登录后将根据账号身份进入对应工作页面。
         </p>
 
         <div class="login-page__notice-list">
           <article class="login-page__notice-card">
-            <strong>统一登录入口</strong>
-            <span>员工和管理员使用同一入口登录系统。</span>
+            <strong>账号管理</strong>
+            <span>账号由系统管理员统一维护，请使用正式分配的登录信息。</span>
           </article>
           <article class="login-page__notice-card">
-            <strong>按角色进入</strong>
-            <span>登录成功后自动进入对应的工作页面。</span>
+            <strong>登录说明</strong>
+            <span>管理员和员工共用同一入口，登录后自动进入对应工作区。</span>
           </article>
           <article class="login-page__notice-card">
-            <strong>登录帮助</strong>
-            <span>如账号无法使用或忘记密码，请联系系统管理员。</span>
+            <strong>使用支持</strong>
+            <span>如遇登录异常、密码遗忘或账号停用，请联系系统管理员处理。</span>
           </article>
+        </div>
+
+        <div class="login-page__hero-footer">
+          <span>适用于企业内部办公场景</span>
+          <span>请妥善保管个人账号信息</span>
         </div>
       </div>
 
@@ -29,7 +40,7 @@
           <div class="login-page__card-header">
             <div>
               <strong>账号登录</strong>
-              <p>请输入企业账号和密码</p>
+              <p>请输入账号和密码完成身份验证</p>
             </div>
           </div>
         </template>
@@ -41,11 +52,11 @@
           label-position="top"
           @keyup.enter="handleSubmit"
         >
-          <el-form-item label="用户名" prop="username" :error="fieldErrors.username">
+          <el-form-item label="账号" prop="username" :error="fieldErrors.username">
             <el-input
               v-model="form.username"
               data-testid="login-username-input"
-              placeholder="请输入用户名"
+              placeholder="请输入账号"
               clearable
             />
           </el-form-item>
@@ -82,7 +93,7 @@
 
         <div class="login-page__tips">
           <div class="login-page__tips-row">
-            <span>如无法登录，请联系系统管理员处理账号或密码问题。</span>
+            <span>如无法登录，请联系系统管理员核对账号状态或重置密码。</span>
           </div>
         </div>
       </el-card>
@@ -115,7 +126,7 @@ const form = reactive({
 })
 
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
@@ -172,10 +183,9 @@ async function handleSubmit() {
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 24%),
-    radial-gradient(circle at 80% 20%, rgba(96, 165, 250, 0.24), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.22), transparent 34%),
-    linear-gradient(135deg, #020617 0%, #0f172a 42%, #172554 100%);
+    radial-gradient(circle at top left, rgba(47, 105, 178, 0.1), transparent 28%),
+    radial-gradient(circle at 80% 20%, rgba(15, 95, 148, 0.08), transparent 24%),
+    linear-gradient(180deg, #f3f6fb 0%, #f7f9fc 52%, #eef3f9 100%);
 }
 
 .login-page__panel {
@@ -183,53 +193,68 @@ async function handleSubmit() {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 420px);
   gap: 24px;
+  align-items: stretch;
 }
 
 .login-page__hero,
 .login-page__card {
-  border-radius: 28px;
+  border-radius: 24px;
 }
 
 .login-page__hero {
   display: grid;
   align-content: space-between;
   gap: 28px;
-  padding: 40px;
-  color: #eff6ff;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.34));
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(16px);
+  padding: 36px;
+  color: #1f2937;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9fd 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+}
+
+.login-page__hero-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.login-page__brand-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .login-page__hero h1 {
-  margin: 12px 0 16px;
+  margin: 8px 0 0;
   max-width: 680px;
-  font-size: clamp(34px, 6vw, 54px);
-  line-height: 1.05;
-  letter-spacing: -0.04em;
+  font-size: clamp(28px, 4vw, 38px);
+  line-height: 1.3;
 }
 
 .login-page__hero p {
   margin: 0;
   max-width: 560px;
   line-height: 1.8;
-  color: rgba(239, 246, 255, 0.78);
+  color: #475569;
 }
 
 .login-page__eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #7dd3fc;
+  font-size: 13px;
+  color: #2f69b2;
 }
 
 .login-page__card {
   align-self: center;
   border: none;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
 }
 
 .login-page__card-header strong {
@@ -261,21 +286,31 @@ async function handleSubmit() {
 
 .login-page__notice-card {
   padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .login-page__notice-card strong {
   display: block;
   margin-bottom: 10px;
   font-size: 15px;
-  color: #f8fafc;
+  color: #0f172a;
 }
 
 .login-page__notice-card span {
   line-height: 1.7;
-  color: rgba(226, 232, 240, 0.84);
+  color: #64748b;
+}
+
+.login-page__hero-footer {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  color: #64748b;
+  font-size: 13px;
 }
 
 .login-page__tips {
@@ -298,6 +333,10 @@ async function handleSubmit() {
 
   .login-page__hero {
     padding: 28px;
+  }
+
+  .login-page__hero-head {
+    align-items: flex-start;
   }
 
   .login-page__notice-list {

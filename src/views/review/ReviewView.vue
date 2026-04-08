@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { fetchExceptionDetail } from '../../api/exception'
 import {
   fetchLatestReview,
@@ -12,24 +13,24 @@ import {
 
 const REVIEW_RESULT_OPTIONS = [
   { value: 'CONFIRMED', label: '确认异常' },
-  { value: 'REJECTED', label: '驳回异常' },
+  { value: 'REJECTED', label: '排除异常' },
 ]
 
 const FEEDBACK_TAG_OPTIONS = [
-  { value: 'TRUE_POSITIVE', label: '命中有效' },
-  { value: 'FALSE_POSITIVE', label: '误报' },
-  { value: 'NEEDS_TUNING', label: '需要调优' },
+  { value: 'TRUE_POSITIVE', label: '识别有效' },
+  { value: 'FALSE_POSITIVE', label: '识别偏差' },
+  { value: 'NEEDS_TUNING', label: '需继续优化' },
 ]
 
 const REVIEW_RESULT_LABELS = {
   CONFIRMED: '确认异常',
-  REJECTED: '驳回异常',
+  REJECTED: '排除异常',
 }
 
 const FEEDBACK_TAG_LABELS = {
-  TRUE_POSITIVE: '命中有效',
-  FALSE_POSITIVE: '误报',
-  NEEDS_TUNING: '需要调优',
+  TRUE_POSITIVE: '识别有效',
+  FALSE_POSITIVE: '识别偏差',
+  NEEDS_TUNING: '需继续优化',
 }
 
 const RISK_LEVEL_LABELS = {
@@ -39,9 +40,9 @@ const RISK_LEVEL_LABELS = {
 }
 
 const SOURCE_TYPE_LABELS = {
-  MODEL: '模型判定',
-  RULE: '规则判定',
-  MODEL_FALLBACK: '模型降级',
+  MODEL: '综合识别',
+  RULE: '规则校验',
+  MODEL_FALLBACK: '自动识别',
 }
 
 const PROCESS_STATUS_LABELS = {
@@ -50,6 +51,11 @@ const PROCESS_STATUS_LABELS = {
 }
 
 const EXCEPTION_TYPE_LABELS = {
+  PROXY_CHECKIN: '代打卡',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非规定时间打卡',
+  REPEAT_CHECK: '重复打卡',
   MULTI_LOCATION_CONFLICT: '多地点异常',
 }
 
@@ -106,6 +112,30 @@ const canSubmitReview = computed(() => {
 const canSubmitLatestFeedback = computed(() => {
   return Boolean(latestReview.value?.id && feedbackForm.feedbackTag && !feedbackLoading.value)
 })
+const assistantDisplayError = computed(() => {
+  if (assistantMissing.value) {
+    return '当前记录暂无处置参考，请先查看异常详情后再进行后续处理。'
+  }
+
+  return assistantError.value
+})
+const heroCards = computed(() => [
+  {
+    key: 'exception',
+    label: '异常编号',
+    value: hasExceptionId.value ? exceptionId.value : '待选择',
+  },
+  {
+    key: 'assistant',
+    label: '处置参考',
+    value: assistantMissing.value ? '暂缺' : '可用',
+  },
+  {
+    key: 'latest',
+    label: '最新办理',
+    value: latestReview.value?.id ? `编号 ${latestReview.value.id}` : '暂无',
+  },
+])
 
 function normalizeQueryValue(value) {
   if (Array.isArray(value)) {
@@ -135,7 +165,7 @@ function formatDisplayValue(value, labelMap) {
   }
 
   const label = labelMap[value]
-  return label || value
+  return label || '未识别'
 }
 
 function formatText(value) {
@@ -148,6 +178,74 @@ function formatScore(value) {
   }
 
   return `${value}`
+}
+
+function getRiskTagClass(level) {
+  if (level === 'HIGH') {
+    return 'review-tag--danger'
+  }
+
+  if (level === 'MEDIUM') {
+    return 'review-tag--warning'
+  }
+
+  if (level === 'LOW') {
+    return 'review-tag--safe'
+  }
+
+  return 'review-tag--neutral'
+}
+
+function getStatusTagClass(status) {
+  if (status === 'REVIEWED') {
+    return 'review-tag--safe'
+  }
+
+  if (status === 'PENDING') {
+    return 'review-tag--warning'
+  }
+
+  return 'review-tag--neutral'
+}
+
+function getSourceTagClass(source) {
+  if (source === 'MODEL' || source === 'MODEL_FALLBACK') {
+    return 'review-tag--info'
+  }
+
+  if (source === 'RULE') {
+    return 'review-tag--neutral'
+  }
+
+  return 'review-tag--neutral'
+}
+
+function getReviewResultTagClass(result) {
+  if (result === 'CONFIRMED') {
+    return 'review-tag--danger'
+  }
+
+  if (result === 'REJECTED') {
+    return 'review-tag--safe'
+  }
+
+  return 'review-tag--neutral'
+}
+
+function getFeedbackTagClass(tag) {
+  if (tag === 'TRUE_POSITIVE') {
+    return 'review-tag--safe'
+  }
+
+  if (tag === 'FALSE_POSITIVE') {
+    return 'review-tag--warning'
+  }
+
+  if (tag === 'NEEDS_TUNING') {
+    return 'review-tag--info'
+  }
+
+  return 'review-tag--neutral'
 }
 
 function resetReviewForm() {
@@ -228,14 +326,14 @@ async function loadReviewPage(currentExceptionId) {
     applyLatestReview(latestResult.value)
   } else {
     applyLatestReview(null)
-    latestError.value = latestResult.reason?.message || '最新复核记录加载失败，请稍后重试'
+    latestError.value = latestResult.reason?.message || '最近办理记录加载失败，请稍后重试'
   }
 
   if (assistantResult.status === 'fulfilled') {
     assistant.value = assistantResult.value
   } else {
     assistant.value = null
-    assistantError.value = assistantResult.reason?.message || '复核辅助信息加载失败，请稍后重试'
+    assistantError.value = assistantResult.reason?.message || '处置参考加载失败，请稍后重试'
   }
 }
 
@@ -258,7 +356,7 @@ async function handleSubmitReview() {
     })
 
     applyLatestReview(savedReview)
-    submitSuccess.value = '复核结果已提交'
+    submitSuccess.value = '复核结果提交成功'
 
     if (reviewForm.feedbackTag) {
       const strategyFeedback = normalizeText(reviewForm.strategyFeedback)
@@ -275,11 +373,11 @@ async function handleSubmitReview() {
           feedbackTag: reviewForm.feedbackTag,
           strategyFeedback,
         })
-        feedbackSuccess.value = '反馈标签已更新'
+        feedbackSuccess.value = '补充说明已保存'
       } catch (error) {
         feedbackForm.feedbackTag = reviewForm.feedbackTag
         feedbackForm.strategyFeedback = reviewForm.strategyFeedback
-        feedbackError.value = error?.message || '复核反馈提交失败，请稍后重试'
+        feedbackError.value = error?.message || '补充说明保存失败，请稍后重试'
       }
     }
 
@@ -314,9 +412,9 @@ async function handleSubmitLatestFeedback() {
       feedbackTag: feedbackForm.feedbackTag,
       strategyFeedback,
     })
-    feedbackSuccess.value = '反馈标签已更新'
+    feedbackSuccess.value = '补充说明已保存'
   } catch (error) {
-    feedbackError.value = error?.message || '复核反馈提交失败，请稍后重试'
+    feedbackError.value = error?.message || '补充说明保存失败，请稍后重试'
   } finally {
     feedbackLoading.value = false
   }
@@ -339,31 +437,16 @@ watch(
 
 <template>
   <section class="review-page">
-    <header class="review-page__header">
-      <div>
-        <p class="review-page__eyebrow">人工复核</p>
-        <h1>人工复核</h1>
-        <p>查看异常详情和智能辅助信息，并完成复核处理与反馈记录。</p>
-      </div>
-
-      <div class="review-page__summary-grid">
-        <article class="review-page__summary-card">
-          <span>异常编号</span>
-          <strong>{{ hasExceptionId ? exceptionId : '待选择' }}</strong>
-        </article>
-        <article class="review-page__summary-card">
-          <span>智能辅助</span>
-          <strong>{{ assistantMissing ? '缺失' : '可用' }}</strong>
-        </article>
-        <article class="review-page__summary-card">
-          <span>最新记录</span>
-          <strong>{{ latestReview?.id ? `#${latestReview.id}` : '暂无' }}</strong>
-        </article>
-      </div>
-    </header>
+    <ConsoleHero
+      eyebrow="人工复核"
+      title="人工复核"
+      description="查看异常详情、处置参考和办理记录，并完成复核确认与补充说明。"
+      theme="violet"
+      :cards="heroCards"
+    />
 
     <section v-if="!hasExceptionId" data-testid="review-empty-state" class="review-panel review-panel--empty">
-      <h2>请选择待复核异常</h2>
+      <h2>请选择待处理记录</h2>
       <p>请从异常中心或预警列表进入当前页面。</p>
     </section>
 
@@ -372,9 +455,9 @@ watch(
         <div class="review-panel__head">
           <div>
             <p class="review-panel__eyebrow">异常详情</p>
-            <h2>异常 #{{ exceptionId }}</h2>
+            <h2>异常编号 {{ exceptionId }}</h2>
           </div>
-          <span class="review-panel__tag">复核任务</span>
+          <span class="review-panel__tag">待复核</span>
         </div>
 
         <p v-if="detailLoading" class="review-feedback">异常详情加载中...</p>
@@ -389,24 +472,36 @@ watch(
             </div>
             <div>
               <dt>风险等级</dt>
-              <dd>{{ formatDisplayValue(exceptionDetail?.riskLevel, RISK_LEVEL_LABELS) }}</dd>
+              <dd>
+                <span :class="['review-tag', getRiskTagClass(exceptionDetail?.riskLevel)]">
+                  {{ formatDisplayValue(exceptionDetail?.riskLevel, RISK_LEVEL_LABELS) }}
+                </span>
+              </dd>
             </div>
             <div>
-              <dt>来源</dt>
-              <dd>{{ formatDisplayValue(exceptionDetail?.sourceType, SOURCE_TYPE_LABELS) }}</dd>
+              <dt>识别方式</dt>
+              <dd>
+                <span :class="['review-tag', getSourceTagClass(exceptionDetail?.sourceType)]">
+                  {{ formatDisplayValue(exceptionDetail?.sourceType, SOURCE_TYPE_LABELS) }}
+                </span>
+              </dd>
             </div>
             <div>
               <dt>处理状态</dt>
-              <dd>{{ formatDisplayValue(exceptionDetail?.processStatus, PROCESS_STATUS_LABELS) }}</dd>
+              <dd>
+                <span :class="['review-tag', getStatusTagClass(exceptionDetail?.processStatus)]">
+                  {{ formatDisplayValue(exceptionDetail?.processStatus, PROCESS_STATUS_LABELS) }}
+                </span>
+              </dd>
             </div>
-            <div>
-              <dt>记录 ID</dt>
-              <dd>{{ formatText(exceptionDetail?.recordId) }}</dd>
-            </div>
-            <div>
-              <dt>用户 ID</dt>
-              <dd>{{ formatText(exceptionDetail?.userId) }}</dd>
-            </div>
+              <div>
+                <dt>考勤记录编号</dt>
+                <dd>{{ formatText(exceptionDetail?.recordId) }}</dd>
+              </div>
+              <div>
+                <dt>人员编号</dt>
+                <dd>{{ formatText(exceptionDetail?.userId) }}</dd>
+              </div>
           </dl>
 
           <p class="review-detail-grid__description">{{ formatText(exceptionDetail?.description) }}</p>
@@ -416,62 +511,70 @@ watch(
       <section data-testid="review-assistant-card" class="review-panel review-panel--assistant">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">智能复核辅助</p>
-            <h2>辅助建议</h2>
+            <p class="review-panel__eyebrow">处置参考</p>
+            <h2>处置参考</h2>
           </div>
-          <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">缺失</span>
+          <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">暂缺</span>
         </div>
 
-        <p v-if="assistantLoading" class="review-feedback">复核辅助信息加载中...</p>
+        <p v-if="assistantLoading" class="review-feedback">处置参考加载中...</p>
         <p v-else-if="assistantError" data-testid="review-assistant-error" class="review-feedback review-feedback--error">
-          {{ assistantError }}
+          {{ assistantDisplayError }}
         </p>
         <dl v-else class="review-detail-grid">
           <div>
-            <dt>智能建议</dt>
+                <dt>参考建议</dt>
             <dd>{{ formatText(assistant?.aiReviewSuggestion) }}</dd>
           </div>
           <div>
-            <dt>相似案例</dt>
-            <dd>{{ formatText(assistant?.similarCaseSummary) }}</dd>
-          </div>
-          <div>
-            <dt>判定依据</dt>
-            <dd>{{ formatText(assistant?.decisionReason) }}</dd>
-          </div>
-          <div>
-            <dt>置信度</dt>
-            <dd>{{ formatScore(assistant?.confidenceScore) }}</dd>
-          </div>
+              <dt>关联案例</dt>
+              <dd>{{ formatText(assistant?.similarCaseSummary) }}</dd>
+            </div>
+            <div>
+              <dt>判定依据</dt>
+              <dd>{{ formatText(assistant?.decisionReason) }}</dd>
+            </div>
+            <div>
+              <dt>可信度</dt>
+              <dd>{{ formatScore(assistant?.confidenceScore) }}</dd>
+            </div>
         </dl>
       </section>
 
       <section class="review-panel review-panel--history">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">最新复核记录</p>
-            <h2>当前只展示最新一条</h2>
+            <p class="review-panel__eyebrow">最近办理记录</p>
+            <h2>查看最近一次处理结果</h2>
           </div>
         </div>
 
-        <p v-if="latestLoading" class="review-feedback">最新复核记录加载中...</p>
+        <p v-if="latestLoading" class="review-feedback">最近办理记录加载中...</p>
         <p v-else-if="latestError" class="review-feedback review-feedback--error">{{ latestError }}</p>
         <article v-else-if="latestReview" data-testid="review-latest-card" class="review-latest-card">
           <dl class="review-detail-grid">
             <div>
               <dt>复核结果</dt>
-              <dd>{{ formatDisplayValue(latestReview.reviewResult, REVIEW_RESULT_LABELS) }}</dd>
+              <dd>
+                <span :class="['review-tag', getReviewResultTagClass(latestReview.reviewResult)]">
+                  {{ formatDisplayValue(latestReview.reviewResult, REVIEW_RESULT_LABELS) }}
+                </span>
+              </dd>
             </div>
             <div>
               <dt>复核时间</dt>
               <dd>{{ formatText(latestReview.reviewTime) }}</dd>
             </div>
             <div>
-              <dt>反馈标签</dt>
-              <dd>{{ formatDisplayValue(latestReview.feedbackTag, FEEDBACK_TAG_LABELS) }}</dd>
+              <dt>处理评价</dt>
+              <dd>
+                <span :class="['review-tag', getFeedbackTagClass(latestReview.feedbackTag)]">
+                  {{ formatDisplayValue(latestReview.feedbackTag, FEEDBACK_TAG_LABELS) }}
+                </span>
+              </dd>
             </div>
             <div>
-              <dt>策略反馈</dt>
+              <dt>补充说明</dt>
               <dd>{{ formatText(latestReview.strategyFeedback) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
@@ -479,30 +582,32 @@ watch(
               <dd>{{ formatText(latestReview.reviewComment) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
-              <dt>智能建议快照</dt>
+              <dt>参考建议记录</dt>
               <dd>{{ formatText(latestReview.aiReviewSuggestion) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
-              <dt>相似案例快照</dt>
+              <dt>案例记录</dt>
               <dd>{{ formatText(latestReview.similarCaseSummary) }}</dd>
             </div>
           </dl>
         </article>
-        <p v-else class="review-feedback">暂无最新复核记录。</p>
+        <p v-else class="review-feedback">暂无最近办理记录。</p>
       </section>
 
       <section class="review-panel review-panel--decision">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">新建复核</p>
+            <p class="review-panel__eyebrow">复核办理</p>
             <h2>提交复核结果</h2>
           </div>
-          <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">提交阻塞</span>
+          <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">暂不可提交</span>
         </div>
 
         <p v-if="assistantMissing" class="review-feedback review-feedback--warning">
-          当前缺少智能辅助信息，仅支持查看页面内容；如已有最新复核记录，仍可继续提交反馈标签。
+          当前暂无处置参考，暂不可提交新的复核结果；如已存在复核记录，仍可补充后续说明。
         </p>
+
+        <p v-else class="review-form-tip">复核结果为必填项，处理评价和补充说明可按需填写。</p>
 
         <div class="review-form-grid">
           <label class="review-field">
@@ -526,12 +631,12 @@ watch(
               data-testid="review-comment-input"
               :disabled="isReviewSubmitBlocked"
               rows="4"
-              placeholder="可填写人工确认或驳回的依据。"
+              placeholder="可填写确认或排除异常的依据说明。"
             />
           </label>
 
           <div class="review-field review-field--full">
-            <span>反馈标签（可选）</span>
+            <span>处理评价（可选）</span>
             <div class="review-choice-group">
               <label v-for="option in FEEDBACK_TAG_OPTIONS" :key="option.value" class="review-choice">
                 <input
@@ -548,13 +653,13 @@ watch(
           </div>
 
           <label class="review-field review-field--full">
-            <span>策略反馈</span>
+            <span>补充说明</span>
             <textarea
               v-model="reviewForm.strategyFeedback"
               data-testid="review-form-strategy-input"
               :disabled="isReviewSubmitBlocked || !reviewForm.feedbackTag"
               rows="3"
-              placeholder="仅在选择反馈标签后可填写。"
+              placeholder="选择处理评价后可补充说明。"
             />
           </label>
         </div>
@@ -579,16 +684,17 @@ watch(
       <section class="review-panel review-panel--feedback-panel">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">反馈学习</p>
-            <h2>覆盖最新复核记录的反馈标签</h2>
+            <p class="review-panel__eyebrow">反馈补充</p>
+            <h2>补充最近一次处理信息</h2>
           </div>
         </div>
 
-        <p v-if="!latestReview" class="review-feedback">暂无最新复核记录，暂不可提交反馈标签。</p>
+        <p v-if="!latestReview" class="review-feedback">暂无最近办理记录，暂不可补充反馈信息。</p>
         <template v-else>
+          <p class="review-form-tip">如需补充处理评价或后续说明，可在下方直接保存。</p>
           <div class="review-form-grid">
             <div class="review-field review-field--full">
-              <span>反馈标签</span>
+              <span>处理评价</span>
               <div class="review-choice-group">
                 <label v-for="option in FEEDBACK_TAG_OPTIONS" :key="option.value" class="review-choice">
                   <input
@@ -605,15 +711,15 @@ watch(
             </div>
 
             <label class="review-field review-field--full">
-              <span>策略反馈</span>
-              <textarea
-                v-model="feedbackForm.strategyFeedback"
-                data-testid="review-feedback-strategy-input"
-                :disabled="feedbackLoading || !feedbackForm.feedbackTag"
-                rows="3"
-                placeholder="仅在选择反馈标签后可填写。"
-              />
-            </label>
+                <span>补充说明</span>
+                <textarea
+                  v-model="feedbackForm.strategyFeedback"
+                  data-testid="review-feedback-strategy-input"
+                  :disabled="feedbackLoading || !feedbackForm.feedbackTag"
+                  rows="3"
+                  placeholder="选择处理评价后可补充说明。"
+                />
+              </label>
           </div>
 
           <p v-if="feedbackError" data-testid="review-feedback-error" class="review-feedback review-feedback--error">
@@ -628,9 +734,9 @@ watch(
               :disabled="!canSubmitLatestFeedback"
               @click="handleSubmitLatestFeedback"
             >
-              {{ feedbackLoading ? '保存中...' : '保存反馈' }}
-            </button>
-          </div>
+                {{ feedbackLoading ? '保存中...' : '保存补充' }}
+              </button>
+            </div>
         </template>
       </section>
     </section>
@@ -698,7 +804,7 @@ watch(
 .review-panel__eyebrow {
   margin: 0 0 10px;
   font-size: 13px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .review-page__eyebrow {
@@ -717,6 +823,7 @@ watch(
   padding: 24px;
   border-radius: 24px;
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
 }
 
@@ -733,6 +840,14 @@ watch(
 .review-panel--decision,
 .review-panel--feedback-panel {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.review-panel--assistant {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.review-panel--history {
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
 }
 
 .review-panel__head {
@@ -761,6 +876,11 @@ watch(
   background: rgba(148, 163, 184, 0.18);
 }
 
+.review-panel__tag {
+  color: #245391;
+  background: rgba(47, 105, 178, 0.12);
+}
+
 .review-panel__status--warning {
   color: #92400e;
   background: rgba(251, 191, 36, 0.18);
@@ -779,7 +899,7 @@ watch(
   gap: 8px;
   padding: 16px;
   border-radius: 18px;
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(47, 105, 178, 0.06);
 }
 
 .review-detail-grid dt,
@@ -792,6 +912,41 @@ watch(
   margin: 0;
   color: #0f172a;
   line-height: 1.7;
+}
+
+.review-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.review-tag--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.review-tag--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.review-tag--safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.review-tag--info {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
+}
+
+.review-tag--neutral {
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
 }
 
 .review-detail-grid__description,
@@ -858,6 +1013,15 @@ watch(
   color: #047857;
 }
 
+.review-form-tip {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
+  line-height: 1.7;
+}
+
 .review-actions {
   display: flex;
   justify-content: flex-end;
@@ -879,12 +1043,12 @@ watch(
 
 .review-actions__primary {
   color: #ffffff;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
 }
 
 .review-actions__secondary {
-  color: #0f172a;
-  background: rgba(99, 102, 241, 0.12);
+  color: #245391;
+  background: rgba(47, 105, 178, 0.12);
 }
 
 @media (max-width: 768px) {

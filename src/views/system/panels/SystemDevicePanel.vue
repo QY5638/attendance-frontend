@@ -3,7 +3,7 @@
     <header class="panel-card__header">
       <div>
         <h2>设备管理</h2>
-        <p>维护设备基础资料，用于点位管理、地图展示和启停控制。</p>
+        <p>维护设备档案信息，用于位置管理和启停控制。</p>
       </div>
       <button type="button" class="panel-card__primary" @click="openCreateDialog">新增设备</button>
     </header>
@@ -11,18 +11,18 @@
     <section class="panel-card__hero-strip">
       <article>
         <span>配置目标</span>
-        <strong>设备主数据</strong>
+        <strong>设备档案</strong>
       </article>
       <article>
         <span>能力范围</span>
-        <strong>位置 / 坐标 / 启停</strong>
+        <strong>位置维护 / 启停控制</strong>
       </article>
     </section>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
         <span>关键词</span>
-        <input v-model="filters.keyword" type="text" placeholder="设备编号、名称或地点" />
+        <input v-model="filters.keyword" type="text" placeholder="设备名称、位置或档案标识" />
       </label>
       <label>
         <span>状态</span>
@@ -45,9 +45,9 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>设备编号</th>
+            <th>设备标识</th>
             <th>设备名称</th>
-            <th>位置</th>
+            <th>位置信息</th>
             <th>状态</th>
             <th>说明</th>
             <th>操作</th>
@@ -58,10 +58,10 @@
             <td colspan="6">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="6">暂无设备数据</td>
+            <td colspan="6">暂无设备档案</td>
           </tr>
           <tr v-for="row in rows" :key="row.deviceId">
-            <td>{{ row.deviceId }}</td>
+            <td>{{ formatDeviceIdentifier(row.deviceId) }}</td>
             <td>{{ row.name || '-' }}</td>
             <td>
               <div class="panel-card__location-cell">
@@ -69,6 +69,7 @@
                 <small v-if="hasCoordinatePair(row)">
                   经度 {{ formatCoordinate(row.longitude) }} / 纬度 {{ formatCoordinate(row.latitude) }}
                 </small>
+                <small v-else>未维护位置坐标</small>
               </div>
             </td>
             <td>
@@ -104,23 +105,24 @@
         <div class="panel-card__dialog-head">
           <div>
             <strong>{{ editingId ? '编辑设备' : '新增设备' }}</strong>
-            <p>设备页统一使用 `deviceId` 作为唯一标识。</p>
+            <p>设备标识用于档案管理，请按单位规则填写并保持唯一。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
 
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>设备编号</span>
-            <input v-model="form.deviceId" type="text" :disabled="Boolean(editingId)" placeholder="如 DEV-001" />
+            <span>设备标识</span>
+            <input v-if="!editingId" v-model="form.deviceId" type="text" placeholder="例如 门禁机-01" />
+            <input v-else :value="formatDeviceIdentifier(form.deviceId)" type="text" disabled />
           </label>
           <label>
             <span>设备名称</span>
-            <input v-model="form.name" type="text" placeholder="请输入设备名称" />
+            <input v-model="form.name" type="text" placeholder="例如 东门门禁机" />
           </label>
           <label>
             <span>设备位置</span>
-            <input v-model="form.location" type="text" placeholder="请输入设备位置" />
+            <input v-model="form.location" type="text" placeholder="例如 一层大厅东侧" />
           </label>
           <label>
             <span>设备经度</span>
@@ -128,7 +130,7 @@
               v-model="form.longitude"
               data-testid="system-device-longitude-input"
               type="text"
-              placeholder="点击地图自动回填或手动输入"
+              placeholder="可地图选点或手动输入"
             />
           </label>
           <label>
@@ -137,20 +139,21 @@
               v-model="form.latitude"
               data-testid="system-device-latitude-input"
               type="text"
-              placeholder="点击地图自动回填或手动输入"
+              placeholder="可地图选点或手动输入"
             />
           </label>
           <div class="panel-card__full-width panel-card__map-card">
             <div class="panel-card__map-head">
               <div>
-                <strong>地图选点</strong>
-                <p>已接入前端高德地图 Key，点击地图即可回填设备经纬度。</p>
+                <strong>位置选点</strong>
+                <p>点击地图可自动回填位置坐标，也可直接手动录入。</p>
               </div>
               <span>{{ coordinateSummary }}</span>
             </div>
             <p v-if="mapError" class="panel-card__feedback panel-card__feedback--error">{{ mapError }}</p>
             <p v-else-if="mapLoading" class="panel-card__feedback">地图加载中...</p>
             <div ref="mapContainerRef" data-testid="system-device-map" class="panel-card__map"></div>
+            <p class="panel-card__map-note">建议优先使用地图选点，确保档案位置与现场保持一致。</p>
           </div>
           <label>
             <span>状态</span>
@@ -220,7 +223,7 @@ const form = reactive({
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize) || 1))
 const coordinateSummary = computed(() => {
   if (!hasCoordinatePair(form)) {
-    return '未选择地图坐标'
+    return '未设置位置坐标'
   }
 
   return `经度 ${formatCoordinate(form.longitude)} / 纬度 ${formatCoordinate(form.latitude)}`
@@ -265,6 +268,21 @@ function formatCoordinate(value) {
   }
 
   return numericValue.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+function formatDeviceIdentifier(deviceId) {
+  const normalized = String(deviceId || '').trim()
+
+  if (!normalized) {
+    return '-'
+  }
+
+  const matched = normalized.match(/^DEV[-_]?(.+)$/i)
+  if (matched?.[1]) {
+    return `设备-${matched[1]}`
+  }
+
+  return normalized
 }
 
 function parseCoordinatePair(target = form) {
@@ -432,7 +450,7 @@ async function handleSubmit() {
   }
 
   if (!form.deviceId.trim() || !form.name.trim()) {
-    error.value = '请完整填写设备编号和设备名称'
+    error.value = '请完整填写设备标识和设备名称'
     return
   }
 
@@ -442,16 +460,16 @@ async function handleSubmit() {
   try {
     if (editingId.value) {
       await updateDevice(form)
-      notice.value = '设备更新成功'
+      notice.value = '设备档案更新成功'
     } else {
       await addDevice(form)
-      notice.value = '设备创建成功'
+      notice.value = '设备档案新增成功'
     }
 
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '设备保存失败'
+    error.value = requestError?.message || '设备档案保存失败'
   } finally {
     submitting.value = false
   }
@@ -466,7 +484,7 @@ async function handleToggleStatus(row) {
       deviceId: row.deviceId,
       status: row.status === 1 ? 0 : 1,
     })
-    notice.value = `设备${row.deviceId}状态已更新`
+    notice.value = `设备“${formatDeviceIdentifier(row.deviceId)}”状态已更新`
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '设备状态更新失败'
@@ -476,7 +494,7 @@ async function handleToggleStatus(row) {
 async function handleDelete(row) {
   const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function'
     ? true
-    : window.confirm(`确定删除设备“${row.deviceId}”吗？`)
+    : window.confirm(`确定删除设备档案“${formatDeviceIdentifier(row.deviceId)}”吗？`)
 
   if (!confirmed) {
     return
@@ -490,10 +508,10 @@ async function handleDelete(row) {
     if (rows.value.length === 1 && pagination.pageNum > 1) {
       pagination.pageNum -= 1
     }
-    notice.value = '设备删除成功'
+    notice.value = '设备档案删除成功'
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '设备删除失败'
+    error.value = requestError?.message || '设备档案删除失败'
   }
 }
 
@@ -550,7 +568,7 @@ onBeforeUnmount(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -560,7 +578,7 @@ onBeforeUnmount(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -648,7 +666,7 @@ onBeforeUnmount(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%) !important;
   color: #ffffff !important;
 }
 
@@ -691,6 +709,10 @@ onBeforeUnmount(() => {
 }
 
 .panel-card__location-cell small {
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
   color: #64748b;
 }
 
@@ -730,6 +752,12 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.panel-card__map-note {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
 .panel-card__map-head {
   display: flex;
   align-items: flex-start;
@@ -738,7 +766,7 @@ onBeforeUnmount(() => {
 }
 
 .panel-card__map-head span {
-  color: #4338ca;
+  color: #245391;
   font-size: 13px;
   font-weight: 600;
 }
@@ -748,7 +776,7 @@ onBeforeUnmount(() => {
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.12));
+  background: linear-gradient(135deg, rgba(47, 105, 178, 0.08), rgba(15, 95, 148, 0.12));
 }
 
 .panel-card__modal {
@@ -789,7 +817,7 @@ onBeforeUnmount(() => {
 }
 
 .panel-card__map-head span {
-  color: #4338ca;
+  color: #245391;
   font-size: 13px;
   font-weight: 600;
 }
@@ -799,7 +827,7 @@ onBeforeUnmount(() => {
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid rgba(148, 163, 184, 0.28);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.12));
+  background: linear-gradient(135deg, rgba(47, 105, 178, 0.08), rgba(15, 95, 148, 0.12));
 }
 
 .panel-card__full-width {

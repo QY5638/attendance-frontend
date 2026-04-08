@@ -3,7 +3,7 @@
     <ConsoleHero
       eyebrow="工作台"
       title="概览工作台"
-      :description="isAdmin ? '面向管理员展示统计概览、预警摘要和风险画像。' : '面向员工展示个人统计概览和智能摘要。'"
+      :description="isAdmin ? '用于查看运行概况、重点预警和待处理事项。' : '用于查看个人考勤概况、当日提醒和常用入口。'"
       theme="indigo"
       :cards="heroCards"
     >
@@ -28,10 +28,10 @@
     <template v-else>
       <section class="dashboard-spotlight">
         <div class="dashboard-spotlight__lead">
-          <p class="dashboard-spotlight__eyebrow">{{ isAdmin ? '今日处理重点' : '今日自助入口' }}</p>
-          <h3>{{ isAdmin ? '先看预警，再进异常与复核链路' : '先打卡，再检查个人记录与异常状态' }}</h3>
+          <p class="dashboard-spotlight__eyebrow">{{ isAdmin ? '今日重点' : '今日事项' }}</p>
+          <h3>{{ isAdmin ? '优先处理预警与待办复核事项' : '先完成打卡，再核对个人记录' }}</h3>
           <p>
-            {{ isAdmin ? '当前首页会优先展示统计、预警和风险信息，适合管理员快速进入当天重点处置任务。' : '员工侧保持最短操作链路，进入系统后可直接完成打卡、查看记录并发起补卡。' }}
+            {{ isAdmin ? '首页优先展示整体指标、预警概况和风险概况，便于管理人员快速进入当天重点处置任务。' : '员工侧保留常用业务入口，进入系统后可直接完成打卡、查看记录并处理个人异常。' }}
           </p>
         </div>
 
@@ -54,14 +54,14 @@
 
       <section data-testid="dashboard-summary" class="dashboard-section dashboard-summary-card">
         <div class="dashboard-section__head">
-          <h3>智能统计摘要</h3>
-          <span>智能解读</span>
+          <h3>综合摘要</h3>
+          <span>系统汇总</span>
         </div>
 
         <div class="dashboard-summary-card__content">
-          <p>{{ summaryData.summary || '暂无统计摘要' }}</p>
-          <p><strong>重点风险：</strong>{{ summaryData.highlightRisks || '暂无重点风险' }}</p>
-          <p><strong>管理建议：</strong>{{ summaryData.manageSuggestion || '暂无管理建议' }}</p>
+          <p>{{ summaryData.summary || '暂无概述信息' }}</p>
+          <p><strong>重点关注：</strong>{{ summaryData.highlightRisks || '暂无重点关注内容' }}</p>
+          <p><strong>处理建议：</strong>{{ summaryData.manageSuggestion || '暂无处理建议' }}</p>
         </div>
       </section>
 
@@ -71,20 +71,20 @@
         class="dashboard-section"
       >
         <div class="dashboard-section__head">
-          <h3>预警摘要</h3>
-          <span>最近 5 条</span>
+          <h3>预警概况</h3>
+          <span>最近 5 条记录</span>
         </div>
 
         <div v-if="warningItems.length" class="dashboard-list">
           <el-card v-for="item in warningItems" :key="item.id || item.exceptionId || item.aiSummary" class="dashboard-list__item">
             <div class="dashboard-list__title">
               <strong>{{ item.level || '未分级' }}</strong>
-              <span>#{{ item.id || item.exceptionId || '--' }}</span>
+              <span>编号 {{ item.id || item.exceptionId || '--' }}</span>
             </div>
-            <p>{{ item.aiSummary || item.disposeSuggestion || '暂无预警摘要' }}</p>
+            <p>{{ item.aiSummary || item.disposeSuggestion || '暂无摘要说明' }}</p>
           </el-card>
         </div>
-        <el-empty v-else description="暂无预警摘要" />
+        <el-empty v-else description="暂无摘要说明" />
       </section>
 
       <section
@@ -93,7 +93,7 @@
         class="dashboard-section"
       >
         <div class="dashboard-section__head">
-          <h3>部门风险画像</h3>
+          <h3>部门风险概况</h3>
           <span>风险简报</span>
         </div>
 
@@ -103,10 +103,10 @@
               <strong>{{ item.deptName || '未知部门' }}</strong>
               <span>{{ item.riskScore ?? '--' }}</span>
             </div>
-            <p>{{ item.riskSummary || item.manageSuggestion || '暂无风险摘要' }}</p>
+            <p>{{ item.riskSummary || item.manageSuggestion || '暂无情况说明' }}</p>
           </el-card>
         </div>
-        <el-empty v-else description="暂无风险画像" />
+        <el-empty v-else description="暂无风险概况" />
       </section>
     </template>
   </section>
@@ -143,52 +143,52 @@ const summaryData = ref({
 const heroCards = computed(() => [
   {
     key: 'role',
-    label: '当前角色',
+    label: '当前身份',
     value: roleLabel.value,
   },
-    {
-      key: 'workspace',
-      label: '功能区域',
-      value: isAdmin.value ? '风险处置工作台' : '员工自助工作台',
-    },
+  {
+    key: 'workspace',
+    label: '工作场景',
+    value: isAdmin.value ? '管理处置工作区' : '员工业务工作区',
+  },
 ])
 const spotlightCards = computed(() => {
   if (isAdmin.value) {
     return [
       {
-        label: '预警摘要',
+        label: '预警概况',
         value: `${warningItems.value.length} 条`,
-        desc: '首页仅保留最近 5 条高关注记录',
+        desc: '首页仅保留最近 5 条需要关注的记录',
       },
       {
-        label: '风险画像',
+        label: '风险概况',
         value: `${riskItems.value.length} 个`,
-        desc: '快速识别部门风险热区与管理建议',
+        desc: '用于快速识别重点部门和管理建议',
       },
       {
-        label: '智能摘要',
+        label: '综合摘要',
         value: summaryData.value.summary ? '已生成' : '待生成',
-        desc: '汇总趋势、重点风险与处置建议',
+        desc: '汇总趋势变化、重点关注和处理建议',
       },
     ]
   }
 
   return [
     {
-        label: '登录身份',
-        value: authStore.realName || '当前用户',
-        desc: '默认会跳转到员工侧打卡工作区',
-      },
-    {
-      label: '个人摘要',
-      value: overviewCards.value.length ? '已同步' : '待同步',
-      desc: '用于查看个人近期出勤、异常与缺勤情况',
+      label: '当前账号',
+      value: authStore.realName || '当前用户',
+      desc: '登录后默认进入个人业务页面',
     },
-      {
-        label: '智能解读',
-        value: summaryData.value.summary ? '已生成' : '待生成',
-        desc: '给出近期考勤趋势和注意事项',
-      },
+    {
+      label: '个人概况',
+      value: overviewCards.value.length ? '已同步' : '待同步',
+      desc: '用于查看近期出勤、异常和缺勤情况',
+    },
+    {
+      label: '综合摘要',
+      value: summaryData.value.summary ? '已生成' : '待生成',
+      desc: '给出近期考勤变化和注意事项',
+    },
   ]
 })
 

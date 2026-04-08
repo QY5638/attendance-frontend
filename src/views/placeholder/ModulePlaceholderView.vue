@@ -3,19 +3,19 @@
     <div class="placeholder-card__head">
       <div>
         <p class="placeholder-card__eyebrow">{{ route.meta.menuGroup || '功能页面' }}</p>
-        <h2>{{ route.meta.title || '页面开发中' }}</h2>
+        <h2>{{ route.meta.title || '功能准备中' }}</h2>
       </div>
-      <el-tag type="warning">待完善</el-tag>
+      <el-tag type="warning">准备中</el-tag>
     </div>
 
     <p class="placeholder-card__desc">
-      当前页面正在完善中，后续会继续补齐功能内容。
+      当前页面正在完善中，后续将按业务计划逐步开放相关内容。
     </p>
 
     <div class="placeholder-card__meta">
       <div>
         <span>页面状态</span>
-        <strong>建设中</strong>
+        <strong>准备中</strong>
       </div>
       <div>
         <span>适用对象</span>

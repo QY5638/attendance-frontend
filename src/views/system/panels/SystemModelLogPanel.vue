@@ -2,38 +2,38 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>模型日志</h2>
-        <p>查询模型调用记录、模板引用、耗时与执行状态。</p>
+        <h2>处理记录</h2>
+        <p>用于查询系统分析处理记录、方案应用情况、耗时与办理状态。</p>
       </div>
       <span class="panel-card__summary">共 {{ pagination.total }} 条</span>
     </header>
 
     <section class="panel-card__hero-strip">
       <article>
-        <span>日志类型</span>
-        <strong>模型调用记录</strong>
+        <span>内容分类</span>
+        <strong>分析处理记录</strong>
       </article>
       <article>
         <span>主要用途</span>
-        <strong>排查模板、状态与耗时</strong>
+        <strong>查看场景、结果与耗时</strong>
       </article>
     </section>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
-        <span>业务类型</span>
-        <input v-model="filters.businessType" type="text" placeholder="请输入业务类型" />
+        <span>办理场景</span>
+        <input v-model="filters.businessType" type="text" placeholder="请输入办理场景关键字" />
       </label>
       <label>
-        <span>业务 ID</span>
-        <input v-model="filters.businessId" type="text" placeholder="请输入业务 ID" />
+        <span>关联编号</span>
+        <input v-model="filters.businessId" type="text" placeholder="请输入关联编号" />
       </label>
       <label>
-        <span>模板 ID</span>
-        <input v-model="filters.promptTemplateId" type="text" placeholder="请输入模板 ID" />
+        <span>方案编号</span>
+        <input v-model="filters.promptTemplateId" type="text" placeholder="请输入方案编号" />
       </label>
       <label>
-        <span>状态</span>
+        <span>办理状态</span>
         <select v-model="filters.status">
           <option value="">全部状态</option>
           <option value="SUCCESS">成功</option>
@@ -60,13 +60,13 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>业务类型</th>
-            <th>业务 ID</th>
-            <th>模板 ID</th>
-            <th>状态</th>
-            <th>耗时</th>
-            <th>输入摘要</th>
-            <th>输出 / 错误</th>
+            <th>办理场景</th>
+            <th>关联编号</th>
+            <th>方案编号</th>
+            <th>办理状态</th>
+            <th>处理耗时</th>
+            <th>输入概述</th>
+            <th>结果说明</th>
             <th>创建时间</th>
           </tr>
         </thead>
@@ -75,20 +75,28 @@
             <td colspan="8">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="8">暂无模型日志</td>
+            <td colspan="8">暂无处理记录</td>
           </tr>
           <tr v-for="row in rows" :key="row.id">
-            <td>{{ row.businessType || '-' }}</td>
+            <td>
+              <span :class="['panel-card__scene-tag', getBusinessTypeClass(row.businessType)]">
+                {{ formatBusinessType(row.businessType) }}
+              </span>
+            </td>
             <td>{{ row.businessId ?? '-' }}</td>
             <td>{{ row.promptTemplateId ?? '-' }}</td>
             <td>
-              <span :class="['panel-card__status', row.status === 'SUCCESS' ? 'is-active' : 'is-inactive']">
-                {{ row.status === 'SUCCESS' ? '成功' : '失败' }}
+              <span :class="['panel-card__status', getModelStatusClass(row.status)]">
+                {{ formatModelStatus(row.status) }}
               </span>
             </td>
             <td>{{ formatLatency(row.latencyMs) }}</td>
-            <td>{{ row.inputSummary || '-' }}</td>
-            <td>{{ resolveResultText(row) }}</td>
+            <td>
+              <p class="panel-card__summary-text">{{ row.inputSummary || '-' }}</p>
+            </td>
+            <td>
+              <p class="panel-card__summary-text">{{ resolveResultText(row) }}</p>
+            </td>
             <td>{{ formatDateTime(row.createTime) }}</td>
           </tr>
         </tbody>
@@ -130,6 +138,13 @@ const pagination = reactive({
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize) || 1))
+
+const MODEL_STATUS_LABELS = {
+  SUCCESS: '成功',
+  FAILED: '失败',
+  RUNNING: '执行中',
+  PENDING: '待执行',
+}
 
 function buildListParams() {
   const params = {
@@ -182,7 +197,81 @@ function resolveResultText(row) {
     return row.errorMessage || '-'
   }
 
+  if (row.status === 'RUNNING' || row.status === 'PENDING') {
+    return row.outputSummary || '处理中'
+  }
+
   return row.outputSummary || '-'
+}
+
+function formatModelStatus(status) {
+  return MODEL_STATUS_LABELS[String(status || '').toUpperCase()] || '未识别'
+}
+
+function getModelStatusClass(status) {
+  const normalized = String(status || '').toUpperCase()
+
+  if (normalized === 'SUCCESS') {
+    return 'is-active'
+  }
+
+  if (normalized === 'RUNNING' || normalized === 'PENDING') {
+    return 'is-pending'
+  }
+
+  return 'is-inactive'
+}
+
+function formatBusinessType(value) {
+  const normalized = String(value || '').toUpperCase()
+
+  if (!normalized) {
+    return '-'
+  }
+
+  if (normalized.includes('EXCEPTION')) {
+    return '异常处理'
+  }
+
+  if (normalized.includes('WARNING')) {
+    return '预警处置'
+  }
+
+  if (normalized.includes('REVIEW')) {
+    return '复核办理'
+  }
+
+  if (normalized.includes('ATTENDANCE')) {
+    return '考勤分析'
+  }
+
+  if (normalized.includes('STATISTIC')) {
+    return '统计分析'
+  }
+
+  return '其他业务'
+}
+
+function getBusinessTypeClass(value) {
+  const normalized = String(value || '').toUpperCase()
+
+  if (normalized.includes('EXCEPTION')) {
+    return 'panel-card__scene-tag--danger'
+  }
+
+  if (normalized.includes('WARNING')) {
+    return 'panel-card__scene-tag--warning'
+  }
+
+  if (normalized.includes('REVIEW')) {
+    return 'panel-card__scene-tag--info'
+  }
+
+  if (normalized.includes('STATISTIC')) {
+    return 'panel-card__scene-tag--safe'
+  }
+
+  return 'panel-card__scene-tag--neutral'
 }
 
 async function loadList() {
@@ -196,7 +285,7 @@ async function loadList() {
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
-    error.value = requestError?.message || '模型日志加载失败'
+    error.value = requestError?.message || '处理记录加载失败'
   } finally {
     loading.value = false
   }
@@ -252,7 +341,7 @@ onMounted(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -262,7 +351,7 @@ onMounted(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -297,8 +386,8 @@ onMounted(() => {
 .panel-card__summary {
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(79, 70, 229, 0.08);
-  color: #4338ca;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
   font-size: 13px;
   font-weight: 600;
 }
@@ -342,7 +431,7 @@ onMounted(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
   color: #ffffff;
 }
 
@@ -405,6 +494,56 @@ onMounted(() => {
 .panel-card__status.is-inactive {
   background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
+}
+
+.panel-card__status.is-pending {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.panel-card__scene-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-card__scene-tag--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.panel-card__scene-tag--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.panel-card__scene-tag--info {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
+}
+
+.panel-card__scene-tag--safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.panel-card__scene-tag--neutral {
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
+.panel-card__summary-text {
+  margin: 0;
+  color: #334155;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .panel-card__footer {

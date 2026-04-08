@@ -3,14 +3,14 @@
     <header class="panel-card__header">
       <div>
         <h2>异常类型</h2>
-        <p>维护异常类型编码、名称、说明与状态。</p>
+        <p>维护异常类别名称、说明与状态。</p>
       </div>
     </header>
 
     <section class="panel-card__hero-strip panel-card__hero-strip--single">
       <article>
         <span>配置目标</span>
-        <strong>异常类型枚举</strong>
+        <strong>异常类别说明</strong>
       </article>
     </section>
 
@@ -36,8 +36,8 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>编码</th>
-            <th>名称</th>
+            <th>异常类别</th>
+            <th>显示名称</th>
             <th>说明</th>
             <th>状态</th>
             <th>操作</th>
@@ -51,7 +51,7 @@
             <td colspan="5">暂无异常类型配置</td>
           </tr>
           <tr v-for="row in rows" :key="row.code">
-            <td>{{ row.code }}</td>
+            <td>{{ formatExceptionCode(row.code) }}</td>
             <td>{{ row.name || '-' }}</td>
             <td>{{ row.description || '-' }}</td>
             <td>
@@ -80,15 +80,15 @@
         <div class="panel-card__dialog-head">
           <div>
             <strong>编辑异常类型</strong>
-            <p>异常类型配置当前只支持更新，不提供新增与删除。</p>
+            <p>当前页面用于维护现有异常类别说明，不提供新增与删除。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
 
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>编码</span>
-            <input v-model="form.code" type="text" disabled />
+            <span>异常类别</span>
+            <input :value="formatExceptionCode(form.code)" type="text" disabled />
           </label>
           <label>
             <span>状态</span>
@@ -98,7 +98,7 @@
             </select>
           </label>
           <label>
-            <span>名称</span>
+            <span>显示名称</span>
             <input v-model="form.name" type="text" />
           </label>
           <label class="panel-card__full-width">
@@ -128,6 +128,15 @@ const dialogVisible = ref(false)
 const rows = ref([])
 const error = ref('')
 const notice = ref('')
+
+const EXCEPTION_CODE_LABELS = {
+  PROXY_CHECKIN: '代打卡',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非规定时间打卡',
+  REPEAT_CHECK: '重复打卡',
+  MULTI_LOCATION_CONFLICT: '多地点异常',
+}
 
 const filters = reactive({
   status: '',
@@ -199,6 +208,10 @@ function openEditDialog(row) {
   dialogVisible.value = true
 }
 
+function formatExceptionCode(code) {
+  return EXCEPTION_CODE_LABELS[code] || '未识别'
+}
+
 async function handleSubmit() {
   if (submitting.value) {
     return
@@ -257,7 +270,7 @@ onMounted(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -267,7 +280,7 @@ onMounted(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -355,7 +368,7 @@ onMounted(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%) !important;
   color: #ffffff !important;
 }
 

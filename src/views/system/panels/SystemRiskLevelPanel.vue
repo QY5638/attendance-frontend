@@ -10,11 +10,11 @@
     <section class="panel-card__hero-strip panel-card__hero-strip--single">
       <article>
         <span>配置目标</span>
-        <strong>风险等级枚举</strong>
+        <strong>风险分级说明</strong>
       </article>
     </section>
 
-    <p class="panel-card__notice">当前配置已持久化到数据库：更新后会通过后端接口写入存储，服务重启后仍会保留。</p>
+    <p class="panel-card__notice">调整后将用于系统风险识别和页面展示，请按企业管理标准统一维护。</p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
@@ -38,8 +38,8 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>编码</th>
-            <th>名称</th>
+            <th>风险等级</th>
+            <th>显示名称</th>
             <th>说明</th>
             <th>状态</th>
             <th>操作</th>
@@ -53,7 +53,7 @@
             <td colspan="5">暂无风险等级配置</td>
           </tr>
           <tr v-for="row in rows" :key="row.code">
-            <td>{{ row.code }}</td>
+            <td>{{ formatRiskCode(row.code) }}</td>
             <td>{{ row.name || '-' }}</td>
             <td>{{ row.description || '-' }}</td>
             <td>
@@ -82,15 +82,15 @@
         <div class="panel-card__dialog-head">
           <div>
             <strong>编辑风险等级</strong>
-            <p>当前页面只支持更新，不提供新增与删除。</p>
+            <p>当前页面用于维护现有等级说明，不提供新增与删除。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
 
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>编码</span>
-            <input v-model="form.code" type="text" disabled />
+            <span>风险等级</span>
+            <input :value="formatRiskCode(form.code)" type="text" disabled />
           </label>
           <label>
             <span>状态</span>
@@ -100,7 +100,7 @@
             </select>
           </label>
           <label>
-            <span>名称</span>
+            <span>显示名称</span>
             <input v-model="form.name" type="text" />
           </label>
           <label class="panel-card__full-width">
@@ -130,6 +130,12 @@ const dialogVisible = ref(false)
 const rows = ref([])
 const error = ref('')
 const notice = ref('')
+
+const RISK_CODE_LABELS = {
+  HIGH: '高风险',
+  MEDIUM: '中风险',
+  LOW: '低风险',
+}
 
 const filters = reactive({
   status: '',
@@ -201,6 +207,10 @@ function openEditDialog(row) {
   dialogVisible.value = true
 }
 
+function formatRiskCode(code) {
+  return RISK_CODE_LABELS[code] || '未识别'
+}
+
 async function handleSubmit() {
   if (submitting.value) {
     return
@@ -259,7 +269,7 @@ onMounted(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -269,7 +279,7 @@ onMounted(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -365,7 +375,7 @@ onMounted(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%) !important;
   color: #ffffff !important;
 }
 

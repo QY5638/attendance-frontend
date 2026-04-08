@@ -4,8 +4,8 @@
       <div class="layout-brand">
         <div class="layout-brand__mark">勤</div>
         <div v-if="!collapsed" class="layout-brand__copy">
-          <div class="layout-brand__title">考勤预警系统</div>
-          <div class="layout-brand__subtitle">企业考勤管理平台</div>
+          <div class="layout-brand__title">企业考勤管理系统</div>
+          <div class="layout-brand__subtitle">内部办公平台</div>
         </div>
       </div>
 
@@ -87,18 +87,24 @@ const menuRoutes = computed(() => {
 
 const menuGroups = computed(() => getMenuGroups(menuRoutes.value, authStore.roleCode))
 const activePath = computed(() => route.path)
-const currentTitle = computed(() => route.meta?.title || '后台管理台')
-const currentSection = computed(() => route.meta?.menuGroup || '业务中心')
+const currentTitle = computed(() => route.meta?.title || '管理首页')
+const currentSection = computed(() => route.meta?.menuGroup || '工作区')
 const currentDescription = computed(() => {
-  if (route.meta?.title === '概览工作台') {
-    return '用于查看整体运行情况、重点提醒和常用入口。'
+  const descriptions = {
+    概览工作台: '集中查看运行概况、重点提醒和常用入口。',
+    统计分析: '查看部门指标、趋势变化和综合分析结果。',
+    用户管理: '维护人员资料、所属部门和角色信息。',
+    部门管理: '维护组织部门资料，便于统一归口管理。',
+    角色管理: '维护岗位角色资料和页面访问范围。',
+    人脸采集: '完成人脸信息采集与资料更新。',
+    考勤记录: '支持打卡、记录查询和补卡申请等日常业务。',
+    异常中心: '集中处理异常记录、查看原因并进入复核。',
+    预警列表: '查看预警信息、处置建议和相关异常。',
+    人工复核: '结合辅助意见完成复核处理和反馈。',
+    系统配置: '维护基础配置、分析模板和运行记录。',
   }
 
-  if (route.meta?.title === '考勤记录') {
-    return '支持打卡、记录查询和补卡申请等日常操作。'
-  }
-
-  return '集中展示当前页面的主要信息和常用操作。'
+  return descriptions[route.meta?.title] || '集中展示当前页面的主要信息和常用操作。'
 })
 const roleLabel = computed(() => {
   if (authStore.roleCode === 'ADMIN') {
@@ -109,7 +115,7 @@ const roleLabel = computed(() => {
     return '员工'
   }
 
-  return authStore.roleCode || '未识别角色'
+  return '其他角色'
 })
 
 const MENU_ICONS = {
@@ -140,16 +146,16 @@ function handleLogout() {
 .layout-shell {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 30%),
-    radial-gradient(circle at right center, rgba(99, 102, 241, 0.1), transparent 28%),
-    linear-gradient(180deg, #eef4ff 0%, #f8fafc 48%, #eef2ff 100%);
+    radial-gradient(circle at top left, rgba(47, 105, 178, 0.1), transparent 30%),
+    radial-gradient(circle at right center, rgba(15, 95, 148, 0.08), transparent 26%),
+    linear-gradient(180deg, #f3f6fb 0%, #f7f9fc 52%, #eef3f9 100%);
 }
 
 .layout-sidebar {
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(15, 23, 42, 0.08);
-  background: linear-gradient(180deg, #0f172a 0%, #111c44 100%);
+  background: linear-gradient(180deg, #18304d 0%, #233f61 100%);
   color: #e2e8f0;
 }
 
@@ -165,8 +171,8 @@ function handleLogout() {
   height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(125, 211, 252, 0.24), rgba(99, 102, 241, 0.34));
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(125, 211, 252, 0.24), rgba(47, 105, 178, 0.34));
   color: #f8fafc;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -195,7 +201,7 @@ function handleLogout() {
   width: 100%;
   min-height: 40px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
 }
 
@@ -237,7 +243,7 @@ function handleLogout() {
 }
 
 .layout-menu :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.44), rgba(56, 189, 248, 0.26));
+  background: linear-gradient(135deg, rgba(47, 105, 178, 0.52), rgba(15, 95, 148, 0.28));
   color: #ffffff;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
 }
@@ -274,7 +280,7 @@ function handleLogout() {
   gap: 16px;
   padding: 18px 24px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(10px);
 }
 
@@ -284,10 +290,8 @@ function handleLogout() {
 
 .layout-header__eyebrow {
   margin-bottom: 8px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #4f46e5;
+  font-size: 13px;
+  color: #2f69b2;
 }
 
 .layout-header__title {
@@ -314,7 +318,7 @@ function handleLogout() {
   min-width: 120px;
   padding: 10px 14px;
   border-radius: 14px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .layout-header__identity-label {
@@ -333,7 +337,7 @@ function handleLogout() {
   min-height: 38px;
   padding-inline: 14px;
   border: none;
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
 }
 
 .layout-main {

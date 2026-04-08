@@ -1,16 +1,17 @@
 <template>
   <section class="warning-page">
-    <header class="warning-page__header">
-      <div>
-        <p class="warning-page__eyebrow">风险预警</p>
-        <h2 class="warning-page__title">预警列表</h2>
-        <p class="warning-page__desc">展示预警摘要、优先级和处置建议，并支持只读跳转到异常详情。</p>
-      </div>
-
-      <button type="button" data-testid="warning-refresh" class="warning-page__refresh" @click="loadWarningList">
-        刷新
-      </button>
-    </header>
+    <ConsoleHero
+      eyebrow="风险预警"
+      title="预警列表"
+      description="集中查看预警信息、处置建议和关联异常，并支持进入人工复核。"
+      theme="sky"
+    >
+      <template #actions>
+        <button type="button" data-testid="warning-refresh" class="warning-page__refresh" @click="loadWarningList">
+          刷新
+        </button>
+      </template>
+    </ConsoleHero>
 
     <ConsoleOverviewCards :items="overviewItems" accent="#0f766e" />
 
@@ -68,13 +69,13 @@
         <article v-for="item in warningList" :key="item.id" class="warning-item">
           <div class="warning-item__main">
             <div class="warning-item__title-row">
-              <strong>#{{ item.id }}</strong>
+                <strong>预警编号 {{ item.id }}</strong>
               <span>{{ formatDateTime(item.sendTime) }}</span>
             </div>
 
             <dl class="warning-item__grid">
               <div>
-                <dt>关联异常</dt>
+                <dt>异常编号</dt>
                 <dd>{{ item.exceptionId ?? '--' }}</dd>
               </div>
               <div>
@@ -83,23 +84,35 @@
               </div>
               <div>
                 <dt>预警类型</dt>
-                <dd>{{ formatDisplayValue(item.type, WARNING_TYPE_LABELS) }}</dd>
+                <dd>
+                  <span :class="['warning-tag', getWarningTypeClass(item.type)]">
+                    {{ formatDisplayValue(item.type, WARNING_TYPE_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
                 <dt>风险等级</dt>
-                <dd>{{ formatDisplayValue(item.level, WARNING_LEVEL_LABELS) }}</dd>
+                <dd>
+                  <span :class="['warning-tag', getWarningLevelClass(item.level)]">
+                    {{ formatDisplayValue(item.level, WARNING_LEVEL_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
                 <dt>处理状态</dt>
-                <dd>{{ formatDisplayValue(item.status, WARNING_STATUS_LABELS) }}</dd>
+                <dd>
+                  <span :class="['warning-tag', getWarningStatusClass(item.status)]">
+                    {{ formatDisplayValue(item.status, WARNING_STATUS_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
-                <dt>优先级</dt>
+                <dt>处置顺序</dt>
                 <dd>{{ item.priorityScore ?? '--' }}</dd>
               </div>
             </dl>
 
-            <p class="warning-item__summary">{{ item.aiSummary || item.disposeSuggestion || '暂无预警摘要' }}</p>
+            <p class="warning-item__summary">{{ item.aiSummary || item.disposeSuggestion || '暂无情况说明' }}</p>
           </div>
 
           <div class="warning-item__actions">
@@ -109,7 +122,7 @@
               class="warning-item__action"
               @click="openAdvice(item.id)"
             >
-              查看建议
+              查看处置建议
             </button>
             <button
               :data-testid="`warning-open-exception-${item.exceptionId}`"
@@ -117,7 +130,7 @@
               class="warning-item__action warning-item__action--secondary"
               @click="jumpToException(item.exceptionId)"
             >
-              查看关联异常
+              查看异常详情
             </button>
             <button
               :data-testid="`warning-open-review-${item.exceptionId}`"
@@ -125,7 +138,7 @@
               class="warning-item__action warning-item__action--review"
               @click="jumpToReview(item.exceptionId)"
             >
-              去复核
+              提交复核
             </button>
           </div>
         </article>
@@ -138,32 +151,36 @@
       <div class="warning-advice-dialog__panel">
         <header class="warning-advice-dialog__header">
           <div>
-            <p class="warning-page__eyebrow">预警建议</p>
-            <h3>预警 #{{ selectedWarningId }}</h3>
+            <p class="warning-page__eyebrow">处置建议</p>
+            <h3>预警编号 {{ selectedWarningId }}</h3>
           </div>
 
           <button type="button" class="warning-advice-dialog__close" @click="closeAdvice">关闭</button>
         </header>
 
-        <p v-if="adviceLoading" class="warning-feedback">预警建议加载中...</p>
+        <p v-if="adviceLoading" class="warning-feedback">处置建议加载中...</p>
         <p v-else-if="adviceError" data-testid="warning-advice-error" class="warning-feedback warning-feedback--error">
           {{ adviceError }}
         </p>
         <div v-else-if="adviceDetail" class="warning-advice-grid">
           <div>
-            <dt>关联异常</dt>
+            <dt>异常编号</dt>
             <dd>{{ adviceDetail.exceptionId ?? '--' }}</dd>
           </div>
           <div>
-            <dt>优先级</dt>
+            <dt>处置顺序</dt>
             <dd>{{ adviceDetail.priorityScore ?? '--' }}</dd>
           </div>
           <div>
-            <dt>决策来源</dt>
-            <dd>{{ formatDisplayValue(adviceDetail.decisionSource, DECISION_SOURCE_LABELS) }}</dd>
+            <dt>识别方式</dt>
+            <dd>
+              <span :class="['warning-tag', getDecisionSourceClass(adviceDetail.decisionSource)]">
+                {{ formatDisplayValue(adviceDetail.decisionSource, DECISION_SOURCE_LABELS) }}
+              </span>
+            </dd>
           </div>
           <div>
-            <dt>智能摘要</dt>
+            <dt>情况概述</dt>
             <dd>{{ adviceDetail.aiSummary || '--' }}</dd>
           </div>
           <div>
@@ -171,7 +188,7 @@
             <dd>{{ adviceDetail.disposeSuggestion || '--' }}</dd>
           </div>
         </div>
-        <p v-else class="warning-feedback">暂无预警建议</p>
+        <p v-else class="warning-feedback">暂无处置建议</p>
       </div>
     </section>
   </section>
@@ -181,6 +198,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import { fetchFe06WarningAdvice, fetchFe06WarningList } from '../../api/fe06-warning'
 
@@ -205,8 +223,8 @@ const WARNING_STATUS_LABELS = {
 }
 
 const DECISION_SOURCE_LABELS = {
-  MODEL_FUSION: '模型融合',
-  RULE: '规则判定',
+  MODEL_FUSION: '综合识别',
+  RULE: '规则校验',
 }
 
 const router = useRouter()
@@ -246,13 +264,13 @@ const overviewItems = computed(() => [
       WARNING_STATUS_LABELS[queryForm.status] ||
       WARNING_TYPE_LABELS[queryForm.type] ||
       '全部预警',
-    desc: '支持按风险等级、状态与预警类型组合查看',
+    desc: '支持按风险等级、状态和预警类型组合查看',
   },
   {
     key: 'advice',
-    label: '建议弹层',
-    value: adviceVisible.value ? `预警 #${selectedWarningId.value}` : '待查看建议',
-    desc: '可在建议中直接跳转异常详情或人工复核',
+    label: '当前查看',
+    value: adviceVisible.value ? `预警编号 ${selectedWarningId.value}` : '未查看',
+    desc: '可在建议中直接查看异常详情或进入人工复核',
   },
 ])
 
@@ -272,11 +290,63 @@ function formatDisplayValue(value, labelMap) {
   }
 
   const label = labelMap[value]
-  return label || value
+  return label || '未识别'
 }
 
 function formatDateTime(value) {
   return value || '--'
+}
+
+function getWarningLevelClass(level) {
+  if (level === 'HIGH') {
+    return 'warning-tag--danger'
+  }
+
+  if (level === 'MEDIUM') {
+    return 'warning-tag--warning'
+  }
+
+  if (level === 'LOW') {
+    return 'warning-tag--safe'
+  }
+
+  return 'warning-tag--neutral'
+}
+
+function getWarningStatusClass(status) {
+  if (status === 'PROCESSED') {
+    return 'warning-tag--safe'
+  }
+
+  if (status === 'UNPROCESSED') {
+    return 'warning-tag--warning'
+  }
+
+  return 'warning-tag--neutral'
+}
+
+function getWarningTypeClass(type) {
+  if (type === 'RISK_WARNING') {
+    return 'warning-tag--info'
+  }
+
+  if (type === 'ATTENDANCE_WARNING') {
+    return 'warning-tag--neutral'
+  }
+
+  return 'warning-tag--neutral'
+}
+
+function getDecisionSourceClass(source) {
+  if (source === 'MODEL_FUSION') {
+    return 'warning-tag--info'
+  }
+
+  if (source === 'RULE') {
+    return 'warning-tag--neutral'
+  }
+
+  return 'warning-tag--neutral'
 }
 
 async function loadWarningList() {
@@ -323,7 +393,7 @@ async function openAdvice(id) {
       return
     }
 
-    adviceError.value = error?.message || '获取预警建议失败'
+    adviceError.value = error?.message || '获取处置建议失败'
   } finally {
     if (requestId === latestAdviceRequestId) {
       adviceLoading.value = false
@@ -450,7 +520,7 @@ onMounted(() => {
 .warning-filter-actions__primary,
 .warning-item__action,
 .warning-advice-dialog__close {
-  background: #0f766e;
+  background: #2f69b2;
   color: #ffffff;
 }
 
@@ -459,7 +529,7 @@ onMounted(() => {
 }
 
 .warning-item__action--review {
-  background: #0f766e;
+  background: #245391;
 }
 
 .warning-filter-card,
@@ -546,16 +616,40 @@ onMounted(() => {
 
 .warning-item__main {
   flex: 1;
+  display: grid;
+  gap: 12px;
 }
 
 .warning-item__title-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  align-items: center;
+}
+
+.warning-item__title-row strong,
+.warning-item__title-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+}
+
+.warning-item__title-row strong {
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
+}
+
+.warning-item__title-row span {
+  background: #f8fafc;
+  color: #64748b;
 }
 
 .warning-item__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   margin: 0;
 }
 
@@ -565,14 +659,53 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.warning-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.warning-tag--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.warning-tag--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.warning-tag--safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.warning-tag--info {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
+}
+
+.warning-tag--neutral {
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
 .warning-item__summary {
-  margin: 16px 0 0;
+  margin: 0;
   color: #334155;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .warning-item__actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 10px;
 }
 

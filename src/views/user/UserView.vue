@@ -3,7 +3,7 @@
     <ConsoleHero
       eyebrow="基础资料"
       title="用户管理"
-      description="维护员工基础资料，并在同一表单中关联部门、角色和状态。"
+      description="维护人员资料，并关联所属部门、岗位角色和使用状态。"
       theme="indigo"
       :cards="heroCards"
     />
@@ -12,17 +12,17 @@
       <template #header>
         <div class="crud-page__header">
           <div>
-            <strong>用户管理</strong>
-            <p>维护员工基础资料，并在表单中关联部门与角色。</p>
+            <strong>人员资料</strong>
+            <p>维护人员基本信息，支持按部门和状态快速检索。</p>
           </div>
-          <el-button type="primary" @click="openCreateDialog">新增用户</el-button>
+          <el-button type="primary" @click="openCreateDialog">新增人员</el-button>
         </div>
       </template>
 
-      <el-form :inline="true" :model="filters" class="crud-page__filters">
-        <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" clearable placeholder="用户名或姓名" />
-        </el-form-item>
+        <el-form :inline="true" :model="filters" class="crud-page__filters">
+          <el-form-item label="关键词">
+          <el-input v-model="filters.keyword" clearable placeholder="姓名或账号" />
+          </el-form-item>
         <el-form-item label="部门">
           <el-select v-model="filters.deptId" clearable placeholder="全部部门">
             <el-option v-for="item in departmentOptions" :key="item.id" :label="item.name" :value="item.id" />
@@ -41,7 +41,7 @@
       </el-form>
 
       <el-table v-loading="loading" :data="rows">
-        <el-table-column prop="username" label="用户名" min-width="140" />
+        <el-table-column prop="username" label="账号" min-width="140" />
         <el-table-column prop="realName" label="姓名" min-width="120" />
         <el-table-column prop="gender" label="性别" width="90" />
         <el-table-column prop="phone" label="手机号" min-width="150" />
@@ -83,16 +83,16 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑用户' : '新增用户'" width="640px">
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑人员' : '新增人员'" width="640px">
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="用户名" prop="username">
+            <el-form-item label="账号" prop="username">
               <el-input v-model="form.username" clearable maxlength="30" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item :label="editingId ? '密码（留空则不修改）' : '密码'" prop="password">
+            <el-form-item :label="editingId ? '密码（留空则保持原值）' : '密码'" prop="password">
               <el-input v-model="form.password" clearable show-password />
             </el-form-item>
           </el-col>
@@ -180,13 +180,13 @@ const pagination = reactive({
 const heroCards = computed(() => [
   {
     key: 'total',
-    label: '当前列表',
+    label: '在册人数',
     value: `${pagination.total} 人`,
   },
   {
     key: 'scope',
-    label: '主数据范围',
-    value: '账号 / 部门 / 角色',
+    label: '维护范围',
+    value: '人员 / 部门 / 角色',
   },
 ])
 

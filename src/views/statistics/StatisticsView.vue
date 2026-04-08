@@ -3,7 +3,7 @@
     <ConsoleHero
       eyebrow="统计分析"
       title="统计分析"
-      description="聚焦部门统计、异常趋势、智能解读和报表导出。"
+      description="集中查看部门指标、趋势变化、风险概况和报表导出。"
       theme="sky"
       :cards="heroCards"
     >
@@ -35,8 +35,8 @@
       <section class="statistics-spotlight">
         <div class="statistics-spotlight__lead">
           <p class="statistics-spotlight__eyebrow">分析概览</p>
-          <h3>先看总体指标，再结合趋势与风险画像判断当天重点</h3>
-          <p>统计页用于承接管理者的汇总分析、风险判断和报表导出，和首页工作台保持同一套解读逻辑。</p>
+          <h3>先看总体指标，再结合趋势变化判断当日重点</h3>
+          <p>统计页用于承接管理层的汇总分析、风险研判和报表输出，并与首页工作台保持一致的信息结构。</p>
         </div>
 
         <ConsoleOverviewCards :items="spotlightCards" accent="#0f766e" />
@@ -45,7 +45,7 @@
       <section data-testid="statistics-overview" class="statistics-section">
         <div class="statistics-section__head">
           <h3>部门统计总览</h3>
-          <span>当前部门</span>
+          <span>核心指标</span>
         </div>
 
         <div class="statistics-metric-grid">
@@ -76,33 +76,33 @@
 
       <section data-testid="statistics-summary" class="statistics-section statistics-summary-card">
         <div class="statistics-section__head">
-          <h3>智能统计解读</h3>
-          <span>趋势摘要</span>
+          <h3>分析概述</h3>
+          <span>系统汇总</span>
         </div>
 
         <div class="statistics-summary-card__content">
-          <p>{{ summaryData.summary || '暂无统计摘要' }}</p>
-          <p><strong>重点风险：</strong>{{ summaryData.highlightRisks || '暂无重点风险' }}</p>
-          <p><strong>管理建议：</strong>{{ summaryData.manageSuggestion || '暂无管理建议' }}</p>
+          <p>{{ summaryData.summary || '暂无概述信息' }}</p>
+          <p><strong>重点关注：</strong>{{ summaryData.highlightRisks || '暂无重点关注内容' }}</p>
+          <p><strong>处理建议：</strong>{{ summaryData.manageSuggestion || '暂无处理建议' }}</p>
         </div>
       </section>
 
       <section data-testid="statistics-risk" class="statistics-section">
         <div class="statistics-section__head">
-          <h3>部门风险画像</h3>
-          <span>风险简报</span>
+          <h3>部门风险概况</h3>
+          <span>重点部门</span>
         </div>
 
         <div v-if="riskItems.length" class="statistics-risk-grid">
           <el-card v-for="item in riskItems" :key="item.deptId || item.deptName" class="statistics-risk-card">
             <div class="statistics-risk-card__head">
               <strong>{{ item.deptName || '未知部门' }}</strong>
-              <span>{{ item.riskScore ?? '--' }}</span>
+              <span>{{ formatRiskScore(item.riskScore) }}</span>
             </div>
-            <p>{{ item.riskSummary || item.manageSuggestion || '暂无风险摘要' }}</p>
+            <p>{{ item.riskSummary || item.manageSuggestion || '暂无情况说明' }}</p>
           </el-card>
         </div>
-        <el-empty v-else description="暂无风险画像" />
+        <el-empty v-else description="暂无风险概况" />
       </section>
     </template>
   </section>
@@ -136,12 +136,12 @@ const summaryData = ref({
 const heroCards = computed(() => [
   {
     key: 'dimension',
-    label: '分析维度',
+    label: '分析视角',
     value: '总览 / 趋势 / 风险',
   },
   {
     key: 'export',
-    label: '导出能力',
+    label: '报表状态',
     value: exporting.value ? '导出中' : '可导出',
   },
 ])
@@ -150,19 +150,19 @@ const spotlightCards = computed(() => [
     key: 'overview',
     label: '总览指标',
     value: `${overviewCards.value.length} 项`,
-    desc: '覆盖出勤、异常、比例等关键管理指标',
+    desc: '覆盖出勤、异常和比例等关键管理指标',
   },
   {
     key: 'trend',
     label: '趋势样本',
     value: `${trendPoints.value.length} 组`,
-    desc: '用于观察异常变化和周期性波动',
+    desc: '用于观察异常变化和阶段波动',
   },
   {
     key: 'risk',
-    label: '风险画像',
+    label: '风险概况',
     value: `${riskItems.value.length} 个`,
-    desc: '聚焦部门风险热区和管理建议',
+    desc: '聚焦重点部门和管理建议',
   },
 ])
 
@@ -258,6 +258,16 @@ function getBarHeight(value) {
   return `${Math.max((value / maxTrendValue.value) * 100, 8)}%`
 }
 
+function formatRiskScore(value) {
+  const score = Number(value)
+
+  if (!Number.isFinite(score)) {
+    return '--'
+  }
+
+  return `${score} 分`
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -296,7 +306,7 @@ async function handleExport() {
   try {
     const { blob, filename } = await exportStatisticsReport()
     downloadBlob(blob, filename)
-    ElMessage.success('报表导出已触发')
+    ElMessage.success('报表已开始导出')
   } catch (error) {
     ElMessage.error(error?.message || '报表导出失败，请稍后重试')
   } finally {
@@ -326,6 +336,7 @@ onMounted(() => {
   padding: 24px;
   border-radius: 24px;
   background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
 
@@ -386,8 +397,8 @@ onMounted(() => {
 .statistics-metric-grid,
 .statistics-risk-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
 }
 
 .statistics-metric-card__label {
@@ -399,6 +410,11 @@ onMounted(() => {
 .statistics-metric-card__value {
   font-size: 28px;
   color: #0f172a;
+}
+
+.statistics-metric-card :deep(.el-card__body),
+.statistics-risk-card :deep(.el-card__body) {
+  padding: 18px;
 }
 
 .statistics-trend-grid {
@@ -432,7 +448,14 @@ onMounted(() => {
 }
 
 .statistics-trend-bar strong {
-  color: #0f172a;
+  min-width: 56px;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
 }
 
 .statistics-trend-bar span {
@@ -445,6 +468,11 @@ onMounted(() => {
   gap: 12px;
   line-height: 1.7;
   color: #334155;
+}
+
+.statistics-summary-card__content p:first-child {
+  font-size: 15px;
+  color: #0f172a;
 }
 
 .statistics-summary-card__content p,
@@ -465,13 +493,23 @@ onMounted(() => {
 }
 
 .statistics-risk-card__head span {
-  color: #0f766e;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
   font-weight: 700;
 }
 
 .statistics-risk-card p {
   line-height: 1.7;
   color: #475569;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 @media (max-width: 960px) {
