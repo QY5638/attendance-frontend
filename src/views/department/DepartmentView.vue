@@ -3,7 +3,7 @@
     <ConsoleHero
       eyebrow="基础资料"
       title="部门管理"
-      description="维护部门基础资料，用于用户归属、统计分析和风险画像维度映射。"
+      description="维护组织部门资料，用于人员归属、统计汇总和业务分组。"
       theme="sky"
       :cards="heroCards"
     />
@@ -12,8 +12,8 @@
       <template #header>
         <div class="crud-page__header">
           <div>
-            <strong>部门管理</strong>
-            <p>维护部门基础资料，不扩展树形组织结构。</p>
+            <strong>部门资料</strong>
+            <p>维护部门名称和说明，当前按平级部门统一管理。</p>
           </div>
           <el-button type="primary" @click="openCreateDialog">新增部门</el-button>
         </div>
@@ -102,12 +102,12 @@ const pagination = reactive({
 const heroCards = computed(() => [
   {
     key: 'total',
-    label: '当前列表',
+    label: '部门数量',
     value: `${pagination.total} 个部门`,
   },
   {
     key: 'scope',
-    label: '配置范围',
+    label: '维护范围',
     value: '名称 / 说明',
   },
 ])

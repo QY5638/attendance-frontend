@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import {
   getAttendanceDeviceOptionsRequest,
   getMyAttendanceRecordRequest,
@@ -75,7 +76,7 @@ function readDeviceOptions(response) {
   }
 
   if (payload.length === 0) {
-    throw new Error('暂无可用考勤设备，自助打卡暂不可用')
+    throw new Error('暂无可用考勤设备，当前暂不可办理打卡')
   }
 
   return payload.map((item) => ({
@@ -149,6 +150,48 @@ const isRepairSubmitDisabled = computed(() => {
 const totalPages = computed(() => {
   return Math.max(1, Math.ceil(recordTotal.value / recordQuery.pageSize) || 1)
 })
+
+const heroCards = computed(() => [
+  {
+    key: 'tab',
+    label: '当前功能',
+    value: activeTab.value === 'checkin' ? '打卡办理' : '记录查询',
+  },
+  {
+    key: 'device',
+    label: '当前设备',
+    value: selectedDevice.value ? (selectedDevice.value.name || selectedDevice.value.id) : '未选择',
+  },
+  {
+    key: 'image',
+    label: '采集状态',
+    value: checkinForm.imageData ? '已准备' : '待采集',
+  },
+])
+
+const CHECK_TYPE_LABELS = {
+  IN: '上班打卡',
+  OUT: '下班打卡',
+}
+
+const RECORD_STATUS_LABELS = {
+  NORMAL: '正常',
+  EXCEPTION: '异常',
+  REPAIRED: '已补卡',
+  REPAIR_PENDING: '补卡处理中',
+  ABSENT: '缺勤',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+}
+
+const EXCEPTION_TYPE_LABELS = {
+  MULTI_LOCATION_CONFLICT: '多地点异常',
+  PROXY_CHECKIN: '代打卡',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非规定时间打卡',
+  REPEAT_CHECK: '重复打卡',
+}
 
 function buildRecordQuery() {
   return {
@@ -416,11 +459,19 @@ function formatExceptionType(exceptionType) {
     return '-'
   }
 
-  if (exceptionType === 'MULTI_LOCATION_CONFLICT') {
-    return '多地点异常'
+  return EXCEPTION_TYPE_LABELS[exceptionType] || '其他异常'
+}
+
+function formatCheckType(checkType) {
+  return CHECK_TYPE_LABELS[checkType] || '其他类型'
+}
+
+function formatRecordStatus(status) {
+  if (!status) {
+    return '-'
   }
 
-  return exceptionType
+  return RECORD_STATUS_LABELS[status] || '其他状态'
 }
 
 function openRepairDialog(record) {
@@ -529,30 +580,15 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="attendance-view">
-    <header class="attendance-view__header">
-      <div>
-        <p class="attendance-view__eyebrow">考勤业务</p>
-        <h1>考勤自助</h1>
-        <p>把设备选择、人脸预检、正式打卡和个人记录查询收敛到一页完成。</p>
-      </div>
+    <ConsoleHero
+      eyebrow="考勤业务"
+      title="考勤记录"
+      description="完成打卡、补卡申请和个人记录查询，相关办理集中在当前页面完成。"
+      theme="indigo"
+      :cards="heroCards"
+    />
 
-      <div class="attendance-view__status-grid">
-        <article class="attendance-view__status-card">
-          <span>当前标签</span>
-          <strong>{{ activeTab === 'checkin' ? '打卡' : '记录' }}</strong>
-        </article>
-        <article class="attendance-view__status-card">
-          <span>设备状态</span>
-          <strong>{{ selectedDevice ? (selectedDevice.name || selectedDevice.id) : '未选择设备' }}</strong>
-        </article>
-        <article class="attendance-view__status-card">
-          <span>图像状态</span>
-          <strong>{{ checkinForm.imageData ? '已就绪' : '待采集' }}</strong>
-        </article>
-      </div>
-    </header>
-
-    <div class="attendance-tabs" role="tablist" aria-label="考勤功能切换">
+    <div class="attendance-tabs" role="tablist" aria-label="考勤页面切换">
       <button
         data-testid="attendance-tab-checkin"
         type="button"
@@ -577,10 +613,10 @@ onBeforeUnmount(() => {
       <section class="attendance-card attendance-card--soft">
         <div class="attendance-card__head">
           <div>
-            <p class="attendance-card__eyebrow">步骤 1</p>
+            <p class="attendance-card__eyebrow">打卡信息</p>
             <h2>选择打卡类型与设备</h2>
           </div>
-          <span class="attendance-card__badge">设备校验</span>
+          <span class="attendance-card__badge">信息确认</span>
         </div>
 
         <div v-if="deviceOptionsError" data-testid="attendance-device-blocking-error" class="attendance-error">
@@ -596,7 +632,7 @@ onBeforeUnmount(() => {
         </label>
 
         <label class="attendance-field">
-          <span>考勤设备</span>
+          <span>打卡设备</span>
           <select v-model="checkinForm.deviceId" data-testid="attendance-device-select" :disabled="isDeviceSelectDisabled">
             <option value="">请选择设备</option>
             <option v-for="item in deviceOptions" :key="item.id" :value="item.id">
@@ -627,7 +663,7 @@ onBeforeUnmount(() => {
       <section class="attendance-face-card attendance-card">
         <div class="attendance-face-card__header">
           <div>
-            <p class="attendance-card__eyebrow">步骤 2</p>
+            <p class="attendance-card__eyebrow">人脸采集</p>
             <h2>采集人脸图像</h2>
           </div>
           <div class="attendance-face-source-switch">
@@ -702,7 +738,7 @@ onBeforeUnmount(() => {
           >
             清空图像
           </button>
-          <p class="attendance-hint">上传后会直接作为本次打卡与人脸预检图像。</p>
+          <p class="attendance-hint">上传后将直接用于本次打卡的人脸校验。</p>
           <p v-if="faceUploadError" data-testid="attendance-face-upload-error" class="attendance-error">
             {{ faceUploadError }}
           </p>
@@ -717,10 +753,10 @@ onBeforeUnmount(() => {
       <section class="attendance-card attendance-card--soft">
         <div class="attendance-card__head">
           <div>
-            <p class="attendance-card__eyebrow">步骤 3</p>
-            <h2>执行预检并提交打卡</h2>
+            <p class="attendance-card__eyebrow">提交确认</p>
+            <h2>完成人脸校验并提交打卡</h2>
           </div>
-          <span class="attendance-card__badge">提交动作</span>
+          <span class="attendance-card__badge">办理提交</span>
         </div>
 
         <button
@@ -729,7 +765,7 @@ onBeforeUnmount(() => {
           :disabled="faceVerifyLoading || !checkinForm.imageData"
           @click="handleVerifyFace"
         >
-          辅助预检
+          先行校验
         </button>
 
         <p v-if="faceVerifyResult" data-testid="attendance-face-verify-result" class="attendance-hint">
@@ -737,8 +773,8 @@ onBeforeUnmount(() => {
         </p>
 
         <div class="attendance-face-card__tips">
-          <span>建议先执行辅助预检，再正式提交打卡。</span>
-          <span>若摄像头不可用，可切换为本地图片上传。</span>
+          <span>建议先进行人脸校验，再正式提交打卡。</span>
+          <span>如摄像头不可用，可切换为本地图片上传。</span>
         </div>
 
         <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
@@ -760,10 +796,10 @@ onBeforeUnmount(() => {
       <section class="attendance-card attendance-card--soft">
         <div class="attendance-card__head">
           <div>
-            <p class="attendance-card__eyebrow">记录检索</p>
+            <p class="attendance-card__eyebrow">记录查询</p>
             <h2>查询个人考勤记录</h2>
           </div>
-          <span class="attendance-card__badge">支持补卡申请</span>
+          <span class="attendance-card__badge">支持补卡</span>
         </div>
 
         <div class="attendance-record-filters">
@@ -787,7 +823,7 @@ onBeforeUnmount(() => {
           </label>
 
           <button data-testid="attendance-record-search" type="button" @click="handleSearchRecords">
-            查询记录
+            查询
           </button>
         </div>
 
@@ -832,9 +868,9 @@ onBeforeUnmount(() => {
             <td data-testid="attendance-record-empty" colspan="5">暂无记录</td>
           </tr>
           <tr v-for="record in recordList" :key="record.id">
-            <td>{{ record.checkType }}</td>
+            <td>{{ formatCheckType(record.checkType) }}</td>
             <td>{{ record.checkTime }}</td>
-            <td>{{ record.status || '-' }}</td>
+            <td>{{ formatRecordStatus(record.status) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
             <td>
               <button
@@ -851,24 +887,43 @@ onBeforeUnmount(() => {
       </section>
     </section>
 
-    <div v-if="repairDialogVisible" data-testid="attendance-repair-dialog" class="attendance-repair-dialog">
-      <p>补卡类型：{{ repairForm.checkType }}</p>
-      <p>补卡时间：{{ repairForm.checkTime }}</p>
-      <div v-if="repairError" data-testid="attendance-repair-error" class="attendance-error">
-        {{ repairError }}
+    <div v-if="repairDialogVisible" class="attendance-repair-dialog">
+      <div class="attendance-repair-dialog__backdrop" @click="repairDialogVisible = false"></div>
+      <div data-testid="attendance-repair-dialog" class="attendance-repair-dialog__panel">
+        <div class="attendance-card__head attendance-card__head--dialog">
+          <div>
+            <p class="attendance-card__eyebrow">补卡申请</p>
+            <h2>填写补卡说明</h2>
+          </div>
+          <button type="button" class="attendance-repair-dialog__close" @click="repairDialogVisible = false">关闭</button>
+        </div>
+
+        <div class="attendance-repair-dialog__meta">
+          <p>打卡类型：{{ formatCheckType(repairForm.checkType) }}</p>
+          <p>打卡时间：{{ repairForm.checkTime || '--' }}</p>
+        </div>
+
+        <div v-if="repairError" data-testid="attendance-repair-error" class="attendance-error">
+          {{ repairError }}
+        </div>
+
+        <label class="attendance-field">
+          <span>补卡说明</span>
+          <textarea v-model="repairForm.repairReason" data-testid="attendance-repair-reason-input" rows="3" />
+        </label>
+
+        <div class="attendance-repair-dialog__actions">
+          <button type="button" @click="repairDialogVisible = false">取消</button>
+          <button
+            data-testid="attendance-repair-submit"
+            type="button"
+            :disabled="isRepairSubmitDisabled"
+            @click="handleSubmitRepair"
+          >
+            提交申请
+          </button>
+        </div>
       </div>
-      <label class="attendance-field">
-        <span>补卡原因</span>
-        <textarea v-model="repairForm.repairReason" data-testid="attendance-repair-reason-input" rows="3" />
-      </label>
-      <button
-        data-testid="attendance-repair-submit"
-        type="button"
-        :disabled="isRepairSubmitDisabled"
-        @click="handleSubmitRepair"
-      >
-        提交补卡
-      </button>
     </div>
   </section>
 </template>
@@ -877,70 +932,6 @@ onBeforeUnmount(() => {
 .attendance-view {
   display: grid;
   gap: 20px;
-}
-
-.attendance-view__header h1,
-.attendance-view__header p {
-  margin: 0;
-}
-
-.attendance-view__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
-  gap: 18px;
-  padding: 28px;
-  border-radius: 28px;
-  background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
-  color: #f8fafc;
-  box-shadow: 0 24px 60px rgba(30, 64, 175, 0.16);
-}
-
-.attendance-view__eyebrow {
-  margin: 0 0 10px;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(191, 219, 254, 0.86);
-}
-
-.attendance-view__header h1 {
-  font-size: clamp(30px, 4vw, 38px);
-}
-
-.attendance-view__header p:last-child {
-  margin-top: 12px;
-  max-width: 640px;
-  line-height: 1.8;
-  color: rgba(226, 232, 240, 0.92);
-}
-
-.attendance-view__status-grid {
-  display: grid;
-  gap: 12px;
-}
-
-.attendance-view__status-card {
-  padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-}
-
-.attendance-view__status-card span,
-.attendance-view__status-card strong {
-  display: block;
-}
-
-.attendance-view__status-card span {
-  font-size: 12px;
-  color: rgba(191, 219, 254, 0.8);
-}
-
-.attendance-view__status-card strong {
-  margin-top: 10px;
-  font-size: 20px;
-  line-height: 1.3;
 }
 
 .attendance-tabs {
@@ -952,7 +943,7 @@ onBeforeUnmount(() => {
   min-width: 120px;
   min-height: 44px;
   padding: 0 18px;
-  border: 1px solid rgba(99, 102, 241, 0.16);
+  border: 1px solid rgba(47, 105, 178, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
   color: #334155;
@@ -962,7 +953,7 @@ onBeforeUnmount(() => {
 
 .attendance-tabs button[aria-pressed='true'] {
   border-color: transparent;
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
   color: #ffffff;
 }
 
@@ -990,12 +981,16 @@ onBeforeUnmount(() => {
   margin-bottom: 18px;
 }
 
+.attendance-card__head--dialog {
+  margin-bottom: 14px;
+}
+
 .attendance-card__eyebrow {
   margin: 0 0 8px;
   font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .attendance-card__head h2 {
@@ -1007,8 +1002,8 @@ onBeforeUnmount(() => {
 .attendance-card__badge {
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(79, 70, 229, 0.08);
-  color: #4338ca;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
   font-size: 12px;
   white-space: nowrap;
 }
@@ -1027,8 +1022,10 @@ onBeforeUnmount(() => {
 .attendance-field input,
 .attendance-field textarea,
 .attendance-record-filters button,
+.attendance-card > button,
 .attendance-panel > button,
 .attendance-face-actions button,
+.attendance-face-source-switch__button,
 .attendance-face-upload,
 .attendance-pagination button,
 .attendance-record-table button,
@@ -1040,8 +1037,10 @@ onBeforeUnmount(() => {
 .attendance-field input,
 .attendance-field textarea,
 .attendance-record-filters button,
+.attendance-card > button,
 .attendance-panel > button,
 .attendance-face-actions button,
+.attendance-face-source-switch__button,
 .attendance-face-upload,
 .attendance-pagination button,
 .attendance-record-table button,
@@ -1054,8 +1053,10 @@ onBeforeUnmount(() => {
 }
 
 .attendance-record-filters button,
+.attendance-card > button,
 .attendance-panel > button,
 .attendance-face-actions button,
+.attendance-face-source-switch__button,
 .attendance-face-upload,
 .attendance-pagination button,
 .attendance-record-table button,
@@ -1065,12 +1066,13 @@ onBeforeUnmount(() => {
 }
 
 .attendance-panel > button,
+.attendance-card > button,
 .attendance-record-filters button,
 .attendance-repair-dialog button[data-testid='attendance-repair-submit'] {
   border-color: transparent;
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
   color: #ffffff;
-  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.2);
+  box-shadow: 0 12px 28px rgba(47, 105, 178, 0.2);
 }
 
 .attendance-record-filters {
@@ -1109,7 +1111,7 @@ onBeforeUnmount(() => {
 
 .attendance-face-source-switch__button--active {
   color: #ffffff;
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
 }
 
 .attendance-face-capture {
@@ -1140,7 +1142,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   width: fit-content;
   color: #ffffff;
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
   cursor: pointer;
 }
 
@@ -1199,12 +1201,52 @@ onBeforeUnmount(() => {
 }
 
 .attendance-repair-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.attendance-repair-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.attendance-repair-dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(560px, calc(100vw - 32px));
+  margin: 64px auto;
   display: grid;
   gap: 14px;
   padding: 22px;
   border-radius: 24px;
   background: #ffffff;
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+}
+
+.attendance-repair-dialog__meta {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.attendance-repair-dialog__meta p {
+  margin: 0;
+}
+
+.attendance-repair-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.attendance-repair-dialog__close {
+  min-height: 40px;
 }
 
 .attendance-face-card__tips {
@@ -1212,19 +1254,19 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: rgba(99, 102, 241, 0.08);
-  color: #4338ca;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
   font-size: 13px;
 }
 
 @media (max-width: 960px) {
-  .attendance-view__header {
-    grid-template-columns: 1fr;
-    padding: 24px;
-  }
-
   .attendance-card__head {
     flex-direction: column;
+  }
+
+  .attendance-repair-dialog__actions button,
+  .attendance-repair-dialog__close {
+    width: 100%;
   }
 }
 </style>

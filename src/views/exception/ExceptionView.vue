@@ -1,16 +1,17 @@
 <template>
   <section class="exception-page">
-    <header class="exception-page__header">
-      <div>
-        <p class="exception-page__eyebrow">异常处理</p>
-        <h2 class="exception-page__title">异常中心</h2>
-        <p class="exception-page__desc">查看异常列表、智能判定摘要和处置依据，支持进入复核流程。</p>
-      </div>
-
-      <button type="button" data-testid="exception-refresh" class="exception-page__refresh" @click="loadExceptionList">
-        刷新
-      </button>
-    </header>
+    <ConsoleHero
+      eyebrow="异常处理"
+      title="异常中心"
+      description="集中查看异常记录、分析摘要和处置依据，并支持进入复核流程。"
+      theme="indigo"
+    >
+      <template #actions>
+        <button type="button" data-testid="exception-refresh" class="exception-page__refresh" @click="loadExceptionList">
+          刷新
+        </button>
+      </template>
+    </ConsoleHero>
 
     <ConsoleOverviewCards :items="overviewItems" />
 
@@ -49,8 +50,8 @@
         </label>
 
         <label class="exception-filter-field">
-          <span>用户 ID</span>
-          <input v-model="queryForm.userId" data-testid="exception-filter-user-id" type="text" placeholder="按用户 ID 查询" />
+          <span>人员编号</span>
+          <input v-model="queryForm.userId" data-testid="exception-filter-user-id" type="text" placeholder="按人员编号查询" />
         </label>
       </div>
 
@@ -77,7 +78,7 @@
         <article v-for="item in exceptionList" :key="item.id" class="exception-item">
           <div class="exception-item__main">
             <div class="exception-item__title-row">
-              <strong>#{{ item.id }}</strong>
+                <strong>异常编号 {{ item.id }}</strong>
               <span>{{ formatDateTime(item.createTime) }}</span>
             </div>
 
@@ -88,27 +89,39 @@
               </div>
               <div>
                 <dt>风险等级</dt>
-                <dd>{{ formatDisplayValue(item.riskLevel, RISK_LEVEL_LABELS) }}</dd>
+                <dd>
+                  <span :class="['exception-tag', getRiskTagClass(item.riskLevel)]">
+                    {{ formatDisplayValue(item.riskLevel, RISK_LEVEL_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
-                <dt>来源</dt>
-                <dd>{{ formatDisplayValue(item.sourceType, SOURCE_TYPE_LABELS) }}</dd>
+                <dt>识别方式</dt>
+                <dd>
+                  <span :class="['exception-tag', getSourceTagClass(item.sourceType)]">
+                    {{ formatDisplayValue(item.sourceType, SOURCE_TYPE_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
                 <dt>处理状态</dt>
-                <dd>{{ formatDisplayValue(item.processStatus, PROCESS_STATUS_LABELS) }}</dd>
+                <dd>
+                  <span :class="['exception-tag', getProcessTagClass(item.processStatus)]">
+                    {{ formatDisplayValue(item.processStatus, PROCESS_STATUS_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
-                <dt>记录 ID</dt>
+                <dt>考勤记录编号</dt>
                 <dd>{{ item.recordId ?? '--' }}</dd>
               </div>
               <div>
-                <dt>用户 ID</dt>
+                <dt>人员编号</dt>
                 <dd>{{ item.userId ?? '--' }}</dd>
               </div>
             </dl>
 
-            <p class="exception-item__description">{{ item.description || '暂无异常描述' }}</p>
+            <p class="exception-item__description">{{ item.description || '暂无情况说明' }}</p>
           </div>
 
           <button
@@ -117,7 +130,7 @@
             class="exception-item__action"
             @click="openExceptionDetail(item.id)"
           >
-            查看详情
+            查看异常详情
           </button>
         </article>
       </div>
@@ -130,7 +143,7 @@
         <header class="exception-detail-dialog__header">
           <div>
             <p class="exception-page__eyebrow">异常详情</p>
-            <h3>异常 #{{ selectedExceptionId }}</h3>
+            <h3>异常编号 {{ selectedExceptionId }}</h3>
           </div>
 
           <div class="exception-detail-dialog__actions">
@@ -140,7 +153,7 @@
               class="exception-detail-dialog__review"
               @click="jumpToReview(selectedExceptionId)"
             >
-              去复核
+              提交复核
             </button>
             <button type="button" data-testid="exception-detail-close" class="exception-detail-dialog__close" @click="closeExceptionDetail">
               关闭
@@ -165,33 +178,45 @@
               </div>
               <div>
                 <dt>风险等级</dt>
-                <dd>{{ formatDisplayValue(exceptionDetail?.riskLevel, RISK_LEVEL_LABELS) }}</dd>
+                <dd>
+                  <span :class="['exception-tag', getRiskTagClass(exceptionDetail?.riskLevel)]">
+                    {{ formatDisplayValue(exceptionDetail?.riskLevel, RISK_LEVEL_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
-                <dt>来源</dt>
-                <dd>{{ formatDisplayValue(exceptionDetail?.sourceType, SOURCE_TYPE_LABELS) }}</dd>
+                <dt>识别方式</dt>
+                <dd>
+                  <span :class="['exception-tag', getSourceTagClass(exceptionDetail?.sourceType)]">
+                    {{ formatDisplayValue(exceptionDetail?.sourceType, SOURCE_TYPE_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
                 <dt>处理状态</dt>
-                <dd>{{ formatDisplayValue(exceptionDetail?.processStatus, PROCESS_STATUS_LABELS) }}</dd>
+                <dd>
+                  <span :class="['exception-tag', getProcessTagClass(exceptionDetail?.processStatus)]">
+                    {{ formatDisplayValue(exceptionDetail?.processStatus, PROCESS_STATUS_LABELS) }}
+                  </span>
+                </dd>
               </div>
               <div>
-                <dt>记录 ID</dt>
+                <dt>考勤记录编号</dt>
                 <dd>{{ exceptionDetail?.recordId ?? '--' }}</dd>
               </div>
               <div>
-                <dt>用户 ID</dt>
+                <dt>人员编号</dt>
                 <dd>{{ exceptionDetail?.userId ?? '--' }}</dd>
               </div>
             </dl>
 
-            <p class="exception-detail-section__description">{{ exceptionDetail?.description || '暂无异常描述' }}</p>
+            <p class="exception-detail-section__description">{{ exceptionDetail?.description || '暂无情况说明' }}</p>
           </section>
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
-              <h4>智能判定摘要</h4>
-              <span>{{ analysisBrief?.promptVersion || '无 Prompt 版本' }}</span>
+              <h4>分析摘要</h4>
+              <span>{{ analysisBrief?.promptVersion ? `分析版本 ${analysisBrief.promptVersion}` : '未记录版本' }}</span>
             </div>
 
             <p v-if="analysisError" data-testid="exception-analysis-error" class="exception-feedback exception-feedback--error">
@@ -199,15 +224,15 @@
             </p>
             <div v-else-if="analysisBrief" class="exception-summary-grid">
               <div>
-                <dt>模型结论</dt>
+                <dt>系统结论</dt>
                 <dd>{{ analysisBrief.modelConclusion || '--' }}</dd>
               </div>
               <div>
-                <dt>置信度</dt>
+                <dt>可信度</dt>
                 <dd>{{ formatScore(analysisBrief.confidenceScore) }}</dd>
               </div>
               <div>
-                <dt>理由摘要</dt>
+                <dt>说明摘要</dt>
                 <dd>{{ analysisBrief.reasonSummary || '--' }}</dd>
               </div>
               <div>
@@ -215,29 +240,29 @@
                 <dd>{{ analysisBrief.actionSuggestion || '--' }}</dd>
               </div>
               <div>
-                <dt>相似案例</dt>
+                <dt>关联案例</dt>
                 <dd>{{ analysisBrief.similarCaseSummary || '--' }}</dd>
               </div>
             </div>
-            <p v-else class="exception-feedback">暂无智能摘要</p>
+            <p v-else class="exception-feedback">暂无分析摘要</p>
           </section>
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
-              <h4>决策链</h4>
+              <h4>处理依据</h4>
               <span>{{ decisionTraceList.length }} 条</span>
             </div>
 
             <p v-if="decisionTraceError" class="exception-feedback exception-feedback--error">{{ decisionTraceError }}</p>
-            <p v-else-if="!decisionTraceList.length" class="exception-feedback">暂无决策链记录</p>
+            <p v-else-if="!decisionTraceList.length" class="exception-feedback">暂无处理依据记录</p>
             <div v-else class="exception-trace-list">
               <article v-for="item in decisionTraceList" :key="item.id || `${item.businessType}-${item.businessId}`" class="exception-trace-item">
                 <div class="exception-trace-item__head">
                   <strong>{{ item.finalDecision || '未生成最终结论' }}</strong>
                   <span>{{ formatScore(item.confidenceScore) }}</span>
                 </div>
-                <p><strong>规则结果：</strong>{{ item.ruleResult || '--' }}</p>
-                <p><strong>模型结果：</strong>{{ item.modelResult || '--' }}</p>
+                <p><strong>规则校验：</strong>{{ item.ruleResult || '--' }}</p>
+                <p><strong>综合识别：</strong>{{ item.modelResult || '--' }}</p>
                 <p><strong>判定依据：</strong>{{ item.decisionReason || '--' }}</p>
               </article>
             </div>
@@ -252,6 +277,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import {
   fetchExceptionAnalysisBrief,
@@ -276,9 +302,9 @@ const RISK_LEVEL_LABELS = {
 }
 
 const SOURCE_TYPE_LABELS = {
-  MODEL: '模型判定',
-  RULE: '规则判定',
-  MODEL_FALLBACK: '模型降级',
+  MODEL: '综合识别',
+  RULE: '规则校验',
+  MODEL_FALLBACK: '自动识别',
 }
 
 const PROCESS_STATUS_LABELS = {
@@ -330,13 +356,13 @@ const overviewItems = computed(() => [
       PROCESS_STATUS_LABELS[queryForm.processStatus] ||
       queryForm.userId ||
       '全部异常',
-    desc: '支持按类型、风险、状态、用户维度组合分析',
+    desc: '支持按类型、风险、状态和人员维度查看',
   },
   {
     key: 'entry',
     label: '处置入口',
-    value: detailVisible.value ? `异常 #${selectedExceptionId.value}` : '待选择异常',
-    desc: '详情中可直接跳转到人工复核页',
+    value: detailVisible.value ? `异常编号 ${selectedExceptionId.value}` : '待选择异常',
+    desc: '详情中可直接进入人工复核页面',
   },
 ])
 
@@ -357,7 +383,7 @@ function formatDisplayValue(value, labelMap) {
   }
 
   const label = labelMap[value]
-  return label || value
+  return label || '未识别'
 }
 
 function formatDateTime(value) {
@@ -370,6 +396,46 @@ function formatScore(value) {
   }
 
   return `${value}`
+}
+
+function getRiskTagClass(level) {
+  if (level === 'HIGH') {
+    return 'exception-tag--danger'
+  }
+
+  if (level === 'MEDIUM') {
+    return 'exception-tag--warning'
+  }
+
+  if (level === 'LOW') {
+    return 'exception-tag--safe'
+  }
+
+  return 'exception-tag--neutral'
+}
+
+function getProcessTagClass(status) {
+  if (status === 'REVIEWED') {
+    return 'exception-tag--safe'
+  }
+
+  if (status === 'PENDING') {
+    return 'exception-tag--warning'
+  }
+
+  return 'exception-tag--neutral'
+}
+
+function getSourceTagClass(source) {
+  if (source === 'RULE') {
+    return 'exception-tag--neutral'
+  }
+
+  if (source === 'MODEL' || source === 'MODEL_FALLBACK') {
+    return 'exception-tag--info'
+  }
+
+  return 'exception-tag--neutral'
 }
 
 async function loadExceptionList() {
@@ -426,13 +492,13 @@ async function openExceptionDetail(id) {
   if (analysisResult.status === 'fulfilled') {
     analysisBrief.value = analysisResult.value
   } else {
-    analysisError.value = analysisResult.reason?.message || '获取异常分析摘要失败'
+    analysisError.value = analysisResult.reason?.message || '获取分析摘要失败'
   }
 
   if (traceResult.status === 'fulfilled') {
     decisionTraceList.value = Array.isArray(traceResult.value) ? traceResult.value : []
   } else {
-    decisionTraceError.value = traceResult.reason?.message || '获取异常决策链失败'
+    decisionTraceError.value = traceResult.reason?.message || '获取处理依据失败'
   }
 
   detailLoading.value = false
@@ -525,7 +591,7 @@ onMounted(() => {
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #6366f1;
+  color: #2f69b2;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -560,7 +626,7 @@ onMounted(() => {
 .exception-detail-dialog__close {
   border: 0;
   border-radius: 12px;
-  background: #4f46e5;
+  background: #2f69b2;
   color: #ffffff;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -664,19 +730,40 @@ onMounted(() => {
 
 .exception-item__main {
   flex: 1;
+  display: grid;
+  gap: 12px;
 }
 
 .exception-item__title-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  align-items: center;
+}
+
+.exception-item__title-row strong,
+.exception-item__title-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+}
+
+.exception-item__title-row strong {
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
+}
+
+.exception-item__title-row span {
+  background: #f8fafc;
+  color: #64748b;
 }
 
 .exception-item__grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   margin: 0;
 }
 
@@ -687,11 +774,53 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.exception-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.exception-tag--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.exception-tag--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.exception-tag--safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.exception-tag--info {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
+}
+
+.exception-tag--neutral {
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
 .exception-item__description,
 .exception-detail-section__description,
 .exception-trace-item p {
-  margin: 16px 0 0;
+  margin: 0;
   color: #334155;
+}
+
+.exception-item__description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .exception-detail-dialog {
@@ -730,7 +859,7 @@ onMounted(() => {
 
 .exception-trace-item {
   border-radius: 16px;
-  background: rgba(79, 70, 229, 0.05);
+  background: rgba(47, 105, 178, 0.06);
   padding: 16px;
 }
 

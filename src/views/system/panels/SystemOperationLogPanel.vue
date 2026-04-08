@@ -2,34 +2,34 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>操作日志</h2>
-        <p>用于查询系统关键操作记录，便于审计和问题追踪。</p>
+        <h2>业务记录</h2>
+        <p>用于查询关键业务办理记录，便于审计和问题追踪。</p>
       </div>
     </header>
 
     <section class="panel-card__hero-strip">
       <article>
-        <span>日志类型</span>
-        <strong>操作审计日志</strong>
+        <span>内容分类</span>
+        <strong>办理记录</strong>
       </article>
       <article>
         <span>覆盖范围</span>
-        <strong>登录 / 打卡 / 复核等关键动作</strong>
+        <strong>登录 / 打卡 / 复核等关键业务</strong>
       </article>
     </section>
 
     <p class="panel-card__notice">
-      当前日志覆盖范围以登录、打卡、补卡申请、预警重评估、复核提交和复核反馈为主，不承诺覆盖系统配置修改日志。
+      当前主要记录登录、打卡、补卡、预警和复核等关键办理动作，便于日常审计与问题追踪。
     </p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
-        <span>用户 ID</span>
+        <span>人员编号</span>
         <input v-model.number="filters.userId" type="number" min="1" placeholder="如 1001" />
       </label>
       <label>
-        <span>操作类型</span>
-        <input v-model="filters.type" type="text" placeholder="如 LOGIN / CHECKIN" />
+        <span>办理动作</span>
+        <input v-model="filters.type" type="text" placeholder="请输入办理动作关键字" />
       </label>
       <label>
         <span>开始日期</span>
@@ -51,11 +51,11 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>用户 ID</th>
-            <th>类型</th>
-            <th>内容</th>
-            <th>操作时间</th>
+            <th>序号</th>
+            <th>人员编号</th>
+            <th>办理动作</th>
+            <th>办理内容</th>
+            <th>办理时间</th>
           </tr>
         </thead>
         <tbody>
@@ -63,14 +63,14 @@
             <td colspan="5">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="5">暂无日志数据</td>
+            <td colspan="5">暂无记录</td>
           </tr>
           <tr v-for="row in rows" :key="row.id">
             <td>{{ row.id }}</td>
             <td>{{ row.userId ?? '-' }}</td>
-            <td>{{ row.type || '-' }}</td>
+            <td>{{ formatOperationType(row.type) }}</td>
             <td>{{ row.content || '-' }}</td>
-            <td>{{ row.operationTime || '-' }}</td>
+            <td>{{ formatDateTime(row.operationTime) }}</td>
           </tr>
         </tbody>
       </table>
@@ -110,6 +110,18 @@ const pagination = reactive({
 
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize) || 1))
 
+const OPERATION_TYPE_LABELS = {
+  LOGIN: '登录',
+  LOGOUT: '退出登录',
+  CHECKIN: '上班打卡',
+  CHECKOUT: '下班打卡',
+  ATTENDANCE_APPLY: '补卡申请',
+  WARNING_REEVALUATE: '预警处理',
+  REVIEW_SUBMIT: '复核办理',
+  REVIEW_FEEDBACK: '复核补充',
+  SYSTEM_CONFIG: '系统配置',
+}
+
 function buildListParams() {
   const params = {
     pageNum: pagination.pageNum,
@@ -135,6 +147,18 @@ function buildListParams() {
   return params
 }
 
+function formatOperationType(type) {
+  return OPERATION_TYPE_LABELS[String(type || '').toUpperCase()] || '其他操作'
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return '-'
+  }
+
+  return String(value).replace('T', ' ').slice(0, 19)
+}
+
 async function loadList() {
   loading.value = true
   error.value = ''
@@ -146,7 +170,7 @@ async function loadList() {
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
-    error.value = requestError?.message || '操作日志加载失败'
+    error.value = requestError?.message || '业务记录加载失败'
   } finally {
     loading.value = false
   }
@@ -200,7 +224,7 @@ onMounted(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -210,7 +234,7 @@ onMounted(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -248,8 +272,8 @@ onMounted(() => {
   margin: 0 0 16px;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(99, 102, 241, 0.1);
-  color: #3730a3;
+  background: rgba(47, 105, 178, 0.1);
+  color: #245391;
   line-height: 1.7;
 }
 
@@ -295,7 +319,7 @@ onMounted(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%) !important;
   color: #ffffff !important;
 }
 

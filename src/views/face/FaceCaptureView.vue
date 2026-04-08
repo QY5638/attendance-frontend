@@ -1,12 +1,12 @@
 <template>
   <section class="face-card">
-    <header class="face-card__header">
-      <div>
-        <p class="face-card__eyebrow">考勤业务</p>
-        <h2>人脸采集</h2>
-        <p class="face-card__desc">当前页面按当前登录用户自助语义工作，录入与验证请求都只提交当前采集到的人脸图像。</p>
-      </div>
-    </header>
+    <ConsoleHero
+      eyebrow="考勤业务"
+      title="人脸采集"
+      description="用于采集和核验当前账号的人脸信息，请按要求拍照或上传清晰正面照片。"
+      theme="sky"
+      :cards="heroCards"
+    />
 
     <div class="face-card__toolbar">
       <button
@@ -31,7 +31,7 @@
 
     <div class="face-card__grid">
       <section class="face-panel">
-        <h3>采集入口</h3>
+        <h3>采集方式</h3>
 
         <div v-if="source === 'camera'" class="face-panel__body">
           <video ref="videoRef" class="face-panel__camera" autoplay muted playsinline></video>
@@ -70,7 +70,7 @@
             accept="image/*"
             @change="handleUploadChange"
           />
-          <p class="face-card__hint">支持常见图片格式，读取后会直接作为本次录入或验证的人脸图像。</p>
+          <p class="face-card__hint">支持常见图片格式，上传后将用于本次录入或验证。</p>
           <p v-if="uploadError" class="face-card__error">{{ uploadError }}</p>
         </div>
       </section>
@@ -90,7 +90,7 @@
             :disabled="!canSubmit"
             @click="submitRegister"
           >
-            {{ submittingAction === 'register' ? '录入中...' : '人脸录入' }}
+            {{ submittingAction === 'register' ? '录入中...' : '提交录入' }}
           </button>
           <button
             type="button"
@@ -99,7 +99,7 @@
             :disabled="!canSubmit"
             @click="submitVerify"
           >
-            {{ submittingAction === 'verify' ? '验证中...' : '验证当前人脸' }}
+            {{ submittingAction === 'verify' ? '验证中...' : '执行验证' }}
           </button>
           <button
             type="button"
@@ -108,7 +108,7 @@
             :disabled="!imageData && !result"
             @click="resetCapture"
           >
-            重拍 / 重新选择
+            重新采集
           </button>
         </div>
 
@@ -117,15 +117,15 @@
     </div>
 
     <section class="face-result" v-if="result">
-      <h3>结果反馈</h3>
+      <h3>处理结果</h3>
       <p class="face-result__message" data-testid="face-result-message">{{ result.message }}</p>
       <div class="face-result__meta">
-        <div data-testid="face-result-user-id">当前用户编号：{{ result.userId }}</div>
+        <div data-testid="face-result-user-id">人员编号：{{ result.userId }}</div>
         <div v-if="result.type === 'register' && result.createTime">录入时间：{{ result.createTime }}</div>
-        <div v-if="result.type === 'verify'">已录入：{{ result.registered ? '是' : '否' }}</div>
+        <div v-if="result.type === 'verify'">已建立档案：{{ result.registered ? '是' : '否' }}</div>
         <div v-if="result.type === 'verify'">验证结果：{{ result.matched ? '通过' : '未通过' }}</div>
-        <div v-if="result.type === 'verify'">相似分：{{ formatNumber(result.faceScore) }}</div>
-        <div v-if="result.type === 'verify'">阈值：{{ formatNumber(result.threshold) }}</div>
+        <div v-if="result.type === 'verify'">相似度：{{ formatNumber(result.faceScore) }}</div>
+        <div v-if="result.type === 'verify'">校验阈值：{{ formatNumber(result.threshold) }}</div>
       </div>
     </section>
   </section>
@@ -134,6 +134,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue'
 
+import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { registerFace, verifyFace } from '../../api/face'
 
 const source = ref('camera')
@@ -149,6 +150,23 @@ const streamRef = ref(null)
 
 const hasLiveCamera = computed(() => Boolean(streamRef.value))
 const canSubmit = computed(() => Boolean(imageData.value) && !submittingAction.value)
+const heroCards = computed(() => [
+  {
+    key: 'source',
+    label: '采集方式',
+    value: source.value === 'camera' ? '摄像头拍照' : '本地图片上传',
+  },
+  {
+    key: 'image',
+    label: '图像状态',
+    value: imageData.value ? '已准备' : '待采集',
+  },
+  {
+    key: 'action',
+    label: '当前操作',
+    value: submittingAction.value === 'register' ? '提交录入' : submittingAction.value === 'verify' ? '执行验证' : '待处理',
+  },
+])
 
 function formatNumber(value) {
   return typeof value === 'number' ? value.toFixed(2) : value
@@ -298,33 +316,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .face-card {
-  padding: 28px;
-  border-radius: 28px;
-  background: linear-gradient(145deg, #ffffff 0%, #eef2ff 100%);
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
-}
-
-.face-card__header {
-  margin-bottom: 20px;
-}
-
-.face-card__eyebrow {
-  margin: 0 0 10px;
-  color: #6366f1;
-  font-size: 13px;
+  display: grid;
+  gap: 20px;
 }
 
 .face-card h2,
 .face-card h3 {
   margin: 0;
   color: #0f172a;
-}
-
-.face-card__desc {
-  margin: 12px 0 0;
-  max-width: 760px;
-  line-height: 1.7;
-  color: #475569;
 }
 
 .face-card__toolbar {
@@ -344,12 +343,12 @@ onBeforeUnmount(() => {
 
 .face-card__toggle {
   padding: 10px 16px;
-  background: rgba(99, 102, 241, 0.08);
-  color: #4338ca;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
 }
 
 .face-card__toggle--active {
-  background: #4338ca;
+  background: #2f69b2;
   color: #ffffff;
 }
 
@@ -362,9 +361,10 @@ onBeforeUnmount(() => {
 .face-panel,
 .face-result {
   padding: 20px;
-  border-radius: 20px;
+  border-radius: 18px;
   background: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .face-panel__body {
@@ -415,7 +415,7 @@ onBeforeUnmount(() => {
 
 .face-card__button {
   padding: 10px 16px;
-  background: #4338ca;
+  background: #2f69b2;
   color: #ffffff;
 }
 
@@ -439,7 +439,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 10px 16px;
-  background: #4338ca;
+  background: #2f69b2;
   color: #ffffff;
 }
 
@@ -460,7 +460,7 @@ onBeforeUnmount(() => {
 }
 
 .face-result {
-  margin-top: 20px;
+  margin-top: 0;
 }
 
 .face-result__message {
@@ -479,7 +479,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .face-card {
-    padding: 20px;
+    gap: 16px;
   }
 }
 </style>

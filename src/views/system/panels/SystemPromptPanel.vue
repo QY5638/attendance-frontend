@@ -2,8 +2,8 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>提示词模板</h2>
-        <p>用于维护模型分析模板的场景、版本、内容与启停状态。</p>
+        <h2>分析方案</h2>
+        <p>用于维护系统分析方案的适用场景、版本和说明内容。</p>
       </div>
       <button
         type="button"
@@ -11,29 +11,29 @@
         data-testid="prompt-template-create-button"
         @click="openCreateDialog"
       >
-        新增模板
+        新增方案
       </button>
     </header>
 
     <section class="panel-card__hero-strip">
       <article>
         <span>配置目标</span>
-        <strong>模型提示词模板</strong>
+        <strong>分析方案</strong>
       </article>
       <article>
-        <span>关键维度</span>
-        <strong>编码 / 场景 / 版本 / 内容</strong>
+        <span>维护范围</span>
+        <strong>方案信息 / 场景 / 版本 / 说明</strong>
       </article>
     </section>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
         <span>关键词</span>
-        <input v-model="filters.keyword" type="text" placeholder="编码 / 名称 / 版本" />
+        <input v-model="filters.keyword" type="text" placeholder="方案编号 / 名称 / 版本号" />
       </label>
       <label>
-        <span>场景类型</span>
-        <input v-model="filters.sceneType" type="text" placeholder="请输入场景类型" />
+        <span>分析场景</span>
+        <input v-model="filters.sceneType" type="text" placeholder="如 异常处置、预警处置、统计分析" />
       </label>
       <label>
         <span>状态</span>
@@ -56,12 +56,12 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>编码</th>
-            <th>名称</th>
-            <th>场景类型</th>
-            <th>版本</th>
+            <th>方案编号</th>
+            <th>方案名称</th>
+            <th>分析场景</th>
+            <th>版本号</th>
             <th>状态</th>
-            <th>更新时间</th>
+            <th>最近更新</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -70,16 +70,20 @@
             <td colspan="7">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="7">暂无提示词模板</td>
+            <td colspan="7">暂无分析方案</td>
           </tr>
           <tr v-for="row in rows" :key="row.id || `${row.code}-${row.version}`">
             <td>{{ row.code || '-' }}</td>
             <td>{{ row.name || '-' }}</td>
-            <td>{{ row.sceneType || '-' }}</td>
+            <td>
+              <span :class="['panel-card__scene-tag', getSceneTagClass(row.sceneType)]">
+                {{ formatSceneType(row.sceneType) }}
+              </span>
+            </td>
             <td>{{ row.version || '-' }}</td>
             <td>
               <span :class="['panel-card__status', row.status === 'ENABLED' ? 'is-active' : 'is-inactive']">
-                {{ row.status === 'ENABLED' ? '启用' : '停用' }}
+                {{ formatPromptStatus(row.status) }}
               </span>
             </td>
             <td>{{ formatDateTime(row.updateTime) }}</td>
@@ -118,28 +122,30 @@
       <div class="panel-card__dialog">
         <div class="panel-card__dialog-head">
           <div>
-            <strong>{{ form.id ? '编辑提示词模板' : '新增提示词模板' }}</strong>
-            <p>模板编码与版本组合需保持唯一。</p>
+            <strong>{{ form.id ? '编辑分析方案' : '新增分析方案' }}</strong>
+            <p>方案编号与版本号组合需保持唯一，便于统一管理与后续追溯。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
 
+        <p class="panel-card__dialog-tip">建议按使用场景统一维护方案名称、版本和适用范围，避免重复建设。</p>
+
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>模板编码</span>
-            <input v-model="form.code" type="text" />
+            <span>方案编号</span>
+            <input v-model="form.code" type="text" placeholder="请输入方案编号" />
           </label>
           <label>
-            <span>模板名称</span>
-            <input v-model="form.name" type="text" />
+            <span>方案名称</span>
+            <input v-model="form.name" type="text" placeholder="请输入方案名称" />
           </label>
           <label>
-            <span>场景类型</span>
-            <input v-model="form.sceneType" type="text" />
+            <span>分析场景</span>
+            <input v-model="form.sceneType" type="text" placeholder="请输入分析场景" />
           </label>
           <label>
-            <span>模板版本</span>
-            <input v-model="form.version" type="text" />
+            <span>版本号</span>
+            <input v-model="form.version" type="text" placeholder="例如 V1.0" />
           </label>
           <label>
             <span>状态</span>
@@ -149,12 +155,12 @@
             </select>
           </label>
           <label class="panel-card__full-width">
-            <span>备注</span>
-            <input v-model="form.remark" type="text" />
+            <span>适用范围</span>
+            <input v-model="form.remark" type="text" placeholder="请输入适用范围说明" />
           </label>
           <label class="panel-card__full-width">
-            <span>模板内容</span>
-            <textarea v-model="form.content" rows="6"></textarea>
+            <span>方案说明</span>
+            <textarea v-model="form.content" rows="6" placeholder="请填写方案用途、适用条件和主要说明"></textarea>
           </label>
           <div class="panel-card__dialog-actions panel-card__full-width">
             <button type="button" @click="dialogVisible = false">取消</button>
@@ -215,6 +221,11 @@ const form = reactive({
 
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize) || 1))
 
+const PROMPT_STATUS_LABELS = {
+  ENABLED: '启用',
+  DISABLED: '停用',
+}
+
 function buildListParams() {
   const params = {
     pageNum: pagination.pageNum,
@@ -255,6 +266,59 @@ function formatDateTime(value) {
   return String(value).replace('T', ' ').slice(0, 19)
 }
 
+function formatPromptStatus(status) {
+  return PROMPT_STATUS_LABELS[String(status || '').toUpperCase()] || '未识别'
+}
+
+function formatSceneType(value) {
+  const normalized = String(value || '').trim()
+
+  if (!normalized) {
+    return '-'
+  }
+
+  const upper = normalized.toUpperCase()
+  if (upper.includes('EXCEPTION')) {
+    return '异常处置'
+  }
+
+  if (upper.includes('WARNING')) {
+    return '预警处置'
+  }
+
+  if (upper.includes('REVIEW')) {
+    return '复核办理'
+  }
+
+  if (upper.includes('STAT')) {
+    return '统计分析'
+  }
+
+  return normalized
+}
+
+function getSceneTagClass(value) {
+  const normalized = String(value || '').toUpperCase()
+
+  if (normalized.includes('EXCEPTION')) {
+    return 'panel-card__scene-tag--danger'
+  }
+
+  if (normalized.includes('WARNING')) {
+    return 'panel-card__scene-tag--warning'
+  }
+
+  if (normalized.includes('REVIEW')) {
+    return 'panel-card__scene-tag--info'
+  }
+
+  if (normalized.includes('STAT')) {
+    return 'panel-card__scene-tag--safe'
+  }
+
+  return 'panel-card__scene-tag--neutral'
+}
+
 async function loadList() {
   loading.value = true
   error.value = ''
@@ -266,7 +330,7 @@ async function loadList() {
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
-    error.value = requestError?.message || '提示词模板列表加载失败'
+    error.value = requestError?.message || '分析方案列表加载失败'
   } finally {
     loading.value = false
   }
@@ -305,7 +369,7 @@ async function handleSubmit() {
   }
 
   if (!form.code.trim() || !form.name.trim() || !form.sceneType.trim() || !form.version.trim() || !form.content.trim()) {
-    error.value = '请完整填写提示词模板信息'
+    error.value = '请完整填写分析方案信息'
     return
   }
 
@@ -326,16 +390,16 @@ async function handleSubmit() {
 
     if (form.id) {
       await updatePromptTemplate(payload)
-      notice.value = '提示词模板更新成功'
+      notice.value = '分析方案更新成功'
     } else {
       await addPromptTemplate(payload)
-      notice.value = '提示词模板新增成功'
+      notice.value = '分析方案新增成功'
     }
 
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '提示词模板保存失败'
+    error.value = requestError?.message || '分析方案保存失败'
   } finally {
     submitting.value = false
   }
@@ -350,10 +414,10 @@ async function handleToggleStatus(row) {
       id: row.id,
       status: nextStatus,
     })
-    notice.value = '提示词模板状态更新成功'
+    notice.value = '分析方案状态更新成功'
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '提示词模板状态更新失败'
+    error.value = requestError?.message || '分析方案状态更新失败'
   }
 }
 
@@ -391,7 +455,7 @@ onMounted(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -401,7 +465,7 @@ onMounted(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -472,7 +536,7 @@ onMounted(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
   color: #ffffff;
 }
 
@@ -532,6 +596,41 @@ onMounted(() => {
   color: #475569;
 }
 
+.panel-card__scene-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-card__scene-tag--danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.panel-card__scene-tag--warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.panel-card__scene-tag--info {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
+}
+
+.panel-card__scene-tag--safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.panel-card__scene-tag--neutral {
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
+}
+
 .panel-card__inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -564,6 +663,15 @@ onMounted(() => {
 .panel-card__icon-btn {
   background: rgba(148, 163, 184, 0.16);
   color: #334155;
+}
+
+.panel-card__dialog-tip {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
+  line-height: 1.7;
 }
 
 .panel-card__dialog-form {

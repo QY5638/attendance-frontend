@@ -3,7 +3,7 @@
     <ConsoleHero
       eyebrow="基础资料"
       title="角色管理"
-      description="维护角色主数据，为登录后默认工作区、菜单可见范围和人员分类提供基础。"
+      description="维护岗位角色资料，用于区分页面访问范围和默认工作区。"
       theme="violet"
       :cards="heroCards"
     />
@@ -12,17 +12,17 @@
       <template #header>
         <div class="crud-page__header">
           <div>
-            <strong>角色管理</strong>
-            <p>仅维护角色资料，不扩展菜单权限配置。</p>
+            <strong>角色资料</strong>
+            <p>维护角色名称、说明和启停状态，保持权限分类清晰一致。</p>
           </div>
           <el-button type="primary" @click="openCreateDialog">新增角色</el-button>
         </div>
       </template>
 
-      <el-form :inline="true" :model="filters" class="crud-page__filters">
-        <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" clearable placeholder="请输入角色编码或名称" />
-        </el-form-item>
+        <el-form :inline="true" :model="filters" class="crud-page__filters">
+          <el-form-item label="关键词">
+            <el-input v-model="filters.keyword" clearable placeholder="请输入角色名称" />
+          </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="filters.status" clearable placeholder="全部状态">
             <el-option label="启用" :value="1" />
@@ -36,7 +36,11 @@
       </el-form>
 
       <el-table v-loading="loading" :data="rows">
-        <el-table-column prop="code" label="角色编码" min-width="140" />
+        <el-table-column label="角色类型" min-width="140">
+          <template #default="{ row }">
+            {{ formatRoleCode(row.code) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="name" label="角色名称" min-width="160" />
         <el-table-column prop="description" label="角色说明" min-width="240" />
         <el-table-column label="状态" width="120">
@@ -67,9 +71,12 @@
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑角色' : '新增角色'" width="560px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="角色编码" prop="code">
-          <el-input v-model="form.code" clearable maxlength="30" />
+        <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
+        <el-form-item label="角色类型" prop="code">
+          <el-select v-model="form.code" placeholder="请选择角色类型">
+            <el-option label="管理员" value="ADMIN" />
+            <el-option label="员工" value="EMPLOYEE" />
+          </el-select>
         </el-form-item>
         <el-form-item label="角色名称" prop="name">
           <el-input v-model="form.name" clearable maxlength="30" />
@@ -107,6 +114,11 @@ const dialogVisible = ref(false)
 const editingId = ref(null)
 const rows = ref([])
 
+const ROLE_CODE_LABELS = {
+  ADMIN: '管理员',
+  EMPLOYEE: '员工',
+}
+
 const filters = reactive({
   keyword: '',
   status: '',
@@ -121,13 +133,13 @@ const pagination = reactive({
 const heroCards = computed(() => [
   {
     key: 'total',
-    label: '当前列表',
+    label: '角色数量',
     value: `${pagination.total} 个角色`,
   },
   {
     key: 'scope',
-    label: '配置范围',
-    value: '编码 / 名称 / 状态',
+    label: '维护范围',
+    value: '角色类型 / 名称 / 状态',
   },
 ])
 
@@ -139,7 +151,7 @@ const form = reactive({
 })
 
 const rules = {
-  code: [{ required: true, message: '请输入角色编码', trigger: 'blur' }],
+  code: [{ required: true, message: '请选择角色类型', trigger: 'change' }],
   name: [{ required: true, message: '请输入角色名称', trigger: 'blur' }],
 }
 
@@ -167,6 +179,10 @@ function buildListParams() {
   }
 
   return params
+}
+
+function formatRoleCode(code) {
+  return ROLE_CODE_LABELS[code] || '其他角色'
 }
 
 async function loadList() {

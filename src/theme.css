@@ -1,26 +1,26 @@
 :root {
-  --console-primary-500: #6366f1;
-  --console-primary-600: #4f46e5;
-  --console-primary-700: #4338ca;
+  --console-primary-500: #3f78bf;
+  --console-primary-600: #2f69b2;
+  --console-primary-700: #245391;
   --console-accent-teal-600: #0f766e;
-  --console-accent-sky-600: #0369a1;
-  --console-accent-violet-600: #7c3aed;
-  --console-text-primary: #0f172a;
+  --console-accent-sky-600: #0f5f94;
+  --console-accent-violet-600: #4b6b9b;
+  --console-text-primary: #1f2937;
   --console-text-secondary: #475569;
   --console-text-muted: #64748b;
   --console-surface: #ffffff;
-  --console-surface-soft: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  --console-border-soft: rgba(148, 163, 184, 0.16);
-  --console-shadow-soft: 0 18px 50px rgba(15, 23, 42, 0.08);
-  --console-shadow-strong: 0 24px 60px rgba(15, 23, 42, 0.16);
-  --console-radius-lg: 20px;
-  --console-radius-xl: 24px;
-  --console-radius-2xl: 28px;
+  --console-surface-soft: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  --console-border-soft: rgba(148, 163, 184, 0.22);
+  --console-shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.06);
+  --console-shadow-strong: 0 16px 40px rgba(15, 23, 42, 0.1);
+  --console-radius-lg: 16px;
+  --console-radius-xl: 20px;
+  --console-radius-2xl: 24px;
 
   --el-color-primary: var(--console-primary-600);
-  --el-color-success: #059669;
-  --el-color-warning: #d97706;
-  --el-color-danger: #dc2626;
+  --el-color-success: #0f766e;
+  --el-color-warning: #b7791f;
+  --el-color-danger: #c2410c;
   --el-border-radius-base: 12px;
 }
 
@@ -34,10 +34,10 @@ body {
   margin: 0;
   color: var(--console-text-primary);
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 28%),
-    radial-gradient(circle at right center, rgba(99, 102, 241, 0.06), transparent 22%),
-    linear-gradient(180deg, #eef4ff 0%, #f8fafc 46%, #eef2ff 100%);
-  font-family: Inter, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    radial-gradient(circle at top left, rgba(47, 105, 178, 0.08), transparent 30%),
+    radial-gradient(circle at right center, rgba(15, 95, 148, 0.06), transparent 24%),
+    linear-gradient(180deg, #f3f6fb 0%, #f7f9fc 56%, #eef3f9 100%);
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
 }
 
 *,
@@ -62,7 +62,7 @@ textarea {
 .console-overview-card {
   padding: 20px;
   border: 1px solid var(--console-border-soft);
-  border-radius: 22px;
+  border-radius: 18px;
   background: var(--console-surface-soft);
   box-shadow: var(--console-shadow-soft);
 }
@@ -74,16 +74,14 @@ textarea {
 }
 
 .console-overview-card > span {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
   color: var(--console-overview-accent, var(--console-primary-600));
 }
 
 .console-overview-card > strong {
   margin: 10px 0 8px;
   color: var(--console-text-primary);
-  font-size: 24px;
+  font-size: 26px;
   line-height: 1.3;
 }
 
@@ -102,41 +100,41 @@ textarea {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
   gap: 18px;
-  padding: 28px;
+  padding: 24px 28px;
   border-radius: var(--console-radius-2xl);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: #f8fafc;
   box-shadow: var(--console-shadow-strong);
 }
 
 .console-hero--indigo {
-  background: linear-gradient(135deg, #111827 0%, #4338ca 100%);
+  background: linear-gradient(135deg, #213555 0%, #2f69b2 100%);
 }
 
 .console-hero--sky {
-  background: linear-gradient(135deg, #0f172a 0%, #0369a1 100%);
+  background: linear-gradient(135deg, #234866 0%, #0f5f94 100%);
 }
 
 .console-hero--violet {
-  background: linear-gradient(135deg, #111827 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #30465f 0%, #4b6b9b 100%);
 }
 
 .console-hero__eyebrow {
   margin: 0 0 10px;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(221, 214, 254, 0.86);
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.9);
 }
 
 .console-hero h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 30px;
+  line-height: 1.3;
 }
 
 .console-hero__desc {
   margin: 12px 0 0;
   line-height: 1.8;
-  color: rgba(226, 232, 240, 0.92);
+  color: rgba(226, 232, 240, 0.88);
 }
 
 .console-hero__aside {
@@ -159,8 +157,9 @@ textarea {
 
 .console-hero__card {
   padding: 18px;
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .console-hero__card span,
@@ -169,13 +168,84 @@ textarea {
 }
 
 .console-hero__card span {
-  font-size: 12px;
-  color: rgba(191, 219, 254, 0.82);
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.82);
 }
 
 .console-hero__card strong {
   margin-top: 10px;
   font-size: 22px;
+}
+
+.el-card {
+  border: 1px solid var(--console-border-soft);
+  border-radius: 18px !important;
+  background: var(--console-surface-soft);
+  box-shadow: var(--console-shadow-soft) !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.el-dialog {
+  border-radius: 20px !important;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  margin-right: 0;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.el-dialog__body {
+  padding-top: 20px;
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.28) inset !important;
+  border-radius: 12px !important;
+  background-color: #ffffff !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px rgba(47, 105, 178, 0.6) inset !important;
+}
+
+.el-button {
+  border-radius: 12px !important;
+  min-height: 40px;
+}
+
+.el-button--primary {
+  box-shadow: 0 8px 18px rgba(47, 105, 178, 0.18);
+}
+
+.el-table {
+  --el-table-border-color: rgba(226, 232, 240, 0.9);
+  --el-table-header-bg-color: #f8fafc;
+  --el-table-tr-bg-color: transparent;
+  --el-table-row-hover-bg-color: rgba(47, 105, 178, 0.04);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.el-table th.el-table__cell {
+  color: #475569;
+  font-weight: 600;
+}
+
+.el-pagination {
+  gap: 6px;
+}
+
+.el-tag {
+  border-radius: 999px;
 }
 
 @media (max-width: 960px) {

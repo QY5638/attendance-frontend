@@ -3,7 +3,7 @@
     <header class="panel-card__header">
       <div>
         <h2>规则配置</h2>
-        <p>维护考勤时间窗、迟到早退阈值和重复打卡限制。</p>
+        <p>维护考勤时段、异常判定阈值和重复打卡间隔。</p>
       </div>
       <button type="button" class="panel-card__primary" @click="openCreateDialog">新增规则</button>
     </header>
@@ -11,11 +11,11 @@
     <section class="panel-card__hero-strip">
       <article>
         <span>配置目标</span>
-        <strong>考勤规则</strong>
+        <strong>考勤制度</strong>
       </article>
       <article>
-        <span>关键字段</span>
-        <strong>时间窗 / 阈值 / 重复限制</strong>
+        <span>维护要点</span>
+        <strong>时段 / 阈值 / 重复间隔</strong>
       </article>
     </section>
 
@@ -50,7 +50,7 @@
             <th>下班时间</th>
             <th>迟到阈值</th>
             <th>早退阈值</th>
-            <th>重复限制</th>
+            <th>重复间隔</th>
             <th>状态</th>
             <th>操作</th>
           </tr>
@@ -66,9 +66,9 @@
             <td>{{ row.name || '-' }}</td>
             <td>{{ row.startTime || '-' }}</td>
             <td>{{ row.endTime || '-' }}</td>
-            <td>{{ row.lateThreshold ?? '-' }}</td>
-            <td>{{ row.earlyThreshold ?? '-' }}</td>
-            <td>{{ row.repeatLimit ?? '-' }}</td>
+            <td>{{ row.lateThreshold ?? '-' }} 分钟</td>
+            <td>{{ row.earlyThreshold ?? '-' }} 分钟</td>
+            <td>{{ row.repeatLimit ?? '-' }} 分钟</td>
             <td>
               <span :class="['panel-card__status', row.status === 1 ? 'is-active' : 'is-inactive']">
                 {{ row.status === 1 ? '启用' : '停用' }}
@@ -100,7 +100,7 @@
         <div class="panel-card__dialog-head">
           <div>
             <strong>{{ editingId ? '编辑规则' : '新增规则' }}</strong>
-            <p>请根据企业考勤制度维护时间窗、阈值和重复打卡限制。</p>
+            <p>请根据企业管理制度维护上下班时间和异常判定标准。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
@@ -134,7 +134,7 @@
             <input v-model.number="form.earlyThreshold" type="number" min="0" />
           </label>
           <label>
-            <span>重复限制（分钟）</span>
+            <span>重复间隔（分钟）</span>
             <input v-model.number="form.repeatLimit" type="number" min="0" />
           </label>
           <div class="panel-card__dialog-actions panel-card__full-width">
@@ -345,7 +345,7 @@ onMounted(() => {
 .panel-card__hero-strip article {
   padding: 16px 18px;
   border-radius: 18px;
-  background: rgba(79, 70, 229, 0.08);
+  background: rgba(47, 105, 178, 0.08);
 }
 
 .panel-card__hero-strip span,
@@ -355,7 +355,7 @@ onMounted(() => {
 
 .panel-card__hero-strip span {
   font-size: 12px;
-  color: #6366f1;
+  color: #2f69b2;
 }
 
 .panel-card__hero-strip strong {
@@ -437,7 +437,7 @@ onMounted(() => {
 }
 
 .panel-card__primary {
-  background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%) !important;
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%) !important;
   color: #ffffff !important;
 }
 
