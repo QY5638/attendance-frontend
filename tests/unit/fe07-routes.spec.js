@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { protectedChildRoutes } from '../../src/router/routes'
-import ReviewView from '../../src/views/review/ReviewView.vue'
 
 describe('fe-07 routes', () => {
   it('maps review route to ReviewView', () => {
     const reviewRoute = protectedChildRoutes.find((item) => item.name === 'review')
 
-    expect(reviewRoute?.component).toBe(ReviewView)
+    expect(reviewRoute?.path).toBe('review')
+    expect(typeof reviewRoute?.component).toBe('function')
+    expect(reviewRoute?.meta?.title).toBe('人工复核')
   })
 
   it('keeps FE-07 route metadata aligned with the frozen contract', () => {

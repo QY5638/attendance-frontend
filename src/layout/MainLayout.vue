@@ -43,7 +43,7 @@
       </div>
     </el-aside>
 
-    <el-container>
+    <el-container class="layout-content-shell">
       <el-header class="layout-header">
         <div class="layout-header__intro">
           <div class="layout-header__eyebrow">{{ currentSection }}</div>
@@ -62,7 +62,9 @@
       </el-header>
 
       <el-main class="layout-main">
-        <router-view />
+        <div class="layout-main__viewport">
+          <router-view />
+        </div>
       </el-main>
     </el-container>
   </el-container>
@@ -144,7 +146,8 @@ function handleLogout() {
 
 <style scoped>
 .layout-shell {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(47, 105, 178, 0.1), transparent 30%),
     radial-gradient(circle at right center, rgba(15, 95, 148, 0.08), transparent 26%),
@@ -153,10 +156,18 @@ function handleLogout() {
 
 .layout-sidebar {
   display: flex;
+  height: 100vh;
   flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid rgba(15, 23, 42, 0.08);
   background: linear-gradient(180deg, #18304d 0%, #233f61 100%);
   color: #e2e8f0;
+}
+
+.layout-content-shell {
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .layout-brand {
@@ -275,6 +286,7 @@ function handleLogout() {
 
 .layout-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -341,7 +353,15 @@ function handleLogout() {
 }
 
 .layout-main {
+  min-height: 0;
+  overflow: hidden;
   padding: 24px;
+}
+
+.layout-main__viewport {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
 }
 
 @media (max-width: 960px) {

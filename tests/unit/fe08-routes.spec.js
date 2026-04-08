@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import SystemView from '../../src/views/system/SystemView.vue'
 import { protectedChildRoutes } from '../../src/router/routes'
 
 describe('fe-08 routes', () => {
@@ -13,7 +12,7 @@ describe('fe-08 routes', () => {
     expect(systemRoute?.path).toBe('system')
     expect(systemRoute?.meta?.roles).toEqual(['ADMIN'])
     expect(systemRoute?.meta?.moduleCode).toBe('FE-08')
-    expect(systemRoute?.component).toBe(SystemView)
+    expect(typeof systemRoute?.component).toBe('function')
     expect(fe08Paths).toEqual(['system'])
   })
 })

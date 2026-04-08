@@ -41,7 +41,6 @@
       <section data-testid="dashboard-overview" class="dashboard-section">
         <div class="dashboard-section__head">
           <h3>{{ isAdmin ? '统计概览' : '个人概览' }}</h3>
-          <span>{{ authStore.realName || '当前用户' }}</span>
         </div>
 
         <div class="dashboard-metric-grid">
@@ -193,9 +192,15 @@ const spotlightCards = computed(() => {
 })
 
 const METRIC_LABELS = {
+  realName: '姓名',
+  recordCount: '记录总数',
   attendanceCount: '出勤次数',
   normalCount: '正常次数',
   exceptionCount: '异常次数',
+  analysisCount: '分析次数',
+  warningCount: '预警次数',
+  reviewCount: '复核次数',
+  closedLoopCount: '闭环次数',
   attendanceRate: '出勤率',
   exceptionRate: '异常率',
   lateCount: '迟到次数',
@@ -213,7 +218,7 @@ function formatMetricValue(key, value) {
 function buildMetricCards(payload = {}, limit = 4) {
   return Object.entries(payload)
     .filter(([, value]) => ['string', 'number'].includes(typeof value))
-    .filter(([key]) => !['userId', 'deptId', 'deptName'].includes(key))
+    .filter(([key]) => !['userId', 'deptId', 'deptName', 'realName'].includes(key))
     .slice(0, limit)
     .map(([key, value]) => ({
       key,

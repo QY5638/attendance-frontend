@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
+  authStoreRef,
+  getAttendanceListRequest,
   getAttendanceDeviceOptionsRequest,
   loadAmapSdk,
   getMyAttendanceRecordRequest,
@@ -9,6 +11,13 @@ const {
   submitAttendanceRepairRequest,
   verifyFaceRequest,
 } = vi.hoisted(() => ({
+  authStoreRef: {
+    current: {
+      roleCode: 'EMPLOYEE',
+      realName: '张三',
+    },
+  },
+  getAttendanceListRequest: vi.fn(),
   getAttendanceDeviceOptionsRequest: vi.fn(),
   loadAmapSdk: vi.fn(),
   getMyAttendanceRecordRequest: vi.fn(),
@@ -17,7 +26,12 @@ const {
   verifyFaceRequest: vi.fn(),
 }))
 
+vi.mock('../../src/store/auth', () => ({
+  useAuthStore: () => authStoreRef.current,
+}))
+
 vi.mock('../../src/api/attendance', () => ({
+  getAttendanceListRequest,
   getAttendanceDeviceOptionsRequest,
   getMyAttendanceRecordRequest,
   submitAttendanceCheckinRequest,
@@ -74,8 +88,16 @@ function createRecordResponse(records = [], total = records.length) {
   }
 }
 
+async function setFaceImage(wrapper, imageData = 'base64-image') {
+  wrapper.vm.checkinForm.imageData = imageData
+  await wrapper.vm.$nextTick()
+}
+
 describe('attendance view', () => {
   beforeEach(() => {
+    authStoreRef.current = { roleCode: 'EMPLOYEE', realName: '张三' }
+    getAttendanceListRequest.mockReset()
+    getAttendanceListRequest.mockResolvedValue(createRecordResponse())
     getAttendanceDeviceOptionsRequest.mockReset()
     getAttendanceDeviceOptionsRequest.mockResolvedValue(createApiResponse([]))
     loadAmapSdk.mockReset()
@@ -97,6 +119,42 @@ describe('attendance view', () => {
     submitAttendanceRepairRequest.mockResolvedValue(createApiResponse(null))
     verifyFaceRequest.mockReset()
     verifyFaceRequest.mockResolvedValue(createApiResponse({ matched: true }))
+  })
+
+  it('loads admin attendance records with management filters and hides checkin tab', async () => {
+    authStoreRef.current = { roleCode: 'ADMIN', realName: '管理员' }
+    getAttendanceListRequest.mockResolvedValueOnce(createRecordResponse([
+      {
+        id: 1,
+        userId: 1001,
+        realName: '张三',
+        checkType: 'IN',
+        checkTime: '2026-04-04T09:00:00',
+        deviceId: 'DEV-001',
+        location: '办公区A',
+        status: 'NORMAL',
+        exceptionType: 'MULTI_LOCATION_CONFLICT',
+      },
+    ], 1))
+
+    const wrapper = mount(AttendanceView)
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="attendance-tab-checkin"]').exists()).toBe(false)
+    expect(getAttendanceDeviceOptionsRequest).not.toHaveBeenCalled()
+    expect(getAttendanceListRequest).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+      userId: undefined,
+      deptId: undefined,
+      checkType: '',
+      status: '',
+      startDate: '',
+      endDate: '',
+    })
+    expect(wrapper.text()).toContain('张三')
+    expect(wrapper.text()).toContain('DEV-001')
+    expect(wrapper.text()).toContain('办公区A')
   })
 
   it('renders dual tabs, defaults to checkin and loads devices with records in parallel on mount', async () => {
@@ -147,7 +205,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
-    await wrapper.get('[data-testid="attendance-image-input"]').setValue('base64-image')
+    await setFaceImage(wrapper)
 
     expect(wrapper.get('[data-testid="attendance-device-select"]').text()).toContain('前台设备')
     expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('一楼前台')
@@ -203,7 +261,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
-    await wrapper.get('[data-testid="attendance-image-input"]').setValue('base64-image')
+    await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 
@@ -231,7 +289,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
-    await wrapper.get('[data-testid="attendance-image-input"]').setValue('base64-image')
+    await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 
@@ -247,7 +305,7 @@ describe('attendance view', () => {
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="attendance-image-input"]').setValue('base64-image')
+    await setFaceImage(wrapper)
 
     expect(wrapper.get('[data-testid="attendance-device-blocking-error"]').text()).toContain(
       '设备选项加载失败，请稍后重试',
@@ -267,7 +325,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="attendance-device-blocking-error"]').text()).toContain(
-      '暂无可用考勤设备，自助打卡暂不可用',
+      '暂无可用考勤设备，当前暂不可办理打卡',
     )
     expect(wrapper.get('[data-testid="attendance-device-select"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="attendance-checkin-submit"]').attributes('disabled')).toBeDefined()
@@ -473,7 +531,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
-    await wrapper.get('[data-testid="attendance-image-input"]').setValue('base64-image')
+    await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 

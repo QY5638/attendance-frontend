@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import AttendanceView from '../../src/views/attendance/AttendanceView.vue'
 import { getMenuGroups, protectedChildRoutes } from '../../src/router/routes'
 
 describe('menu routes', () => {
@@ -27,7 +26,8 @@ describe('menu routes', () => {
   it('uses AttendanceView for attendance route', () => {
     const attendanceRoute = protectedChildRoutes.find((route) => route.path === 'attendance')
 
-    expect(attendanceRoute?.component).toBe(AttendanceView)
+    expect(attendanceRoute?.name).toBe('attendance')
+    expect(typeof attendanceRoute?.component).toBe('function')
   })
 
   it('keeps attendance route metadata aligned with FE-05 contract', () => {

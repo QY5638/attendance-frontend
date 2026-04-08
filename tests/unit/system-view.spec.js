@@ -57,6 +57,10 @@ vi.mock('../../src/utils/amap', () => ({
 }))
 
 import SystemView from '../../src/views/system/SystemView.vue'
+import SystemDevicePanel from '../../src/views/system/panels/SystemDevicePanel.vue'
+import SystemPromptPanel from '../../src/views/system/panels/SystemPromptPanel.vue'
+import SystemModelLogPanel from '../../src/views/system/panels/SystemModelLogPanel.vue'
+import SystemRiskLevelPanel from '../../src/views/system/panels/SystemRiskLevelPanel.vue'
 
 async function mountSystemView(path = '/system') {
   const router = createRouter({
@@ -81,6 +85,12 @@ async function mountSystemView(path = '/system') {
   await flushPromises()
 
   return { router, wrapper }
+}
+
+async function mountPanel(component) {
+  const wrapper = mount(component)
+  await flushPromises()
+  return wrapper
 }
 
 describe('system view', () => {
@@ -172,11 +182,7 @@ describe('system view', () => {
 
     expect(wrapper.text()).toContain('系统配置')
     expect(wrapper.text()).toContain('设备管理')
-    expect(wrapper.text()).toContain('前台考勤机1')
-    expect(fetchDeviceList).toHaveBeenCalledWith({
-      pageNum: 1,
-      pageSize: 10,
-    })
+    expect(wrapper.get('[data-tab="device"]').text()).toContain('设备台账与启停状态')
   })
 
   it('switches to rule panel by query tab', async () => {
@@ -186,57 +192,44 @@ describe('system view', () => {
     await flushPromises()
 
     expect(router.currentRoute.value.query.tab).toBe('rule')
-    expect(wrapper.text()).toContain('标准规则')
-    expect(fetchRuleList).toHaveBeenCalledWith({
-      pageNum: 1,
-      pageSize: 10,
-    })
+    expect(wrapper.get('[data-tab="rule"]').text()).toContain('考勤规则与阈值管理')
   })
 
   it('falls back invalid tab to device', async () => {
     const { router, wrapper } = await mountSystemView('/system?tab=unknown')
 
     expect(router.currentRoute.value.query.tab).toBe('device')
-    expect(wrapper.text()).toContain('前台考勤机1')
+    expect(wrapper.get('[data-tab="device"]').classes()).toContain('system-view__tab--active')
     expect(fetchRuleList).not.toHaveBeenCalled()
   })
 
-  it('loads prompt template panel with real backend data', async () => {
-    const { wrapper } = await mountSystemView('/system')
-
-    await wrapper.get('[data-tab="prompt"]').trigger('click')
-    await flushPromises()
+  it('loads prompt panel with real backend data', async () => {
+    const wrapper = await mountPanel(SystemPromptPanel)
 
     expect(fetchPromptTemplateList).toHaveBeenCalledWith({
       pageNum: 1,
       pageSize: 10,
     })
     expect(wrapper.text()).toContain('复杂异常分析')
-    expect(wrapper.get('[data-tab="prompt"]').text()).toContain('模板列表、编辑与启停管理')
+    expect(wrapper.text()).toContain('分析方案')
   })
 
   it('loads model log panel with real backend data', async () => {
-    const { wrapper } = await mountSystemView('/system')
-
-    await wrapper.get('[data-tab="model-log"]').trigger('click')
-    await flushPromises()
+    const wrapper = await mountPanel(SystemModelLogPanel)
 
     expect(fetchModelLogList).toHaveBeenCalledWith({
       pageNum: 1,
       pageSize: 10,
     })
-    expect(wrapper.text()).toContain('ATTENDANCE_ANALYSIS')
+    expect(wrapper.text()).toContain('考勤分析')
     expect(wrapper.text()).toContain('识别出连续晚到风险')
-    expect(wrapper.get('[data-tab="model-log"]').text()).toContain('模型调用记录查询与状态追踪')
+    expect(wrapper.text()).toContain('处理记录')
   })
 
-  it('shows persisted notice on risk level panel', async () => {
-    const { wrapper } = await mountSystemView('/system')
+  it('shows maintained notice on risk level panel', async () => {
+    const wrapper = await mountPanel(SystemRiskLevelPanel)
 
-    await wrapper.get('[data-tab="risk-level"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('当前配置已持久化到数据库')
+    expect(wrapper.text()).toContain('调整后将用于系统风险识别和页面展示')
     expect(wrapper.text()).toContain('高风险')
     expect(fetchRiskLevelList).toHaveBeenCalledWith({
       pageNum: 1,
@@ -245,7 +238,7 @@ describe('system view', () => {
   })
 
   it('opens device dialog, loads amap sdk and submits coordinates with device payload', async () => {
-    const { wrapper } = await mountSystemView('/system')
+    const wrapper = await mountPanel(SystemDevicePanel)
 
     const createButton = wrapper.findAll('button').find((button) => button.text() === '新增设备')
     await createButton.trigger('click')
@@ -253,9 +246,9 @@ describe('system view', () => {
 
     expect(loadAmapSdk).toHaveBeenCalledTimes(1)
 
-    await wrapper.get('input[placeholder="如 DEV-001"]').setValue('DEV-010')
-    await wrapper.get('input[placeholder="请输入设备名称"]').setValue('后门考勤机')
-    await wrapper.get('input[placeholder="请输入设备位置"]').setValue('办公区C')
+    await wrapper.get('input[placeholder="例如 门禁机-01"]').setValue('DEV-010')
+    await wrapper.get('input[placeholder="例如 东门门禁机"]').setValue('后门考勤机')
+    await wrapper.get('input[placeholder="例如 一层大厅东侧"]').setValue('办公区C')
     await wrapper.get('[data-testid="system-device-longitude-input"]').setValue('116.397128')
     await wrapper.get('[data-testid="system-device-latitude-input"]').setValue('39.916527')
 

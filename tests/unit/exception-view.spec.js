@@ -138,8 +138,8 @@ describe('exception view', () => {
       userId: '',
     })
     expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('3001')
-    expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('PROXY_CHECKIN')
-    expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('PENDING')
+    expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('代打卡')
+    expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('待处理')
   })
 
   it('submits filters and refreshes the list with caller input', async () => {
@@ -280,16 +280,11 @@ describe('exception view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="exception-list"]').text()
-    const filterText = wrapper.get('[data-testid="exception-filter-type"]').text()
-    expect(listText).toContain('PROXY_CHECKIN · 代打卡')
-    expect(listText).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
-    expect(filterText).toContain('MULTI_LOCATION_CONFLICT')
-    expect(listText).toContain('HIGH · 高风险')
-    expect(listText).toContain('PENDING · 待处理')
-    expect(listText).toContain('CUSTOM_TYPE')
-    expect(listText).toContain('UNKNOWN_LEVEL')
-    expect(listText).toContain('CUSTOM_SOURCE')
-    expect(listText).toContain('CUSTOM_STATUS')
+    expect(listText).toContain('代打卡')
+    expect(listText).toContain('多地点异常')
+    expect(listText).toContain('高风险')
+    expect(listText).toContain('待处理')
+    expect(listText).toContain('未识别')
   })
 
   it('keeps the latest detail selection when older slower detail requests resolve later', async () => {
