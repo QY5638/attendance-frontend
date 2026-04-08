@@ -2,7 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
+import { useAuthStore } from '../../store/auth'
 import {
+  getAttendanceListRequest,
   getAttendanceDeviceOptionsRequest,
   getMyAttendanceRecordRequest,
   submitAttendanceCheckinRequest,
@@ -11,7 +13,10 @@ import {
 } from '../../api/attendance'
 import { loadAmapSdk } from '../../utils/amap'
 
-const activeTab = ref('checkin')
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
+
+const activeTab = ref(isAdmin.value ? 'records' : 'checkin')
 const deviceOptions = ref([])
 const deviceOptionsError = ref('')
 const checkinError = ref('')
@@ -46,6 +51,10 @@ const checkinForm = reactive({
 const recordQuery = reactive({
   pageNum: 1,
   pageSize: 10,
+  userId: '',
+  deptId: '',
+  checkType: '',
+  status: '',
   startDate: '',
   endDate: '',
 })
@@ -151,23 +160,45 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(recordTotal.value / recordQuery.pageSize) || 1)
 })
 
-const heroCards = computed(() => [
-  {
-    key: 'tab',
-    label: '当前功能',
-    value: activeTab.value === 'checkin' ? '打卡办理' : '记录查询',
-  },
-  {
-    key: 'device',
-    label: '当前设备',
-    value: selectedDevice.value ? (selectedDevice.value.name || selectedDevice.value.id) : '未选择',
-  },
-  {
-    key: 'image',
-    label: '采集状态',
-    value: checkinForm.imageData ? '已准备' : '待采集',
-  },
-])
+const heroCards = computed(() => {
+  if (isAdmin.value) {
+    return [
+      {
+        key: 'mode',
+        label: '当前模式',
+        value: '记录管理',
+      },
+      {
+        key: 'scope',
+        label: '查询范围',
+        value: '全员记录',
+      },
+      {
+        key: 'total',
+        label: '当前结果',
+        value: `${recordTotal.value} 条`,
+      },
+    ]
+  }
+
+  return [
+    {
+      key: 'tab',
+      label: '当前功能',
+      value: activeTab.value === 'checkin' ? '打卡办理' : '记录查询',
+    },
+    {
+      key: 'device',
+      label: '当前设备',
+      value: selectedDevice.value ? (selectedDevice.value.name || selectedDevice.value.id) : '未选择',
+    },
+    {
+      key: 'image',
+      label: '采集状态',
+      value: checkinForm.imageData ? '已准备' : '待采集',
+    },
+  ]
+})
 
 const CHECK_TYPE_LABELS = {
   IN: '上班打卡',
@@ -194,6 +225,19 @@ const EXCEPTION_TYPE_LABELS = {
 }
 
 function buildRecordQuery() {
+  if (isAdmin.value) {
+    return {
+      pageNum: recordQuery.pageNum,
+      pageSize: recordQuery.pageSize,
+      userId: recordQuery.userId ? Number(recordQuery.userId) : undefined,
+      deptId: recordQuery.deptId ? Number(recordQuery.deptId) : undefined,
+      checkType: recordQuery.checkType,
+      status: recordQuery.status,
+      startDate: recordQuery.startDate,
+      endDate: recordQuery.endDate,
+    }
+  }
+
   return {
     pageNum: recordQuery.pageNum,
     pageSize: recordQuery.pageSize,
@@ -413,7 +457,9 @@ async function loadRecords() {
   recordError.value = ''
 
   try {
-    const response = await getMyAttendanceRecordRequest(buildRecordQuery())
+    const response = await (isAdmin.value
+      ? getAttendanceListRequest(buildRecordQuery())
+      : getMyAttendanceRecordRequest(buildRecordQuery()))
     const normalized = readRecordPage(response)
 
     if (requestId !== latestRecordRequestId) {
@@ -464,6 +510,14 @@ function formatExceptionType(exceptionType) {
 
 function formatCheckType(checkType) {
   return CHECK_TYPE_LABELS[checkType] || '其他类型'
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return '--'
+  }
+
+  return String(value).replace('T', ' ')
 }
 
 function formatRecordStatus(status) {
@@ -555,6 +609,11 @@ async function handleSubmitRepair() {
 }
 
 onMounted(() => {
+  if (isAdmin.value) {
+    void loadRecords()
+    return
+  }
+
   void Promise.allSettled([loadDeviceOptions(), loadRecords()])
 })
 
@@ -583,13 +642,14 @@ onBeforeUnmount(() => {
     <ConsoleHero
       eyebrow="考勤业务"
       title="考勤记录"
-      description="完成打卡、补卡申请和个人记录查询，相关办理集中在当前页面完成。"
+      :description="isAdmin ? '支持按人员、部门和时间范围查询考勤记录，便于统一核查。' : '完成打卡、补卡申请和个人记录查询，相关办理集中在当前页面完成。'"
       theme="indigo"
       :cards="heroCards"
     />
 
     <div class="attendance-tabs" role="tablist" aria-label="考勤页面切换">
       <button
+        v-if="!isAdmin"
         data-testid="attendance-tab-checkin"
         type="button"
         role="tab"
@@ -605,11 +665,11 @@ onBeforeUnmount(() => {
         :aria-pressed="String(activeTab === 'records')"
         @click="activeTab = 'records'"
       >
-        记录
+        {{ isAdmin ? '记录管理' : '记录' }}
       </button>
     </div>
 
-    <section v-if="activeTab === 'checkin'" data-testid="attendance-checkin-panel" class="attendance-panel">
+    <section v-if="!isAdmin && activeTab === 'checkin'" data-testid="attendance-checkin-panel" class="attendance-panel">
       <section class="attendance-card attendance-card--soft">
         <div class="attendance-card__head">
           <div>
@@ -797,12 +857,45 @@ onBeforeUnmount(() => {
         <div class="attendance-card__head">
           <div>
             <p class="attendance-card__eyebrow">记录查询</p>
-            <h2>查询个人考勤记录</h2>
+            <h2>{{ isAdmin ? '查询人员考勤记录' : '查询个人考勤记录' }}</h2>
           </div>
-          <span class="attendance-card__badge">支持补卡</span>
+          <span class="attendance-card__badge">{{ isAdmin ? '支持筛选' : '支持补卡' }}</span>
         </div>
 
         <div class="attendance-record-filters">
+          <label v-if="isAdmin" class="attendance-field">
+            <span>人员编号</span>
+            <input v-model="recordQuery.userId" data-testid="attendance-record-user-id-input" type="number" min="1" />
+          </label>
+
+          <label v-if="isAdmin" class="attendance-field">
+            <span>部门编号</span>
+            <input v-model="recordQuery.deptId" data-testid="attendance-record-dept-id-input" type="number" min="1" />
+          </label>
+
+          <label v-if="isAdmin" class="attendance-field">
+            <span>打卡类型</span>
+            <select v-model="recordQuery.checkType" data-testid="attendance-record-check-type-select">
+              <option value="">全部</option>
+              <option value="IN">上班打卡</option>
+              <option value="OUT">下班打卡</option>
+            </select>
+          </label>
+
+          <label v-if="isAdmin" class="attendance-field">
+            <span>处理状态</span>
+            <select v-model="recordQuery.status" data-testid="attendance-record-status-select">
+              <option value="">全部</option>
+              <option value="NORMAL">正常</option>
+              <option value="EXCEPTION">异常</option>
+              <option value="REPAIRED">已补卡</option>
+              <option value="REPAIR_PENDING">补卡处理中</option>
+              <option value="ABSENT">缺勤</option>
+              <option value="LATE">迟到</option>
+              <option value="EARLY_LEAVE">早退</option>
+            </select>
+          </label>
+
           <label class="attendance-field">
             <span>开始日期</span>
             <input v-model="recordQuery.startDate" data-testid="attendance-start-date-input" type="date" />
@@ -856,23 +949,31 @@ onBeforeUnmount(() => {
         <table class="attendance-record-table">
         <thead>
           <tr>
+            <th v-if="isAdmin">姓名</th>
+            <th v-if="isAdmin">人员编号</th>
             <th>打卡类型</th>
             <th>时间</th>
+            <th v-if="isAdmin">设备标识</th>
+            <th v-if="isAdmin">设备位置</th>
             <th>状态</th>
             <th>异常识别</th>
-            <th>操作</th>
+            <th v-if="!isAdmin">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="!recordError && !recordsLoading && recordList.length === 0">
-            <td data-testid="attendance-record-empty" colspan="5">暂无记录</td>
+            <td data-testid="attendance-record-empty" :colspan="isAdmin ? 8 : 5">暂无记录</td>
           </tr>
           <tr v-for="record in recordList" :key="record.id">
+            <td v-if="isAdmin">{{ record.realName || '--' }}</td>
+            <td v-if="isAdmin">{{ record.userId ?? '--' }}</td>
             <td>{{ formatCheckType(record.checkType) }}</td>
-            <td>{{ record.checkTime }}</td>
+            <td>{{ formatDateTime(record.checkTime) }}</td>
+            <td v-if="isAdmin">{{ record.deviceId || '--' }}</td>
+            <td v-if="isAdmin">{{ record.location || '--' }}</td>
             <td>{{ formatRecordStatus(record.status) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
-            <td>
+            <td v-if="!isAdmin">
               <button
                 :data-testid="`attendance-repair-open-${record.id}`"
                 type="button"

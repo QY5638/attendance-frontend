@@ -109,7 +109,7 @@
 </template>
 
 <script setup>
-import { ElMessage } from 'element-plus/es/components/message/index.mjs'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'

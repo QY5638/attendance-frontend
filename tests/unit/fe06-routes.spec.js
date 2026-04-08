@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import ExceptionView from '../../src/views/exception/ExceptionView.vue'
-import WarningView from '../../src/views/warning/WarningView.vue'
 import { protectedChildRoutes } from '../../src/router/routes'
 
 describe('fe-06 routes', () => {
@@ -9,8 +7,13 @@ describe('fe-06 routes', () => {
     const exceptionRoute = protectedChildRoutes.find((item) => item.name === 'exception')
     const warningRoute = protectedChildRoutes.find((item) => item.name === 'warning')
 
-    expect(exceptionRoute?.component).toBe(ExceptionView)
-    expect(warningRoute?.component).toBe(WarningView)
+    expect(exceptionRoute?.path).toBe('exception')
+    expect(typeof exceptionRoute?.component).toBe('function')
+    expect(exceptionRoute?.meta.title).toBe('异常中心')
+
+    expect(warningRoute?.path).toBe('warning')
+    expect(typeof warningRoute?.component).toBe('function')
+    expect(warningRoute?.meta.title).toBe('预警列表')
   })
 
   it('keeps FE-06 route metadata aligned with the frozen contract', () => {

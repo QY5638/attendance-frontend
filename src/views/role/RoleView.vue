@@ -101,8 +101,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus/es/components/message/index.mjs'
-import { ElMessageBox } from 'element-plus/es/components/message-box/index.mjs'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { addRole, deleteRole, fetchRoleList, updateRole } from '../../api/role'

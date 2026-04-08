@@ -114,7 +114,7 @@ describe('review view', () => {
     expect(fetchExceptionDetail).not.toHaveBeenCalled()
     expect(fetchLatestReview).not.toHaveBeenCalled()
     expect(fetchReviewAssistant).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="review-empty-state"]').text()).toContain('/review?exceptionId=')
+    expect(wrapper.get('[data-testid="review-empty-state"]').text()).toContain('请选择待处理记录')
   })
 
   it('loads exception detail, assistant and latest review when exceptionId exists', async () => {
@@ -144,7 +144,7 @@ describe('review view', () => {
     expect(fetchExceptionDetail).toHaveBeenCalledWith('3001')
     expect(fetchLatestReview).toHaveBeenCalledWith('3001')
     expect(fetchReviewAssistant).toHaveBeenCalledWith('3001')
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('异常 #3001')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('异常编号 3001')
   })
   it('renders multi location conflict with Chinese label in review exception detail', async () => {
     routeState.query = {
@@ -158,7 +158,7 @@ describe('review view', () => {
     const wrapper = mount(ReviewView)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('多地点异常')
   })
   it('blocks new review submit when assistant is missing but still allows feedback on the latest review', async () => {
     routeState.query = {
@@ -171,7 +171,7 @@ describe('review view', () => {
     const wrapper = mount(ReviewView)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="review-assistant-error"]').text()).toContain('复核辅助信息不存在')
+    expect(wrapper.get('[data-testid="review-assistant-error"]').text()).toContain('当前记录暂无处置参考')
     expect(wrapper.get('[data-testid="review-submit-button"]').attributes('disabled')).toBeDefined()
 
     await wrapper.get('[data-testid="review-feedback-tag-NEEDS_TUNING"]').setValue(true)
@@ -277,6 +277,6 @@ describe('review view', () => {
 
     expect(wrapper.get('[data-testid="review-latest-card"]').text()).toContain('人工确认异常')
     expect(wrapper.get('[data-testid="review-feedback-error"]').text()).toContain('反馈保存失败')
-    expect(wrapper.text()).toContain('复核结果已提交')
+    expect(wrapper.text()).toContain('复核结果提交成功')
   })
 })

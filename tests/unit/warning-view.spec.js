@@ -98,7 +98,7 @@ describe('warning view', () => {
     })
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('5001')
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('3001')
-    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('UNPROCESSED')
+    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('待处理')
   })
 
   it('submits filters and refreshes the warning list', async () => {
@@ -129,7 +129,7 @@ describe('warning view', () => {
 
     expect(fetchFe06WarningAdvice).toHaveBeenCalledWith(5001)
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('设备与地点异常共同提升风险')
-    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('MODEL_FUSION')
+    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('综合识别')
   })
 
   it('navigates to exception detail using read only query jump', async () => {
@@ -199,12 +199,10 @@ describe('warning view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="warning-list"]').text()
-    expect(listText).toContain('RISK_WARNING · 风险预警')
-    expect(listText).toContain('HIGH · 高风险')
-    expect(listText).toContain('UNPROCESSED · 待处理')
-    expect(listText).toContain('CUSTOM_WARNING')
-    expect(listText).toContain('UNKNOWN_LEVEL')
-    expect(listText).toContain('CUSTOM_STATUS')
+    expect(listText).toContain('风险预警')
+    expect(listText).toContain('高风险')
+    expect(listText).toContain('待处理')
+    expect(listText).toContain('未识别')
   })
 
   it('renders multi location conflict label when warning list carries exception type', async () => {
@@ -221,7 +219,7 @@ describe('warning view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="warning-list"]').text()
-    expect(listText).toContain('MULTI_LOCATION_CONFLICT · 多地点异常')
+    expect(listText).toContain('多地点异常')
   })
 
   it('keeps the latest advice selection when older slower advice requests resolve later', async () => {

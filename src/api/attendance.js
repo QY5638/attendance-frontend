@@ -47,6 +47,41 @@ function createAttendanceRecordParams(payload = {}) {
   return params
 }
 
+function createAttendanceListParams(payload = {}) {
+  const { pageNum, pageSize, userId, deptId, checkType, status, startDate, endDate } = payload
+
+  const params = {
+    pageNum,
+    pageSize,
+  }
+
+  if (userId !== '' && userId !== null && userId !== undefined) {
+    params.userId = userId
+  }
+
+  if (deptId !== '' && deptId !== null && deptId !== undefined) {
+    params.deptId = deptId
+  }
+
+  if (checkType) {
+    params.checkType = checkType
+  }
+
+  if (status) {
+    params.status = status
+  }
+
+  if (startDate) {
+    params.startDate = startDate
+  }
+
+  if (endDate) {
+    params.endDate = endDate
+  }
+
+  return params
+}
+
 export function getAttendanceDeviceOptionsRequest() {
   return request.get('/attendance/device-options')
 }
@@ -58,6 +93,12 @@ export function submitAttendanceCheckinRequest(payload) {
 export function getMyAttendanceRecordRequest(payload) {
   return request.get('/attendance/record/me', {
     params: createAttendanceRecordParams(payload),
+  })
+}
+
+export function getAttendanceListRequest(payload) {
+  return request.get('/attendance/list', {
+    params: createAttendanceListParams(payload),
   })
 }
 

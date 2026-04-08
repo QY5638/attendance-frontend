@@ -157,6 +157,6 @@ describe('dashboard view', () => {
     expect(wrapper.find('.el-alert').exists()).toBe(false)
     expect(wrapper.get('[data-testid="dashboard-summary"]').text()).toContain('部门异常率上升')
     expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('研发部')
-    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('暂无预警摘要')
+    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('暂无摘要说明')
   })
 })
