@@ -24,6 +24,12 @@ const repairDialogVisible = ref(false)
 const repairError = ref('')
 const faceVerifyLoading = ref(false)
 const faceVerifyResult = ref('')
+const faceInputSource = ref('camera')
+const faceCameraStarting = ref(false)
+const faceCameraError = ref('')
+const faceUploadError = ref('')
+const faceVideoRef = ref(null)
+const faceStreamRef = ref(null)
 const deviceMapContainer = ref(null)
 const deviceMapError = ref('')
 let latestRecordRequestId = 0
@@ -110,6 +116,8 @@ function normalizeFaceVerifyResult(response) {
 
 const selectedDevice = computed(() => deviceOptions.value.find((item) => item.id === checkinForm.deviceId) || null)
 
+const hasLiveFaceCamera = computed(() => Boolean(faceStreamRef.value))
+
 const selectedDeviceLocation = computed(() => selectedDevice.value?.location || '')
 
 const selectedDeviceCoordinate = computed(() => {
@@ -193,6 +201,113 @@ function destroyDevicePreviewMap() {
 
   devicePreviewMap = null
   devicePreviewMarker = null
+}
+
+function clearFaceCheckinState() {
+  checkinError.value = ''
+  faceVerifyResult.value = ''
+}
+
+function stopFaceCamera() {
+  if (!faceStreamRef.value) {
+    return
+  }
+
+  faceStreamRef.value.getTracks().forEach((track) => track.stop())
+  faceStreamRef.value = null
+
+  if (faceVideoRef.value) {
+    faceVideoRef.value.srcObject = null
+  }
+}
+
+function switchFaceSource(nextSource) {
+  if (faceInputSource.value === nextSource) {
+    return
+  }
+
+  if (faceInputSource.value === 'camera') {
+    stopFaceCamera()
+  }
+
+  faceInputSource.value = nextSource
+  faceCameraError.value = ''
+  faceUploadError.value = ''
+}
+
+async function startFaceCamera() {
+  if (faceCameraStarting.value) {
+    return
+  }
+
+  faceCameraStarting.value = true
+  faceCameraError.value = ''
+
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('unsupported')
+    }
+
+    stopFaceCamera()
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+    faceStreamRef.value = stream
+
+    if (faceVideoRef.value) {
+      faceVideoRef.value.srcObject = stream
+    }
+  } catch (error) {
+    faceCameraError.value = '无法访问摄像头，请改用本地图片上传'
+  } finally {
+    faceCameraStarting.value = false
+  }
+}
+
+function captureFaceFrame() {
+  if (!faceVideoRef.value || !faceStreamRef.value) {
+    return
+  }
+
+  const canvas = document.createElement('canvas')
+  canvas.width = faceVideoRef.value.videoWidth || 640
+  canvas.height = faceVideoRef.value.videoHeight || 480
+
+  const context = canvas.getContext('2d')
+  if (!context) {
+    faceCameraError.value = '当前环境暂不支持拍照，请改用本地图片上传'
+    return
+  }
+
+  context.drawImage(faceVideoRef.value, 0, 0, canvas.width, canvas.height)
+  checkinForm.imageData = canvas.toDataURL('image/png')
+  clearFaceCheckinState()
+}
+
+function handleFaceUploadChange(event) {
+  faceUploadError.value = ''
+  const [file] = event.target?.files || []
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    faceUploadError.value = '请选择图片文件'
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (loadEvent) => {
+    checkinForm.imageData = loadEvent.target?.result || ''
+    clearFaceCheckinState()
+  }
+  reader.readAsDataURL(file)
+}
+
+function resetFaceImage() {
+  checkinForm.imageData = ''
+  faceCameraError.value = ''
+  faceUploadError.value = ''
+  clearFaceCheckinState()
 }
 
 async function syncSelectedDeviceMap() {
@@ -398,6 +513,7 @@ watch(() => checkinForm.deviceId, () => {
 
 watch(activeTab, (tab) => {
   if (tab !== 'checkin') {
+    stopFaceCamera()
     destroyDevicePreviewMap()
     return
   }
@@ -406,6 +522,7 @@ watch(activeTab, (tab) => {
 })
 
 onBeforeUnmount(() => {
+  stopFaceCamera()
   destroyDevicePreviewMap()
 })
 </script>
@@ -479,15 +596,92 @@ onBeforeUnmount(() => {
         <div v-else ref="deviceMapContainer" data-testid="attendance-device-map" class="attendance-device-map"></div>
       </div>
 
-      <label class="attendance-field">
-        <span>人脸图像</span>
-        <textarea
-          v-model="checkinForm.imageData"
-          data-testid="attendance-image-input"
-          rows="4"
-          placeholder="请输入 base64 图像数据"
-        />
-      </label>
+      <section class="attendance-face-card">
+        <div class="attendance-face-card__header">
+          <span>人脸图像</span>
+          <div class="attendance-face-source-switch">
+            <button
+              type="button"
+              class="attendance-face-source-switch__button"
+              :class="{ 'attendance-face-source-switch__button--active': faceInputSource === 'camera' }"
+              data-testid="attendance-face-source-camera"
+              @click="switchFaceSource('camera')"
+            >
+              摄像头拍照
+            </button>
+            <button
+              type="button"
+              class="attendance-face-source-switch__button"
+              :class="{ 'attendance-face-source-switch__button--active': faceInputSource === 'upload' }"
+              data-testid="attendance-face-source-upload"
+              @click="switchFaceSource('upload')"
+            >
+              本地图片上传
+            </button>
+          </div>
+        </div>
+
+        <div v-if="faceInputSource === 'camera'" class="attendance-face-capture">
+          <video ref="faceVideoRef" class="attendance-face-camera" autoplay muted playsinline></video>
+          <div class="attendance-face-actions">
+            <button
+              type="button"
+              data-testid="attendance-face-camera-start"
+              :disabled="faceCameraStarting"
+              @click="startFaceCamera"
+            >
+              {{ faceCameraStarting ? '开启中...' : '开启摄像头' }}
+            </button>
+            <button
+              type="button"
+              data-testid="attendance-face-camera-capture"
+              :disabled="!hasLiveFaceCamera"
+              @click="captureFaceFrame"
+            >
+              拍照
+            </button>
+            <button
+              type="button"
+              data-testid="attendance-face-reset"
+              :disabled="!checkinForm.imageData"
+              @click="resetFaceImage"
+            >
+              清空图像
+            </button>
+          </div>
+          <p v-if="faceCameraError" data-testid="attendance-face-camera-error" class="attendance-error">
+            {{ faceCameraError }}
+          </p>
+        </div>
+
+        <div v-else class="attendance-face-capture">
+          <label class="attendance-face-upload" for="attendance-face-upload-input">选择本地图片</label>
+          <input
+            id="attendance-face-upload-input"
+            data-testid="attendance-face-upload-input"
+            type="file"
+            accept="image/*"
+            @change="handleFaceUploadChange"
+          />
+          <button
+            type="button"
+            data-testid="attendance-face-reset"
+            :disabled="!checkinForm.imageData"
+            @click="resetFaceImage"
+          >
+            清空图像
+          </button>
+          <p class="attendance-hint">上传后会直接作为本次打卡与人脸预检图像。</p>
+          <p v-if="faceUploadError" data-testid="attendance-face-upload-error" class="attendance-error">
+            {{ faceUploadError }}
+          </p>
+        </div>
+
+        <div v-if="checkinForm.imageData" class="attendance-face-preview">
+          <img :src="checkinForm.imageData" alt="打卡人脸预览" data-testid="attendance-face-preview" />
+        </div>
+        <p v-else data-testid="attendance-image-input" class="attendance-hint">请先拍照或上传图片</p>
+      </section>
 
       <button
         data-testid="attendance-face-verify-button"
@@ -662,6 +856,75 @@ onBeforeUnmount(() => {
   border: 1px solid #dcdfe6;
   border-radius: 12px;
   background: #ffffff;
+}
+
+.attendance-face-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.attendance-face-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.attendance-face-source-switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.attendance-face-source-switch__button--active {
+  color: #ffffff;
+  background: #409eff;
+}
+
+.attendance-face-capture {
+  display: grid;
+  gap: 12px;
+}
+
+.attendance-face-camera,
+.attendance-face-preview {
+  width: 100%;
+  min-height: 240px;
+  border-radius: 12px;
+  background: #f5f7fa;
+  overflow: hidden;
+}
+
+.attendance-face-camera {
+  object-fit: cover;
+}
+
+.attendance-face-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.attendance-face-upload {
+  display: inline-flex;
+  width: fit-content;
+  padding: 8px 12px;
+  color: #ffffff;
+  background: #409eff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.attendance-face-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .attendance-device-map {
