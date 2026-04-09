@@ -43,3 +43,21 @@ export async function fetchExceptionAnalysisBrief(id) {
   const result = await request.get(`/exception/${id}/analysis-brief`)
   return unwrapBusinessResponse(result, '获取异常分析摘要失败')
 }
+
+export async function fetchExceptionRuleCheck(payload = {}) {
+  const result = await request.post('/exception/rule-check', {
+    recordId: payload.recordId,
+  })
+
+  return unwrapBusinessResponse(result, '规则校验失败')
+}
+
+export async function fetchExceptionComplexCheck(payload = {}) {
+  const result = await request.post('/exception/complex-check', {
+    recordId: payload.recordId,
+    userId: payload.userId,
+    riskFeatures: payload.riskFeatures,
+  })
+
+  return unwrapBusinessResponse(result, '综合识别失败')
+}

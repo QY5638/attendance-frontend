@@ -7,6 +7,19 @@ function buildAmapUrl(key) {
   return `${AMAP_BASE_URL}?v=2.0&key=${encodeURIComponent(key)}`
 }
 
+function applyAmapSecurityConfig() {
+  const securityJsCode = (import.meta.env.VITE_AMAP_SECURITY_JS_CODE || '').trim()
+
+  if (!securityJsCode || typeof window === 'undefined') {
+    return
+  }
+
+  window._AMapSecurityConfig = {
+    ...(window._AMapSecurityConfig || {}),
+    securityJsCode,
+  }
+}
+
 export function loadAmapSdk() {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return Promise.reject(new Error('当前环境不支持地图加载'))
@@ -20,6 +33,8 @@ export function loadAmapSdk() {
   if (!amapKey) {
     return Promise.reject(new Error('未配置前端地图 Key'))
   }
+
+  applyAmapSecurityConfig()
 
   if (amapLoaderPromise) {
     return amapLoaderPromise

@@ -125,6 +125,14 @@
               查看处置建议
             </button>
             <button
+              :data-testid="`warning-open-reevaluate-${item.id}`"
+              type="button"
+              class="warning-item__action warning-item__action--muted"
+              @click="openReevaluate(item.id)"
+            >
+              重新评估
+            </button>
+            <button
               :data-testid="`warning-open-exception-${item.exceptionId}`"
               type="button"
               class="warning-item__action warning-item__action--secondary"
@@ -155,7 +163,10 @@
             <h3>预警编号 {{ selectedWarningId }}</h3>
           </div>
 
-          <button type="button" class="warning-advice-dialog__close" @click="closeAdvice">关闭</button>
+          <div class="warning-advice-dialog__actions">
+            <button type="button" class="warning-advice-dialog__reevaluate" @click="openReevaluate(selectedWarningId)">重新评估</button>
+            <button type="button" class="warning-advice-dialog__close" @click="closeAdvice">关闭</button>
+          </div>
         </header>
 
         <p v-if="adviceLoading" class="warning-feedback">处置建议加载中...</p>
@@ -191,16 +202,60 @@
         <p v-else class="warning-feedback">暂无处置建议</p>
       </div>
     </section>
+
+    <section v-if="reevaluateVisible" data-testid="warning-reevaluate-dialog" class="warning-reevaluate-dialog">
+      <div class="warning-reevaluate-dialog__backdrop" @click="closeReevaluate"></div>
+
+      <div class="warning-reevaluate-dialog__panel">
+        <header class="warning-reevaluate-dialog__header">
+          <div>
+            <p class="warning-page__eyebrow">预警重评估</p>
+            <h3>重新评估预警编号 {{ reevaluateForm.warningId }}</h3>
+          </div>
+
+          <button type="button" class="warning-reevaluate-dialog__close" @click="closeReevaluate">关闭</button>
+        </header>
+
+        <p class="warning-feedback">如需重新生成处置建议，可填写本次重评估原因后提交。</p>
+        <p v-if="reevaluateError" data-testid="warning-reevaluate-error" class="warning-feedback warning-feedback--error">
+          {{ reevaluateError }}
+        </p>
+
+        <label class="warning-filter-field warning-filter-field--full">
+          <span>重评估原因</span>
+          <textarea
+            v-model="reevaluateForm.reason"
+            data-testid="warning-reevaluate-reason-input"
+            rows="4"
+            placeholder="请输入重新评估原因，例如补充现场情况、调整处置依据等"
+          />
+        </label>
+
+        <div class="warning-reevaluate-dialog__actions">
+          <button type="button" class="warning-item__action warning-item__action--muted" @click="closeReevaluate">取消</button>
+          <button
+            data-testid="warning-reevaluate-submit"
+            type="button"
+            class="warning-item__action warning-item__action--review"
+            :disabled="reevaluateLoading"
+            @click="submitReevaluate"
+          >
+            {{ reevaluateLoading ? '提交中...' : '提交重评估' }}
+          </button>
+        </div>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup>
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
-import { fetchFe06WarningAdvice, fetchFe06WarningList } from '../../api/fe06-warning'
+import { fetchFe06WarningAdvice, fetchFe06WarningList, fetchFe06WarningReevaluate } from '../../api/fe06-warning'
 
 const WARNING_TYPE_LABELS = {
   RISK_WARNING: '风险预警',
@@ -248,6 +303,14 @@ const adviceError = ref('')
 const selectedWarningId = ref('')
 const adviceDetail = ref(null)
 let latestAdviceRequestId = 0
+
+const reevaluateVisible = ref(false)
+const reevaluateLoading = ref(false)
+const reevaluateError = ref('')
+const reevaluateForm = reactive({
+  warningId: '',
+  reason: '',
+})
 
 const overviewItems = computed(() => [
   {
@@ -406,6 +469,61 @@ function closeAdvice() {
   latestAdviceRequestId += 1
 }
 
+function openReevaluate(warningId) {
+  reevaluateForm.warningId = warningId === null || warningId === undefined ? '' : `${warningId}`.trim()
+  reevaluateForm.reason = ''
+  reevaluateError.value = ''
+  reevaluateVisible.value = Boolean(reevaluateForm.warningId)
+}
+
+function closeReevaluate() {
+  reevaluateVisible.value = false
+  reevaluateError.value = ''
+  reevaluateForm.reason = ''
+}
+
+async function submitReevaluate() {
+  if (!reevaluateForm.warningId || reevaluateLoading.value) {
+    return
+  }
+
+  reevaluateLoading.value = true
+  reevaluateError.value = ''
+
+  try {
+    const payload = await fetchFe06WarningReevaluate({
+      warningId: Number(reevaluateForm.warningId),
+      reason: reevaluateForm.reason.trim(),
+    })
+
+    warningList.value = warningList.value.map((item) => {
+      if (`${item.id}` !== reevaluateForm.warningId) {
+        return item
+      }
+
+      return {
+        ...item,
+        ...payload,
+      }
+    })
+
+    const shouldRefreshAdvice = adviceVisible.value && `${selectedWarningId.value}` === reevaluateForm.warningId
+    const currentWarningId = reevaluateForm.warningId
+
+    closeReevaluate()
+    ElMessage.success('预警已完成重新评估')
+    await loadWarningList()
+
+    if (shouldRefreshAdvice) {
+      await openAdvice(currentWarningId)
+    }
+  } catch (error) {
+    reevaluateError.value = error?.message || '预警重评估失败'
+  } finally {
+    reevaluateLoading.value = false
+  }
+}
+
 function jumpToException(exceptionId) {
   const normalizedId = exceptionId === null || exceptionId === undefined ? '' : `${exceptionId}`.trim()
 
@@ -502,6 +620,7 @@ onMounted(() => {
 .warning-page__refresh,
 .warning-filter-actions__primary,
 .warning-item__action,
+.warning-advice-dialog__reevaluate,
 .warning-advice-dialog__close {
   border: 0;
   border-radius: 12px;
@@ -512,6 +631,7 @@ onMounted(() => {
 .warning-page__refresh,
 .warning-filter-actions__primary,
 .warning-item__action,
+.warning-advice-dialog__reevaluate,
 .warning-advice-dialog__close {
   padding: 10px 16px;
 }
@@ -519,6 +639,7 @@ onMounted(() => {
 .warning-page__refresh,
 .warning-filter-actions__primary,
 .warning-item__action,
+.warning-advice-dialog__reevaluate,
 .warning-advice-dialog__close {
   background: #2f69b2;
   color: #ffffff;
@@ -530,6 +651,12 @@ onMounted(() => {
 
 .warning-item__action--review {
   background: #245391;
+}
+
+.warning-item__action--muted,
+.warning-advice-dialog__reevaluate {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
 }
 
 .warning-filter-card,
@@ -571,11 +698,22 @@ onMounted(() => {
 }
 
 .warning-filter-field input,
-.warning-filter-field select {
+.warning-filter-field select,
+.warning-filter-field textarea {
   min-height: 40px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 12px;
   padding: 0 12px;
+}
+
+.warning-filter-field textarea {
+  min-height: 120px;
+  padding: 12px;
+  resize: vertical;
+}
+
+.warning-filter-field--full {
+  width: 100%;
 }
 
 .warning-filter-actions {
@@ -733,11 +871,58 @@ onMounted(() => {
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
+.warning-advice-dialog__actions,
+.warning-reevaluate-dialog__actions,
+.warning-reevaluate-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.warning-reevaluate-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+}
+
+.warning-reevaluate-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.warning-reevaluate-dialog__panel {
+  position: relative;
+  z-index: 1;
+  width: min(620px, calc(100vw - 32px));
+  margin: 48px auto;
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.warning-reevaluate-dialog__close {
+  border: 0;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #334155;
+  cursor: pointer;
+  padding: 10px 16px;
+}
+
 @media (max-width: 960px) {
   .warning-item,
   .warning-page__header,
   .warning-list-card__head,
-  .warning-advice-dialog__header {
+  .warning-advice-dialog__header,
+  .warning-advice-dialog__actions,
+  .warning-reevaluate-dialog__header,
+  .warning-reevaluate-dialog__actions {
     flex-direction: column;
   }
 
@@ -745,7 +930,9 @@ onMounted(() => {
   .warning-page__refresh,
   .warning-filter-actions__primary,
   .warning-item__action,
-  .warning-advice-dialog__close {
+  .warning-advice-dialog__close,
+  .warning-advice-dialog__reevaluate,
+  .warning-reevaluate-dialog__close {
     width: 100%;
   }
 }

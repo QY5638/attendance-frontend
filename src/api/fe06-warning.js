@@ -33,3 +33,12 @@ export async function fetchFe06WarningAdvice(id) {
   const result = await request.get(`/warning/${id}/advice`)
   return unwrapBusinessResponse(result, '获取预警建议失败')
 }
+
+export async function fetchFe06WarningReevaluate(payload = {}) {
+  const result = await request.post('/warning/re-evaluate', {
+    warningId: payload.warningId,
+    reason: payload.reason || '',
+  })
+
+  return unwrapBusinessResponse(result, '预警重评估失败')
+}

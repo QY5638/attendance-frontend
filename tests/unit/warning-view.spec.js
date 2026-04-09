@@ -4,16 +4,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   fetchFe06WarningAdvice,
   fetchFe06WarningList,
+  fetchFe06WarningReevaluate,
+  messageSuccess,
   routerPush,
 } = vi.hoisted(() => ({
   fetchFe06WarningAdvice: vi.fn(),
   fetchFe06WarningList: vi.fn(),
+  fetchFe06WarningReevaluate: vi.fn(),
+  messageSuccess: vi.fn(),
   routerPush: vi.fn(),
+}))
+
+vi.mock('element-plus', () => ({
+  ElMessage: {
+    success: messageSuccess,
+  },
 }))
 
 vi.mock('../../src/api/fe06-warning', () => ({
   fetchFe06WarningAdvice,
   fetchFe06WarningList,
+  fetchFe06WarningReevaluate,
 }))
 
 vi.mock('vue-router', async () => {
@@ -73,6 +84,8 @@ describe('warning view', () => {
     routerPush.mockReset()
     fetchFe06WarningList.mockReset()
     fetchFe06WarningAdvice.mockReset()
+    fetchFe06WarningReevaluate.mockReset()
+    messageSuccess.mockReset()
 
     fetchFe06WarningList.mockResolvedValue(createListPayload([createWarningRecord()]))
     fetchFe06WarningAdvice.mockResolvedValue({
@@ -83,6 +96,11 @@ describe('warning view', () => {
       disposeSuggestion: '建议优先人工复核',
       decisionSource: 'MODEL_FUSION',
     })
+    fetchFe06WarningReevaluate.mockResolvedValue(createWarningRecord({
+      status: 'PROCESSED',
+      aiSummary: '已完成重新评估',
+      disposeSuggestion: '建议结合最新情况处理',
+    }))
   })
 
   it('loads warning list on mount and renders list fields', async () => {
@@ -283,5 +301,33 @@ describe('warning view', () => {
     await wrapper.get('[data-testid="warning-open-exception-null"]').trigger('click')
 
     expect(routerPush).not.toHaveBeenCalled()
+  })
+
+  it('opens reevaluate dialog and submits reevaluation request', async () => {
+    fetchFe06WarningList
+      .mockResolvedValueOnce(createListPayload([createWarningRecord()]))
+      .mockResolvedValueOnce(createListPayload([
+        createWarningRecord({
+          status: 'PROCESSED',
+          aiSummary: '已完成重新评估',
+          disposeSuggestion: '建议结合最新情况处理',
+        }),
+      ]))
+
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="warning-open-reevaluate-5001"]').trigger('click')
+    await wrapper.get('[data-testid="warning-reevaluate-reason-input"]').setValue('补充现场情况后重新评估')
+    await wrapper.get('[data-testid="warning-reevaluate-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchFe06WarningReevaluate).toHaveBeenCalledWith({
+      warningId: 5001,
+      reason: '补充现场情况后重新评估',
+    })
+    expect(fetchFe06WarningList).toHaveBeenCalledTimes(2)
+    expect(messageSuccess).toHaveBeenCalledWith('预警已完成重新评估')
+    expect(wrapper.text()).toContain('已处理')
   })
 })
