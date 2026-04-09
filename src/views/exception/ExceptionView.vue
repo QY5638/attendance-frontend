@@ -215,6 +215,69 @@
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
+              <h4>重新识别</h4>
+              <span>{{ hasCheckContext() ? `记录编号 ${exceptionDetail?.recordId}` : '缺少记录信息' }}</span>
+            </div>
+
+            <p class="exception-feedback">可基于当前考勤记录重新执行规则校验或综合识别，用于辅助核查当前异常。</p>
+            <p v-if="manualCheckError" data-testid="exception-manual-check-error" class="exception-feedback exception-feedback--error">
+              {{ manualCheckError }}
+            </p>
+
+            <div class="exception-manual-check__actions">
+              <button
+                data-testid="exception-run-rule-check"
+                type="button"
+                class="exception-manual-check__button exception-manual-check__button--secondary"
+                :disabled="!hasCheckContext() || ruleCheckLoading"
+                @click="runRuleCheck"
+              >
+                {{ ruleCheckLoading ? '校验中...' : '规则校验' }}
+              </button>
+              <button
+                data-testid="exception-run-complex-check"
+                type="button"
+                class="exception-manual-check__button"
+                :disabled="!hasCheckContext() || complexCheckLoading"
+                @click="runComplexCheck"
+              >
+                {{ complexCheckLoading ? '识别中...' : '综合识别' }}
+              </button>
+            </div>
+
+            <div v-if="ruleCheckResult || complexCheckResult" class="exception-manual-check__grid">
+              <article v-if="ruleCheckResult" data-testid="exception-rule-check-card" class="exception-manual-check__card">
+                <div class="exception-manual-check__card-head">
+                  <strong>规则校验结果</strong>
+                  <span :class="['exception-tag', getSourceTagClass(ruleCheckResult.sourceType)]">
+                    {{ formatDisplayValue(ruleCheckResult.sourceType, SOURCE_TYPE_LABELS) }}
+                  </span>
+                </div>
+                <p><strong>异常类型：</strong>{{ formatDisplayValue(ruleCheckResult.type, EXCEPTION_TYPE_LABELS) }}</p>
+                <p><strong>风险等级：</strong>{{ formatDisplayValue(ruleCheckResult.riskLevel, RISK_LEVEL_LABELS) }}</p>
+                <p><strong>处理状态：</strong>{{ formatDisplayValue(ruleCheckResult.processStatus, PROCESS_STATUS_LABELS) }}</p>
+                <p><strong>异常编号：</strong>{{ ruleCheckResult.exceptionId ?? '--' }}</p>
+              </article>
+
+              <article v-if="complexCheckResult" data-testid="exception-complex-check-card" class="exception-manual-check__card">
+                <div class="exception-manual-check__card-head">
+                  <strong>综合识别结果</strong>
+                  <span :class="['exception-tag', getSourceTagClass(complexCheckResult.sourceType)]">
+                    {{ formatDisplayValue(complexCheckResult.sourceType, SOURCE_TYPE_LABELS) }}
+                  </span>
+                </div>
+                <p><strong>异常类型：</strong>{{ formatDisplayValue(complexCheckResult.type, EXCEPTION_TYPE_LABELS) }}</p>
+                <p><strong>风险等级：</strong>{{ formatDisplayValue(complexCheckResult.riskLevel, RISK_LEVEL_LABELS) }}</p>
+                <p><strong>系统结论：</strong>{{ complexCheckResult.modelConclusion || '--' }}</p>
+                <p><strong>说明摘要：</strong>{{ complexCheckResult.reasonSummary || '--' }}</p>
+                <p><strong>处理建议：</strong>{{ complexCheckResult.actionSuggestion || '--' }}</p>
+                <p><strong>可信度：</strong>{{ formatScore(complexCheckResult.confidenceScore) }}</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="exception-detail-section">
+            <div class="exception-detail-section__head">
               <h4>分析摘要</h4>
               <span>{{ analysisBrief?.promptVersion ? `分析版本 ${analysisBrief.promptVersion}` : '未记录版本' }}</span>
             </div>
@@ -274,6 +337,7 @@
 </template>
 
 <script setup>
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -281,9 +345,11 @@ import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import {
   fetchExceptionAnalysisBrief,
+  fetchExceptionComplexCheck,
   fetchExceptionDecisionTrace,
   fetchExceptionDetail,
   fetchExceptionList,
+  fetchExceptionRuleCheck,
 } from '../../api/exception'
 
 const EXCEPTION_TYPE_LABELS = {
@@ -338,6 +404,11 @@ const analysisBrief = ref(null)
 const analysisError = ref('')
 const decisionTraceList = ref([])
 const decisionTraceError = ref('')
+const ruleCheckLoading = ref(false)
+const complexCheckLoading = ref(false)
+const manualCheckError = ref('')
+const ruleCheckResult = ref(null)
+const complexCheckResult = ref(null)
 let latestDetailRequestId = 0
 
 const overviewItems = computed(() => [
@@ -396,6 +467,17 @@ function formatScore(value) {
   }
 
   return `${value}`
+}
+
+function hasCheckContext() {
+  return Boolean(exceptionDetail.value?.recordId)
+}
+
+function buildCheckPayload() {
+  return {
+    recordId: Number(exceptionDetail.value?.recordId),
+    userId: Number(exceptionDetail.value?.userId),
+  }
 }
 
 function getRiskTagClass(level) {
@@ -472,6 +554,9 @@ async function openExceptionDetail(id) {
   analysisError.value = ''
   decisionTraceList.value = []
   decisionTraceError.value = ''
+  manualCheckError.value = ''
+  ruleCheckResult.value = null
+  complexCheckResult.value = null
 
   const [detailResult, analysisResult, traceResult] = await Promise.allSettled([
     fetchExceptionDetail(id),
@@ -534,6 +619,46 @@ function jumpToReview(exceptionId) {
       exceptionId: normalizedId,
     },
   })
+}
+
+async function runRuleCheck() {
+  if (!hasCheckContext() || ruleCheckLoading.value) {
+    return
+  }
+
+  ruleCheckLoading.value = true
+  manualCheckError.value = ''
+
+  try {
+    ruleCheckResult.value = await fetchExceptionRuleCheck({
+      recordId: buildCheckPayload().recordId,
+    })
+    ElMessage.success('规则校验已完成')
+    await loadExceptionList()
+  } catch (error) {
+    manualCheckError.value = error?.message || '规则校验失败'
+  } finally {
+    ruleCheckLoading.value = false
+  }
+}
+
+async function runComplexCheck() {
+  if (!hasCheckContext() || complexCheckLoading.value) {
+    return
+  }
+
+  complexCheckLoading.value = true
+  manualCheckError.value = ''
+
+  try {
+    complexCheckResult.value = await fetchExceptionComplexCheck(buildCheckPayload())
+    ElMessage.success('综合识别已完成')
+    await loadExceptionList()
+  } catch (error) {
+    manualCheckError.value = error?.message || '综合识别失败'
+  } finally {
+    complexCheckLoading.value = false
+  }
 }
 
 watch(
@@ -644,6 +769,32 @@ onMounted(() => {
   background: #0f172a;
 }
 
+.exception-manual-check__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exception-manual-check__button {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: #2f69b2;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.exception-manual-check__button--secondary {
+  background: rgba(47, 105, 178, 0.12);
+  color: #245391;
+}
+
+.exception-manual-check__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .exception-filter-card,
 .exception-list-card,
 .exception-detail-dialog__panel {
@@ -660,10 +811,39 @@ onMounted(() => {
 
 .exception-filter-grid,
 .exception-detail-grid,
-.exception-summary-grid {
+.exception-summary-grid,
+.exception-manual-check__grid {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.exception-manual-check__grid {
+  margin-top: 16px;
+}
+
+.exception-manual-check__card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.exception-manual-check__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.exception-manual-check__card-head strong {
+  color: #0f172a;
+}
+
+.exception-manual-check__card p {
+  margin: 8px 0 0;
+  color: #334155;
 }
 
 .exception-filter-field,
@@ -875,14 +1055,16 @@ onMounted(() => {
   .exception-page__header,
   .exception-list-card__head,
   .exception-detail-section__head,
-  .exception-detail-dialog__header {
+  .exception-detail-dialog__header,
+  .exception-manual-check__card-head {
     flex-direction: column;
   }
 
   .exception-item__action,
   .exception-page__refresh,
   .exception-filter-actions__primary,
-  .exception-detail-dialog__close {
+  .exception-detail-dialog__close,
+  .exception-manual-check__button {
     width: 100%;
   }
 }

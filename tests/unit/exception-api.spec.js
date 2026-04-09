@@ -1,25 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { requestGet } = vi.hoisted(() => ({
+const { requestGet, requestPost } = vi.hoisted(() => ({
   requestGet: vi.fn(),
+  requestPost: vi.fn(),
 }))
 
 vi.mock('../../src/utils/request', () => ({
   default: {
     get: requestGet,
+    post: requestPost,
   },
 }))
 
 import {
   fetchExceptionAnalysisBrief,
+  fetchExceptionComplexCheck,
   fetchExceptionDecisionTrace,
   fetchExceptionDetail,
   fetchExceptionList,
+  fetchExceptionRuleCheck,
 } from '../../src/api/exception'
 
 describe('exception api', () => {
   beforeEach(() => {
     requestGet.mockReset()
+    requestPost.mockReset()
   })
 
   it('requests exception list with caller provided params', async () => {
@@ -61,5 +66,25 @@ describe('exception api', () => {
 
     await expect(fetchExceptionAnalysisBrief(3001)).resolves.toEqual({ modelConclusion: 'PROXY_CHECKIN' })
     expect(requestGet).toHaveBeenCalledWith('/exception/3001/analysis-brief')
+  })
+
+  it('requests exception rule check by record id', async () => {
+    requestPost.mockResolvedValue({ code: 200, data: { exceptionId: 3001, sourceType: 'RULE' } })
+
+    await expect(fetchExceptionRuleCheck({ recordId: 2001 })).resolves.toEqual({ exceptionId: 3001, sourceType: 'RULE' })
+    expect(requestPost).toHaveBeenCalledWith('/exception/rule-check', {
+      recordId: 2001,
+    })
+  })
+
+  it('requests exception complex check by record and user id', async () => {
+    requestPost.mockResolvedValue({ code: 200, data: { exceptionId: 3001, sourceType: 'MODEL' } })
+
+    await expect(fetchExceptionComplexCheck({ recordId: 2001, userId: 1001 })).resolves.toEqual({ exceptionId: 3001, sourceType: 'MODEL' })
+    expect(requestPost).toHaveBeenCalledWith('/exception/complex-check', {
+      recordId: 2001,
+      userId: 1001,
+      riskFeatures: undefined,
+    })
   })
 })

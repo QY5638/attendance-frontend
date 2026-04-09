@@ -3,17 +3,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   fetchExceptionAnalysisBrief,
+  fetchExceptionComplexCheck,
   fetchExceptionDecisionTrace,
   fetchExceptionDetail,
   fetchExceptionList,
+  fetchExceptionRuleCheck,
   routeState,
   routerPush,
   routerReplace,
 } = vi.hoisted(() => ({
   fetchExceptionAnalysisBrief: vi.fn(),
+  fetchExceptionComplexCheck: vi.fn(),
   fetchExceptionDecisionTrace: vi.fn(),
   fetchExceptionDetail: vi.fn(),
   fetchExceptionList: vi.fn(),
+  fetchExceptionRuleCheck: vi.fn(),
   routeState: {
     path: '/exception',
     query: {},
@@ -24,9 +28,11 @@ const {
 
 vi.mock('../../src/api/exception', () => ({
   fetchExceptionAnalysisBrief,
+  fetchExceptionComplexCheck,
   fetchExceptionDecisionTrace,
   fetchExceptionDetail,
   fetchExceptionList,
+  fetchExceptionRuleCheck,
 }))
 
 vi.mock('vue-router', async () => {
@@ -118,11 +124,31 @@ describe('exception view', () => {
     fetchExceptionDetail.mockReset()
     fetchExceptionDecisionTrace.mockReset()
     fetchExceptionAnalysisBrief.mockReset()
+    fetchExceptionRuleCheck.mockReset()
+    fetchExceptionComplexCheck.mockReset()
 
     fetchExceptionList.mockResolvedValue(createListPayload([createExceptionRecord()]))
     fetchExceptionDetail.mockResolvedValue(createExceptionRecord())
     fetchExceptionDecisionTrace.mockResolvedValue([createDecisionTrace()])
     fetchExceptionAnalysisBrief.mockResolvedValue(createAnalysisBrief())
+    fetchExceptionRuleCheck.mockResolvedValue({
+      exceptionId: 3001,
+      type: 'PROXY_CHECKIN',
+      riskLevel: 'HIGH',
+      sourceType: 'RULE',
+      processStatus: 'PENDING',
+    })
+    fetchExceptionComplexCheck.mockResolvedValue({
+      exceptionId: 3001,
+      type: 'PROXY_CHECKIN',
+      riskLevel: 'HIGH',
+      sourceType: 'MODEL',
+      processStatus: 'PENDING',
+      modelConclusion: 'PROXY_CHECKIN',
+      reasonSummary: '重新识别后仍为高风险',
+      actionSuggestion: '建议优先人工复核',
+      confidenceScore: 95.2,
+    })
   })
 
   it('loads exception list on mount and renders list fields', async () => {
@@ -336,5 +362,27 @@ describe('exception view', () => {
     expect(detailText).not.toContain('第一条异常')
     expect(detailText).not.toContain('第一条摘要')
     expect(detailText).not.toContain('第一条决策链')
+  })
+
+  it('runs rule check and complex check from detail dialog', async () => {
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-detail-3001"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-run-rule-check"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchExceptionRuleCheck).toHaveBeenCalledWith({ recordId: 2001 })
+    expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('规则校验结果')
+    expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('代打卡')
+
+    await wrapper.get('[data-testid="exception-run-complex-check"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: 2001, userId: 1001 })
+    expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('综合识别结果')
+    expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('重新识别后仍为高风险')
   })
 })
