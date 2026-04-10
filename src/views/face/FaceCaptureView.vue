@@ -1,7 +1,6 @@
 <template>
   <section class="face-card">
     <ConsoleHero
-      eyebrow="考勤业务"
       title="人脸采集"
       description="用于采集和核验当前账号的人脸信息，请按要求拍照或上传清晰正面照片。"
       theme="sky"
@@ -120,8 +119,8 @@
       <h3>处理结果</h3>
       <p class="face-result__message" data-testid="face-result-message">{{ result.message }}</p>
       <div class="face-result__meta">
-        <div data-testid="face-result-user-id">人员编号：{{ result.userId }}</div>
-        <div v-if="result.type === 'register' && result.createTime">录入时间：{{ result.createTime }}</div>
+        <div data-testid="face-result-user-id">当前账号：{{ authStore.realName || '当前用户' }}</div>
+        <div v-if="result.type === 'register' && result.createTime">录入时间：{{ formatDateTimeDisplay(result.createTime, '--') }}</div>
         <div v-if="result.type === 'verify'">已建立档案：{{ result.registered ? '是' : '否' }}</div>
         <div v-if="result.type === 'verify'">验证结果：{{ result.matched ? '通过' : '未通过' }}</div>
         <div v-if="result.type === 'verify'">相似度：{{ formatNumber(result.faceScore) }}</div>
@@ -136,6 +135,8 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { registerFace, verifyFace } from '../../api/face'
+import { useAuthStore } from '../../store/auth'
+import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const source = ref('camera')
 const imageData = ref('')
@@ -147,6 +148,7 @@ const cameraStarting = ref(false)
 const submittingAction = ref('')
 const videoRef = ref(null)
 const streamRef = ref(null)
+const authStore = useAuthStore()
 
 const hasLiveCamera = computed(() => Boolean(streamRef.value))
 const canSubmit = computed(() => Boolean(imageData.value) && !submittingAction.value)

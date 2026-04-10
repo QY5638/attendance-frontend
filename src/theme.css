@@ -16,6 +16,9 @@
   --console-radius-lg: 16px;
   --console-radius-xl: 20px;
   --console-radius-2xl: 24px;
+  --console-scrollbar-track: rgba(226, 232, 240, 0.72);
+  --console-scrollbar-thumb: rgba(148, 163, 184, 0.8);
+  --console-scrollbar-thumb-hover: rgba(100, 116, 139, 0.92);
 
   --el-color-primary: var(--console-primary-600);
   --el-color-success: #0f766e;
@@ -44,6 +47,57 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--console-scrollbar-thumb) var(--console-scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: var(--console-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid var(--console-scrollbar-track);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.88), rgba(125, 141, 163, 0.92));
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--console-scrollbar-thumb-hover), rgba(71, 85, 105, 0.94));
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+input[type='date'][data-empty='true'] {
+  color: transparent;
+}
+
+input[type='date'][data-empty='true']::-webkit-datetime-edit {
+  color: transparent;
+}
+
+input[type='date'][data-empty='true']::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+input[type='date'][data-empty='true']:focus,
+input[type='date'][data-empty='false'] {
+  color: inherit;
+}
+
+input[type='date'][data-empty='true']:focus::-webkit-datetime-edit,
+input[type='date'][data-empty='false']::-webkit-datetime-edit {
+  color: inherit;
 }
 
 button,
@@ -117,12 +171,6 @@ textarea {
 
 .console-hero--violet {
   background: linear-gradient(135deg, #30465f 0%, #4b6b9b 100%);
-}
-
-.console-hero__eyebrow {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: rgba(226, 232, 240, 0.9);
 }
 
 .console-hero h1 {
@@ -255,6 +303,16 @@ textarea {
 
   .console-hero {
     grid-template-columns: 1fr;
+    padding: 18px 20px;
+    gap: 12px;
+  }
+
+  .console-hero h1 {
+    font-size: 26px;
+  }
+
+  .console-hero__desc {
+    margin-top: 6px;
   }
 
   .console-hero__actions {

@@ -67,6 +67,7 @@ function createWarningRecord(overrides = {}) {
   return {
     id: 5001,
     exceptionId: 3001,
+    exceptionType: 'PROXY_CHECKIN',
     type: 'RISK_WARNING',
     level: 'HIGH',
     status: 'UNPROCESSED',
@@ -114,9 +115,44 @@ describe('warning view', () => {
       status: '',
       type: '',
     })
-    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('5001')
-    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('3001')
+    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('高风险代打卡预警')
+    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('代打卡异常')
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('待处理')
+  })
+
+  it('replaces raw warning ids with readable warning subjects', async () => {
+    fetchFe06WarningList.mockResolvedValueOnce(createListPayload([
+      createWarningRecord({
+        id: 123456789,
+        exceptionId: 987654321,
+        exceptionType: 'MULTI_LOCATION_CONFLICT',
+        type: 'ATTENDANCE_WARNING',
+      }),
+    ]))
+    fetchFe06WarningAdvice.mockResolvedValueOnce({
+      id: 123456789,
+      exceptionId: 987654321,
+      priorityScore: 96,
+      aiSummary: '设备与地点异常共同提升风险',
+      disposeSuggestion: '建议优先人工复核',
+      decisionSource: 'MODEL_FUSION',
+    })
+
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    const listText = wrapper.get('[data-testid="warning-list"]').text()
+    expect(listText).toContain('高风险多地点异常预警')
+    expect(listText).toContain('多地点异常')
+    expect(listText).not.toContain('123456789')
+    expect(listText).not.toContain('987654321')
+
+    await wrapper.get('[data-testid="warning-open-advice-123456789"]').trigger('click')
+    await flushPromises()
+
+    const adviceText = wrapper.get('[data-testid="warning-advice-dialog"]').text()
+    expect(adviceText).toContain('高风险多地点异常预警')
+    expect(adviceText).toContain('多地点异常')
   })
 
   it('submits filters and refreshes the warning list', async () => {
@@ -250,6 +286,8 @@ describe('warning view', () => {
         id: 5002,
         exceptionId: 3002,
         aiSummary: '第二条预警摘要',
+        exceptionType: 'MULTI_LOCATION_CONFLICT',
+        type: 'ATTENDANCE_WARNING',
       }),
     ]))
     fetchFe06WarningAdvice
@@ -283,7 +321,7 @@ describe('warning view', () => {
     await flushPromises()
 
     const adviceText = wrapper.get('[data-testid="warning-advice-dialog"]').text()
-    expect(adviceText).toContain('3002')
+    expect(adviceText).toContain('高风险多地点异常预警')
     expect(adviceText).toContain('第二条预警摘要')
     expect(adviceText).toContain('第二条建议')
     expect(adviceText).not.toContain('第一条预警摘要')

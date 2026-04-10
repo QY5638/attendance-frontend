@@ -144,7 +144,29 @@ describe('review view', () => {
     expect(fetchExceptionDetail).toHaveBeenCalledWith('3001')
     expect(fetchLatestReview).toHaveBeenCalledWith('3001')
     expect(fetchReviewAssistant).toHaveBeenCalledWith('3001')
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('异常编号 3001')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('高风险代打卡异常')
+  })
+  it('replaces raw review ids with readable exception and review meanings', async () => {
+    routeState.query = {
+      exceptionId: '123456789',
+    }
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionDetail({
+      id: 123456789,
+      recordId: 987654321,
+      userId: 456789012,
+    }))
+    fetchLatestReview.mockResolvedValueOnce(createReviewRecord({
+      id: 765432198,
+      exceptionId: 123456789,
+    }))
+
+    const wrapper = mount(ReviewView)
+    await flushPromises()
+
+    const detailText = wrapper.get('[data-testid="review-detail-state"]').text()
+    expect(detailText).toContain('高风险代打卡异常')
+    expect(detailText).toContain('排除异常')
+    expect(detailText).not.toContain('123456789')
   })
   it('renders multi location conflict with Chinese label in review exception detail', async () => {
     routeState.query = {

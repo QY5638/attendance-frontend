@@ -85,6 +85,8 @@ describe('exception api', () => {
       recordId: 2001,
       userId: 1001,
       riskFeatures: undefined,
+    }, {
+      timeout: 70000,
     })
   })
 })

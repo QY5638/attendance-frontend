@@ -1,7 +1,6 @@
 <template>
   <section class="exception-page">
     <ConsoleHero
-      eyebrow="异常处理"
       title="异常中心"
       description="集中查看异常记录、分析摘要和处置依据，并支持进入复核流程。"
       theme="indigo"
@@ -50,8 +49,8 @@
         </label>
 
         <label class="exception-filter-field">
-          <span>人员编号</span>
-          <input v-model="queryForm.userId" data-testid="exception-filter-user-id" type="text" placeholder="按人员编号查询" />
+          <span>人员</span>
+          <input v-model="queryForm.userId" data-testid="exception-filter-user-id" type="text" placeholder="按人员筛选" />
         </label>
       </div>
 
@@ -78,7 +77,7 @@
         <article v-for="item in exceptionList" :key="item.id" class="exception-item">
           <div class="exception-item__main">
             <div class="exception-item__title-row">
-                <strong>异常编号 {{ item.id }}</strong>
+                <strong>{{ buildExceptionTitle(item) }}</strong>
               <span>{{ formatDateTime(item.createTime) }}</span>
             </div>
 
@@ -111,14 +110,6 @@
                   </span>
                 </dd>
               </div>
-              <div>
-                <dt>考勤记录编号</dt>
-                <dd>{{ item.recordId ?? '--' }}</dd>
-              </div>
-              <div>
-                <dt>人员编号</dt>
-                <dd>{{ item.userId ?? '--' }}</dd>
-              </div>
             </dl>
 
             <p class="exception-item__description">{{ item.description || '暂无情况说明' }}</p>
@@ -143,7 +134,7 @@
         <header class="exception-detail-dialog__header">
           <div>
             <p class="exception-page__eyebrow">异常详情</p>
-            <h3>异常编号 {{ selectedExceptionId }}</h3>
+            <h3>{{ formatSelectedExceptionTitle() }}</h3>
           </div>
 
           <div class="exception-detail-dialog__actions">
@@ -200,14 +191,6 @@
                   </span>
                 </dd>
               </div>
-              <div>
-                <dt>考勤记录编号</dt>
-                <dd>{{ exceptionDetail?.recordId ?? '--' }}</dd>
-              </div>
-              <div>
-                <dt>人员编号</dt>
-                <dd>{{ exceptionDetail?.userId ?? '--' }}</dd>
-              </div>
             </dl>
 
             <p class="exception-detail-section__description">{{ exceptionDetail?.description || '暂无情况说明' }}</p>
@@ -216,7 +199,7 @@
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
               <h4>重新识别</h4>
-              <span>{{ hasCheckContext() ? `记录编号 ${exceptionDetail?.recordId}` : '缺少记录信息' }}</span>
+              <span>{{ hasCheckContext() ? '基于当前打卡记录重新识别' : '缺少记录信息' }}</span>
             </div>
 
             <p class="exception-feedback">可基于当前考勤记录重新执行规则校验或综合识别，用于辅助核查当前异常。</p>
@@ -256,7 +239,7 @@
                 <p><strong>异常类型：</strong>{{ formatDisplayValue(ruleCheckResult.type, EXCEPTION_TYPE_LABELS) }}</p>
                 <p><strong>风险等级：</strong>{{ formatDisplayValue(ruleCheckResult.riskLevel, RISK_LEVEL_LABELS) }}</p>
                 <p><strong>处理状态：</strong>{{ formatDisplayValue(ruleCheckResult.processStatus, PROCESS_STATUS_LABELS) }}</p>
-                <p><strong>异常编号：</strong>{{ ruleCheckResult.exceptionId ?? '--' }}</p>
+                <p><strong>识别结论：</strong>{{ buildExceptionTitle(ruleCheckResult) }}</p>
               </article>
 
               <article v-if="complexCheckResult" data-testid="exception-complex-check-card" class="exception-manual-check__card">
@@ -268,7 +251,7 @@
                 </div>
                 <p><strong>异常类型：</strong>{{ formatDisplayValue(complexCheckResult.type, EXCEPTION_TYPE_LABELS) }}</p>
                 <p><strong>风险等级：</strong>{{ formatDisplayValue(complexCheckResult.riskLevel, RISK_LEVEL_LABELS) }}</p>
-                <p><strong>系统结论：</strong>{{ complexCheckResult.modelConclusion || '--' }}</p>
+                <p><strong>系统结论：</strong>{{ formatDecisionLabel(complexCheckResult.modelConclusion) }}</p>
                 <p><strong>说明摘要：</strong>{{ complexCheckResult.reasonSummary || '--' }}</p>
                 <p><strong>处理建议：</strong>{{ complexCheckResult.actionSuggestion || '--' }}</p>
                 <p><strong>可信度：</strong>{{ formatScore(complexCheckResult.confidenceScore) }}</p>
@@ -288,7 +271,7 @@
             <div v-else-if="analysisBrief" class="exception-summary-grid">
               <div>
                 <dt>系统结论</dt>
-                <dd>{{ analysisBrief.modelConclusion || '--' }}</dd>
+                <dd>{{ formatDecisionLabel(analysisBrief.modelConclusion) }}</dd>
               </div>
               <div>
                 <dt>可信度</dt>
@@ -321,11 +304,11 @@
             <div v-else class="exception-trace-list">
               <article v-for="item in decisionTraceList" :key="item.id || `${item.businessType}-${item.businessId}`" class="exception-trace-item">
                 <div class="exception-trace-item__head">
-                  <strong>{{ item.finalDecision || '未生成最终结论' }}</strong>
+                  <strong>{{ formatDecisionLabel(item.finalDecision, '未生成最终结论') }}</strong>
                   <span>{{ formatScore(item.confidenceScore) }}</span>
                 </div>
                 <p><strong>规则校验：</strong>{{ item.ruleResult || '--' }}</p>
-                <p><strong>综合识别：</strong>{{ item.modelResult || '--' }}</p>
+                <p><strong>综合识别：</strong>{{ formatDecisionLabel(item.modelResult) }}</p>
                 <p><strong>判定依据：</strong>{{ item.decisionReason || '--' }}</p>
               </article>
             </div>
@@ -351,6 +334,7 @@ import {
   fetchExceptionList,
   fetchExceptionRuleCheck,
 } from '../../api/exception'
+import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const EXCEPTION_TYPE_LABELS = {
   PROXY_CHECKIN: '代打卡',
@@ -376,6 +360,10 @@ const SOURCE_TYPE_LABELS = {
 const PROCESS_STATUS_LABELS = {
   PENDING: '待处理',
   REVIEWED: '已复核',
+}
+
+const INTERFACE_ERROR_MESSAGES = {
+  'server error': '服务器异常，请稍后重试',
 }
 
 const route = useRoute()
@@ -432,7 +420,7 @@ const overviewItems = computed(() => [
   {
     key: 'entry',
     label: '处置入口',
-    value: detailVisible.value ? `异常编号 ${selectedExceptionId.value}` : '待选择异常',
+    value: detailVisible.value ? formatSelectedExceptionTitle() : '待选择异常',
     desc: '详情中可直接进入人工复核页面',
   },
 ])
@@ -457,8 +445,53 @@ function formatDisplayValue(value, labelMap) {
   return label || '未识别'
 }
 
+function formatDecisionLabel(value, fallback = '--') {
+  if (!value) {
+    return fallback
+  }
+
+  const normalizedValue = `${value}`.trim()
+  if (!normalizedValue) {
+    return fallback
+  }
+
+  return EXCEPTION_TYPE_LABELS[normalizedValue] || normalizedValue
+}
+
+function normalizeInterfaceMessage(message, fallbackMessage) {
+  if (!message) {
+    return fallbackMessage
+  }
+
+  return INTERFACE_ERROR_MESSAGES[message] || message
+}
+
 function formatDateTime(value) {
-  return value || '--'
+  return formatDateTimeDisplay(value, '--')
+}
+
+function resolveLabel(value, labelMap) {
+  return value ? labelMap[value] || '' : ''
+}
+
+function buildExceptionTitle(item = {}) {
+  const riskLabel = resolveLabel(item.riskLevel, RISK_LEVEL_LABELS)
+  const typeLabel = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
+
+  if (typeLabel) {
+    return `${riskLabel || ''}${typeLabel}异常`
+  }
+
+  return riskLabel ? `${riskLabel}待核查异常` : '待核查异常'
+}
+
+function formatSelectedExceptionTitle() {
+  if (exceptionDetail.value) {
+    return buildExceptionTitle(exceptionDetail.value)
+  }
+
+  const currentItem = exceptionList.value.find((item) => `${item.id}` === `${selectedExceptionId.value}`)
+  return currentItem ? buildExceptionTitle(currentItem) : '待核查异常'
 }
 
 function formatScore(value) {
@@ -543,6 +576,10 @@ function handleSearch() {
 }
 
 async function openExceptionDetail(id) {
+  return loadExceptionDetail(id, true)
+}
+
+async function loadExceptionDetail(id, resetManualResults = false) {
   const requestId = ++latestDetailRequestId
 
   selectedExceptionId.value = id
@@ -555,8 +592,10 @@ async function openExceptionDetail(id) {
   decisionTraceList.value = []
   decisionTraceError.value = ''
   manualCheckError.value = ''
-  ruleCheckResult.value = null
-  complexCheckResult.value = null
+  if (resetManualResults) {
+    ruleCheckResult.value = null
+    complexCheckResult.value = null
+  }
 
   const [detailResult, analysisResult, traceResult] = await Promise.allSettled([
     fetchExceptionDetail(id),
@@ -587,6 +626,20 @@ async function openExceptionDetail(id) {
   }
 
   detailLoading.value = false
+}
+
+async function refreshExceptionDetailAfterCheck(preferredExceptionId) {
+  await loadExceptionList()
+
+  const preferredId = preferredExceptionId === null || preferredExceptionId === undefined ? '' : `${preferredExceptionId}`.trim()
+  const nextException = exceptionList.value.find((item) => `${item.id}` === preferredId)
+    || exceptionList.value.find((item) => item.recordId === exceptionDetail.value?.recordId)
+
+  if (!nextException) {
+    return
+  }
+
+  await loadExceptionDetail(nextException.id, false)
 }
 
 function closeExceptionDetail() {
@@ -634,9 +687,9 @@ async function runRuleCheck() {
       recordId: buildCheckPayload().recordId,
     })
     ElMessage.success('规则校验已完成')
-    await loadExceptionList()
+    await refreshExceptionDetailAfterCheck(ruleCheckResult.value?.exceptionId)
   } catch (error) {
-    manualCheckError.value = error?.message || '规则校验失败'
+    manualCheckError.value = normalizeInterfaceMessage(error?.message, '规则校验失败')
   } finally {
     ruleCheckLoading.value = false
   }
@@ -653,9 +706,9 @@ async function runComplexCheck() {
   try {
     complexCheckResult.value = await fetchExceptionComplexCheck(buildCheckPayload())
     ElMessage.success('综合识别已完成')
-    await loadExceptionList()
+    await refreshExceptionDetailAfterCheck(complexCheckResult.value?.exceptionId)
   } catch (error) {
-    manualCheckError.value = error?.message || '综合识别失败'
+    manualCheckError.value = normalizeInterfaceMessage(error?.message, '综合识别失败')
   } finally {
     complexCheckLoading.value = false
   }

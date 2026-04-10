@@ -11,13 +11,16 @@ import {
   submitAttendanceRepairRequest,
   verifyFaceRequest,
 } from '../../api/attendance'
+import { fetchDepartmentList } from '../../api/department'
 import { loadAmapSdk } from '../../utils/amap'
+import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
 
 const activeTab = ref(isAdmin.value ? 'records' : 'checkin')
 const deviceOptions = ref([])
+const departmentOptions = ref([])
 const deviceOptionsError = ref('')
 const checkinError = ref('')
 const recordList = ref([])
@@ -226,11 +229,14 @@ const EXCEPTION_TYPE_LABELS = {
 
 function buildRecordQuery() {
   if (isAdmin.value) {
+    const normalizedUserId = Number(String(recordQuery.userId || '').trim())
+    const normalizedDeptId = Number(recordQuery.deptId)
+
     return {
       pageNum: recordQuery.pageNum,
       pageSize: recordQuery.pageSize,
-      userId: recordQuery.userId ? Number(recordQuery.userId) : undefined,
-      deptId: recordQuery.deptId ? Number(recordQuery.deptId) : undefined,
+      userId: Number.isFinite(normalizedUserId) && normalizedUserId > 0 ? normalizedUserId : undefined,
+      deptId: Number.isFinite(normalizedDeptId) && normalizedDeptId > 0 ? normalizedDeptId : undefined,
       checkType: recordQuery.checkType,
       status: recordQuery.status,
       startDate: recordQuery.startDate,
@@ -450,6 +456,35 @@ async function loadDeviceOptions() {
   }
 }
 
+async function fetchAllDepartmentOptions(pageSize = 200) {
+  const items = []
+  let pageNum = 1
+  let total = 0
+
+  do {
+    const result = await fetchDepartmentList({ pageNum, pageSize })
+    const currentItems = Array.isArray(result.items) ? result.items : []
+
+    total = Number(result.total || currentItems.length)
+    items.push(...currentItems)
+    pageNum += 1
+
+    if (!currentItems.length) {
+      break
+    }
+  } while (items.length < total)
+
+  return items
+}
+
+async function loadDepartmentOptions() {
+  try {
+    departmentOptions.value = await fetchAllDepartmentOptions()
+  } catch (error) {
+    departmentOptions.value = []
+  }
+}
+
 async function loadRecords() {
   const requestId = ++latestRecordRequestId
 
@@ -488,6 +523,18 @@ function handleSearchRecords() {
   return loadRecords()
 }
 
+function handleResetRecords() {
+  recordQuery.pageNum = 1
+  recordQuery.pageSize = 10
+  recordQuery.userId = ''
+  recordQuery.deptId = ''
+  recordQuery.checkType = ''
+  recordQuery.status = ''
+  recordQuery.startDate = ''
+  recordQuery.endDate = ''
+  return loadRecords()
+}
+
 function changePage(nextPageNum) {
   const pageNum = Math.min(Math.max(1, nextPageNum), totalPages.value)
 
@@ -513,11 +560,7 @@ function formatCheckType(checkType) {
 }
 
 function formatDateTime(value) {
-  if (!value) {
-    return '--'
-  }
-
-  return String(value).replace('T', ' ')
+  return formatDateTimeDisplay(value, '--')
 }
 
 function formatRecordStatus(status) {
@@ -610,7 +653,7 @@ async function handleSubmitRepair() {
 
 onMounted(() => {
   if (isAdmin.value) {
-    void loadRecords()
+    void Promise.allSettled([loadDepartmentOptions(), loadRecords()])
     return
   }
 
@@ -640,7 +683,6 @@ onBeforeUnmount(() => {
 <template>
   <section class="attendance-view">
     <ConsoleHero
-      eyebrow="考勤业务"
       title="考勤记录"
       :description="isAdmin ? '支持按人员、部门和时间范围查询考勤记录，便于统一核查。' : '完成打卡、补卡申请和个人记录查询，相关办理集中在当前页面完成。'"
       theme="indigo"
@@ -863,14 +905,25 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="attendance-record-filters">
+          <div :class="['attendance-record-filters__fields', { 'attendance-record-filters__fields--admin': isAdmin }]">
           <label v-if="isAdmin" class="attendance-field">
-            <span>人员编号</span>
-            <input v-model="recordQuery.userId" data-testid="attendance-record-user-id-input" type="number" min="1" />
+            <span>人员</span>
+            <input
+              v-model="recordQuery.userId"
+              data-testid="attendance-record-user-id-input"
+              type="text"
+              inputmode="numeric"
+            />
           </label>
 
           <label v-if="isAdmin" class="attendance-field">
-            <span>部门编号</span>
-            <input v-model="recordQuery.deptId" data-testid="attendance-record-dept-id-input" type="number" min="1" />
+            <span>部门</span>
+            <select v-model="recordQuery.deptId" data-testid="attendance-record-dept-id-input">
+              <option value="">全部</option>
+              <option v-for="department in departmentOptions" :key="department.id" :value="String(department.id)">
+                {{ department.name }}
+              </option>
+            </select>
           </label>
 
           <label v-if="isAdmin" class="attendance-field">
@@ -898,24 +951,41 @@ onBeforeUnmount(() => {
 
           <label class="attendance-field">
             <span>开始日期</span>
-            <input v-model="recordQuery.startDate" data-testid="attendance-start-date-input" type="date" />
+            <input
+              v-model="recordQuery.startDate"
+              :data-empty="String(!recordQuery.startDate)"
+              data-testid="attendance-start-date-input"
+              type="date"
+            />
           </label>
 
           <label class="attendance-field">
             <span>结束日期</span>
-            <input v-model="recordQuery.endDate" data-testid="attendance-end-date-input" type="date" />
+            <input
+              v-model="recordQuery.endDate"
+              :data-empty="String(!recordQuery.endDate)"
+              data-testid="attendance-end-date-input"
+              type="date"
+            />
           </label>
+          </div>
+        </div>
 
-          <label class="attendance-field">
-            <span>每页条数</span>
-            <select v-model.number="recordQuery.pageSize" data-testid="attendance-page-size-select">
-              <option :value="10">10</option>
-              <option :value="20">20</option>
-              <option :value="50">50</option>
-            </select>
-          </label>
-
-          <button data-testid="attendance-record-search" type="button" @click="handleSearchRecords">
+        <div class="attendance-record-filters__actions">
+          <button
+            data-testid="attendance-record-reset"
+            class="attendance-record-toolbar__button"
+            type="button"
+            @click="handleResetRecords"
+          >
+            重置筛选
+          </button>
+          <button
+            data-testid="attendance-record-search"
+            class="attendance-record-toolbar__button attendance-record-toolbar__button--primary"
+            type="button"
+            @click="handleSearchRecords"
+          >
             查询
           </button>
         </div>
@@ -924,36 +994,48 @@ onBeforeUnmount(() => {
           {{ recordError }}
         </div>
 
-        <p data-testid="attendance-record-total">共 {{ recordTotal }} 条</p>
+        <div class="attendance-record-toolbar">
+          <div class="attendance-record-toolbar__meta">
+            <p data-testid="attendance-record-total">共 {{ recordTotal }} 条</p>
+            <label class="attendance-record-toolbar__page-size">
+              <span>每页：</span>
+              <select v-model.number="recordQuery.pageSize" data-testid="attendance-page-size-select">
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+              </select>
+            </label>
+          </div>
 
-        <div class="attendance-pagination">
-        <button
-          data-testid="attendance-page-prev"
-          type="button"
-          :disabled="recordQuery.pageNum <= 1"
-          @click="changePage(recordQuery.pageNum - 1)"
-        >
-          上一页
-        </button>
-        <span data-testid="attendance-current-page">第 {{ recordQuery.pageNum }} 页</span>
-        <button
-          data-testid="attendance-page-next"
-          type="button"
-          :disabled="recordQuery.pageNum >= totalPages"
-          @click="changePage(recordQuery.pageNum + 1)"
-        >
-          下一页
-        </button>
+          <div class="attendance-pagination">
+          <button
+            data-testid="attendance-page-prev"
+            type="button"
+            :disabled="recordQuery.pageNum <= 1"
+            @click="changePage(recordQuery.pageNum - 1)"
+          >
+            上一页
+          </button>
+          <span data-testid="attendance-current-page">第 {{ recordQuery.pageNum }} 页</span>
+          <button
+            data-testid="attendance-page-next"
+            type="button"
+            :disabled="recordQuery.pageNum >= totalPages"
+            @click="changePage(recordQuery.pageNum + 1)"
+          >
+            下一页
+          </button>
+          </div>
+
+          <div class="attendance-record-toolbar__placeholder"></div>
         </div>
 
         <table class="attendance-record-table">
         <thead>
           <tr>
             <th v-if="isAdmin">姓名</th>
-            <th v-if="isAdmin">人员编号</th>
             <th>打卡类型</th>
             <th>时间</th>
-            <th v-if="isAdmin">设备标识</th>
             <th v-if="isAdmin">设备位置</th>
             <th>状态</th>
             <th>异常识别</th>
@@ -962,14 +1044,12 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr v-if="!recordError && !recordsLoading && recordList.length === 0">
-            <td data-testid="attendance-record-empty" :colspan="isAdmin ? 8 : 5">暂无记录</td>
+            <td data-testid="attendance-record-empty" :colspan="isAdmin ? 6 : 5">暂无记录</td>
           </tr>
           <tr v-for="record in recordList" :key="record.id">
             <td v-if="isAdmin">{{ record.realName || '--' }}</td>
-            <td v-if="isAdmin">{{ record.userId ?? '--' }}</td>
             <td>{{ formatCheckType(record.checkType) }}</td>
             <td>{{ formatDateTime(record.checkTime) }}</td>
-            <td v-if="isAdmin">{{ record.deviceId || '--' }}</td>
             <td v-if="isAdmin">{{ record.location || '--' }}</td>
             <td>{{ formatRecordStatus(record.status) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
@@ -1001,7 +1081,7 @@ onBeforeUnmount(() => {
 
         <div class="attendance-repair-dialog__meta">
           <p>打卡类型：{{ formatCheckType(repairForm.checkType) }}</p>
-          <p>打卡时间：{{ repairForm.checkTime || '--' }}</p>
+          <p>打卡时间：{{ formatDateTime(repairForm.checkTime) }}</p>
         </div>
 
         <div v-if="repairError" data-testid="attendance-repair-error" class="attendance-error">
@@ -1112,6 +1192,7 @@ onBeforeUnmount(() => {
 .attendance-field {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .attendance-field span {
@@ -1122,12 +1203,12 @@ onBeforeUnmount(() => {
 .attendance-field select,
 .attendance-field input,
 .attendance-field textarea,
-.attendance-record-filters button,
 .attendance-card > button,
 .attendance-panel > button,
 .attendance-face-actions button,
 .attendance-face-source-switch__button,
 .attendance-face-upload,
+.attendance-record-toolbar__button,
 .attendance-pagination button,
 .attendance-record-table button,
 .attendance-repair-dialog button {
@@ -1137,28 +1218,29 @@ onBeforeUnmount(() => {
 .attendance-field select,
 .attendance-field input,
 .attendance-field textarea,
-.attendance-record-filters button,
 .attendance-card > button,
 .attendance-panel > button,
 .attendance-face-actions button,
 .attendance-face-source-switch__button,
 .attendance-face-upload,
+.attendance-record-toolbar__button,
 .attendance-pagination button,
 .attendance-record-table button,
 .attendance-repair-dialog button {
   min-height: 44px;
+  width: 100%;
   padding: 10px 14px;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 14px;
   background: #ffffff;
 }
 
-.attendance-record-filters button,
 .attendance-card > button,
 .attendance-panel > button,
 .attendance-face-actions button,
 .attendance-face-source-switch__button,
 .attendance-face-upload,
+.attendance-record-toolbar__button,
 .attendance-pagination button,
 .attendance-record-table button,
 .attendance-repair-dialog button {
@@ -1168,18 +1250,109 @@ onBeforeUnmount(() => {
 
 .attendance-panel > button,
 .attendance-card > button,
-.attendance-record-filters button,
 .attendance-repair-dialog button[data-testid='attendance-repair-submit'] {
   border-color: transparent;
   background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
   color: #ffffff;
-  box-shadow: 0 12px 28px rgba(47, 105, 178, 0.2);
+  box-shadow: 0 8px 18px rgba(47, 105, 178, 0.18);
+}
+
+.attendance-record-toolbar__button--primary {
+  border: 0;
+  border-radius: 12px;
+  background: #2f69b2;
+  color: #ffffff;
+  box-shadow: none;
 }
 
 .attendance-record-filters {
   display: grid;
+  gap: 14px;
+}
+
+.attendance-record-filters__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.attendance-record-filters__fields--admin {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.attendance-record-filters__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-top: 10px;
+}
+
+.attendance-record-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0 6px;
+}
+
+.attendance-record-toolbar__meta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-self: start;
+  flex-wrap: wrap;
+}
+
+.attendance-record-toolbar__meta p {
+  margin: 0;
+  color: #334155;
+  font-weight: 600;
+}
+
+.attendance-record-toolbar__page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.attendance-record-toolbar__page-size select {
+  min-width: 96px;
+  width: 96px;
+}
+
+.attendance-record-toolbar__button {
+  min-width: 112px;
+  min-height: 40px;
+  width: auto;
+  padding: 10px 16px;
+  border: 1px solid rgba(47, 105, 178, 0.18);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #245391;
+  font-weight: 600;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 1120px) {
+  .attendance-record-filters__fields--admin,
+  .attendance-record-filters__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attendance-record-toolbar {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .attendance-record-filters__actions {
+    justify-content: flex-end;
+  }
+
+  .attendance-pagination {
+    justify-self: center;
+  }
 }
 
 .attendance-map-card {
@@ -1264,7 +1437,31 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.attendance-pagination button {
+  width: auto;
+  min-width: 96px;
+  flex: 0 0 auto;
+}
+
+.attendance-pagination span {
+  min-width: 88px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
+  text-align: center;
+  font-weight: 600;
+}
+
+.attendance-pagination button:disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.2);
+  box-shadow: none;
 }
 
 .attendance-record-table {
@@ -1363,6 +1560,30 @@ onBeforeUnmount(() => {
 @media (max-width: 960px) {
   .attendance-card__head {
     flex-direction: column;
+  }
+
+  .attendance-record-filters__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .attendance-record-toolbar__meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .attendance-record-filters__actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .attendance-pagination {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .attendance-record-toolbar__button {
+    flex: 1 1 160px;
   }
 
   .attendance-repair-dialog__actions button,

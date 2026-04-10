@@ -1,5 +1,7 @@
 import request from '../utils/request'
 
+const COMPLEX_CHECK_TIMEOUT = 70000
+
 function createApiError(message) {
   return {
     type: 'api',
@@ -57,6 +59,8 @@ export async function fetchExceptionComplexCheck(payload = {}) {
     recordId: payload.recordId,
     userId: payload.userId,
     riskFeatures: payload.riskFeatures,
+  }, {
+    timeout: COMPLEX_CHECK_TIMEOUT,
   })
 
   return unwrapBusinessResponse(result, '综合识别失败')

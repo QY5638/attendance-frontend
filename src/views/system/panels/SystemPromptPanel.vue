@@ -29,7 +29,7 @@
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
         <span>关键词</span>
-        <input v-model="filters.keyword" type="text" placeholder="方案编号 / 名称 / 版本号" />
+        <input v-model="filters.keyword" type="text" placeholder="方案标识 / 名称 / 版本号" />
       </label>
       <label>
         <span>分析场景</span>
@@ -56,7 +56,7 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>方案编号</th>
+            <th>方案标识</th>
             <th>方案名称</th>
             <th>分析场景</th>
             <th>版本号</th>
@@ -123,7 +123,7 @@
         <div class="panel-card__dialog-head">
           <div>
             <strong>{{ form.id ? '编辑分析方案' : '新增分析方案' }}</strong>
-            <p>方案编号与版本号组合需保持唯一，便于统一管理与后续追溯。</p>
+            <p>方案标识与版本号组合需保持唯一，便于统一管理与后续追溯。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
@@ -132,8 +132,8 @@
 
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>方案编号</span>
-            <input v-model="form.code" type="text" placeholder="请输入方案编号" />
+            <span>方案标识</span>
+            <input v-model="form.code" type="text" placeholder="请输入方案标识" />
           </label>
           <label>
             <span>方案名称</span>
@@ -145,7 +145,7 @@
           </label>
           <label>
             <span>版本号</span>
-            <input v-model="form.version" type="text" placeholder="例如 V1.0" />
+            <input v-model="form.version" type="text" placeholder="例如 1.0 版" />
           </label>
           <label>
             <span>状态</span>
@@ -188,6 +188,7 @@ import {
   updatePromptTemplate,
   updatePromptTemplateStatus,
 } from '../../../api/system'
+import { formatDateTimeDisplay } from '../../../utils/date-time'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -259,11 +260,7 @@ function resetForm(row = null) {
 }
 
 function formatDateTime(value) {
-  if (!value) {
-    return '-'
-  }
-
-  return String(value).replace('T', ' ').slice(0, 19)
+  return formatDateTimeDisplay(value, '-')
 }
 
 function formatPromptStatus(status) {

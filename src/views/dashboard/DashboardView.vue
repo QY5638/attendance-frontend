@@ -1,7 +1,6 @@
 <template>
   <section class="dashboard-page">
     <ConsoleHero
-      eyebrow="工作台"
       title="概览工作台"
       :description="isAdmin ? '用于查看运行概况、重点预警和待处理事项。' : '用于查看个人考勤概况、当日提醒和常用入口。'"
       theme="indigo"
@@ -35,7 +34,9 @@
           </p>
         </div>
 
-        <ConsoleOverviewCards :items="spotlightCards" />
+        <div class="dashboard-spotlight__cards">
+          <ConsoleOverviewCards :items="spotlightCards" />
+        </div>
       </section>
 
       <section data-testid="dashboard-overview" class="dashboard-section">
@@ -77,8 +78,8 @@
         <div v-if="warningItems.length" class="dashboard-list">
           <el-card v-for="item in warningItems" :key="item.id || item.exceptionId || item.aiSummary" class="dashboard-list__item">
             <div class="dashboard-list__title">
-              <strong>{{ item.level || '未分级' }}</strong>
-              <span>编号 {{ item.id || item.exceptionId || '--' }}</span>
+              <strong>{{ buildWarningTitle(item) }}</strong>
+              <span class="dashboard-list__meta">{{ buildWarningMeta(item) }}</span>
             </div>
             <p>{{ item.aiSummary || item.disposeSuggestion || '暂无摘要说明' }}</p>
           </el-card>
@@ -93,7 +94,7 @@
       >
         <div class="dashboard-section__head">
           <h3>部门风险概况</h3>
-          <span>风险简报</span>
+          <span>全部部门</span>
         </div>
 
         <div v-if="riskItems.length" class="dashboard-list dashboard-list--risk">
@@ -117,7 +118,7 @@ import { computed, onMounted, ref } from 'vue'
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import {
-  fetchDepartmentRiskBrief,
+  fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchPersonalStatistics,
   fetchStatisticsSummary,
@@ -139,6 +140,27 @@ const summaryData = ref({
   highlightRisks: '',
   manageSuggestion: '',
 })
+const WARNING_LEVEL_LABELS = {
+  HIGH: '高风险',
+  MEDIUM: '中风险',
+  LOW: '低风险',
+}
+const WARNING_TYPE_LABELS = {
+  RISK_WARNING: '风险预警',
+  ATTENDANCE_WARNING: '考勤预警',
+}
+const WARNING_STATUS_LABELS = {
+  UNPROCESSED: '待处理',
+  PROCESSED: '已处理',
+}
+const WARNING_EXCEPTION_LABELS = {
+  PROXY_CHECKIN: '代打卡',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非规定时间打卡',
+  REPEAT_CHECK: '重复打卡',
+  MULTI_LOCATION_CONFLICT: '多地点异常',
+}
 const heroCards = computed(() => [
   {
     key: 'role',
@@ -162,7 +184,7 @@ const spotlightCards = computed(() => {
       {
         label: '风险概况',
         value: `${riskItems.value.length} 个`,
-        desc: '用于快速识别重点部门和管理建议',
+        desc: '展示全部部门的风险概况和处理建议',
       },
       {
         label: '综合摘要',
@@ -207,12 +229,91 @@ const METRIC_LABELS = {
   absentCount: '缺勤次数',
 }
 
+const METRIC_PHRASE_LABELS = {
+  closed_loop: '闭环',
+  high_risk: '高风险',
+  medium_risk: '中风险',
+  low_risk: '低风险',
+}
+
+const METRIC_TOKEN_LABELS = {
+  record: '记录',
+  attendance: '出勤',
+  normal: '正常',
+  exception: '异常',
+  analysis: '分析',
+  warning: '预警',
+  review: '复核',
+  closed: '闭环',
+  loop: '闭环',
+  late: '迟到',
+  absent: '缺勤',
+  dept: '部门',
+  department: '部门',
+  user: '人员',
+  high: '高',
+  medium: '中',
+  low: '低',
+  risk: '风险',
+  processed: '已处理',
+  unprocessed: '待处理',
+}
+
 function formatMetricValue(key, value) {
   if (typeof value === 'number' && key.toLowerCase().includes('rate')) {
     return `${Math.round(value * 100)}%`
   }
 
   return value
+}
+
+function splitMetricKey(key) {
+  return String(key || '')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((item) => item.toLowerCase())
+}
+
+function translateMetricTokens(tokens) {
+  if (!tokens.length) {
+    return ''
+  }
+
+  const phraseLabel = METRIC_PHRASE_LABELS[tokens.join('_')]
+  if (phraseLabel) {
+    return phraseLabel
+  }
+
+  return tokens.map((token) => METRIC_TOKEN_LABELS[token]).filter(Boolean).join('')
+}
+
+function resolveMetricLabel(key) {
+  if (METRIC_LABELS[key]) {
+    return METRIC_LABELS[key]
+  }
+
+  const tokens = splitMetricKey(key)
+  if (!tokens.length) {
+    return key
+  }
+
+  const suffix = tokens[tokens.length - 1]
+  const baseLabel = translateMetricTokens(tokens.slice(0, -1))
+
+  if (suffix === 'count' && baseLabel) {
+    return `${baseLabel}数量`
+  }
+
+  if (suffix === 'rate' && baseLabel) {
+    return `${baseLabel}率`
+  }
+
+  if (suffix === 'total' && baseLabel) {
+    return `${baseLabel}总数`
+  }
+
+  return translateMetricTokens(tokens) || key
 }
 
 function buildMetricCards(payload = {}, limit = 4) {
@@ -222,7 +323,7 @@ function buildMetricCards(payload = {}, limit = 4) {
     .slice(0, limit)
     .map(([key, value]) => ({
       key,
-      label: METRIC_LABELS[key] || key,
+      label: resolveMetricLabel(key),
       value: formatMetricValue(key, value),
     }))
 }
@@ -239,23 +340,65 @@ function normalizeList(payload, limit) {
   return source.slice(0, limit)
 }
 
+function normalizeRiskItems(payload) {
+  const source = Array.isArray(payload)
+    ? payload
+    : payload && typeof payload === 'object'
+      ? [payload]
+      : []
+
+  return source
+}
+
+function resolveWarningLabel(value, labelMap) {
+  return value ? labelMap[value] || '' : ''
+}
+
+function buildWarningTitle(item = {}) {
+  const levelLabel = resolveWarningLabel(item.level, WARNING_LEVEL_LABELS)
+  const exceptionLabel = resolveWarningLabel(item.exceptionType, WARNING_EXCEPTION_LABELS)
+  const typeLabel = resolveWarningLabel(item.type, WARNING_TYPE_LABELS)
+
+  if (exceptionLabel) {
+    return `${levelLabel || ''}${exceptionLabel}预警`
+  }
+
+  if (typeLabel === '风险预警') {
+    return `${levelLabel || ''}重点预警` || '重点预警'
+  }
+
+  if (typeLabel) {
+    return `${levelLabel || ''}${typeLabel}`
+  }
+
+  return levelLabel ? `${levelLabel}预警` : '预警记录'
+}
+
+function buildWarningMeta(item = {}) {
+  const typeLabel = resolveWarningLabel(item.type, WARNING_TYPE_LABELS)
+  const statusLabel = resolveWarningLabel(item.status, WARNING_STATUS_LABELS)
+  return [typeLabel, statusLabel].filter(Boolean).join(' · ') || '待处理'
+}
+
 async function loadDashboard() {
   loading.value = true
   errorMessage.value = ''
 
   try {
     if (isAdmin.value) {
-      const [departmentData, summary, risks] = await Promise.all([
+      const [departmentData, summary] = await Promise.all([
         fetchDepartmentStatistics(),
         fetchStatisticsSummary(),
-        fetchDepartmentRiskBrief(),
       ])
-      const warnings = await fetchWarningList({ pageNum: 1, pageSize: 5 }).catch(() => [])
+      const [warnings, risks] = await Promise.all([
+        fetchWarningList({ pageNum: 1, pageSize: 5 }).catch(() => []),
+        fetchDepartmentRiskOverview().catch(() => null),
+      ])
 
       overviewCards.value = buildMetricCards(departmentData)
       summaryData.value = summary || {}
       warningItems.value = normalizeList(warnings, 5)
-      riskItems.value = normalizeList(risks, 3)
+      riskItems.value = normalizeRiskItems(risks)
       return
     }
 
@@ -322,6 +465,10 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(12px);
+}
+
+.dashboard-spotlight__cards :deep(.console-overview-grid) {
+  grid-template-columns: 1fr;
 }
 
 .dashboard-spotlight__eyebrow {
@@ -416,6 +563,18 @@ onMounted(() => {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.dashboard-list__meta {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #4f5f7a;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .dashboard-list__item p {

@@ -24,8 +24,8 @@
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
-        <span>人员编号</span>
-        <input v-model.number="filters.userId" type="number" min="1" placeholder="如 1001" />
+        <span>办理人</span>
+        <input v-model.number="filters.userId" type="number" min="1" placeholder="按办理人筛选" />
       </label>
       <label>
         <span>办理动作</span>
@@ -33,11 +33,11 @@
       </label>
       <label>
         <span>开始日期</span>
-        <input v-model="filters.startDate" type="date" />
+        <input v-model="filters.startDate" :data-empty="String(!filters.startDate)" type="date" />
       </label>
       <label>
         <span>结束日期</span>
-        <input v-model="filters.endDate" type="date" />
+        <input v-model="filters.endDate" :data-empty="String(!filters.endDate)" type="date" />
       </label>
       <div class="panel-card__actions">
         <button type="submit" class="panel-card__primary">查询</button>
@@ -51,25 +51,23 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>序号</th>
-            <th>人员编号</th>
+            <th>办理人</th>
             <th>办理动作</th>
-            <th>办理内容</th>
+            <th>办理摘要</th>
             <th>办理时间</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="5">加载中...</td>
+            <td colspan="4">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="5">暂无记录</td>
+            <td colspan="4">暂无记录</td>
           </tr>
           <tr v-for="row in rows" :key="row.id">
-            <td>{{ row.id }}</td>
-            <td>{{ row.userId ?? '-' }}</td>
+            <td>{{ resolveOperationActor(row) }}</td>
             <td>{{ formatOperationType(row.type) }}</td>
-            <td>{{ row.content || '-' }}</td>
+            <td>{{ formatOperationSummary(row) }}</td>
             <td>{{ formatDateTime(row.operationTime) }}</td>
           </tr>
         </tbody>
@@ -90,6 +88,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import { fetchOperationLogList } from '../../../api/system'
+import { formatDateTimeDisplay } from '../../../utils/date-time'
 
 const loading = ref(false)
 const rows = ref([])
@@ -152,11 +151,34 @@ function formatOperationType(type) {
 }
 
 function formatDateTime(value) {
-  if (!value) {
+  return formatDateTimeDisplay(value, '-')
+}
+
+function resolveOperationActor(row = {}) {
+  const content = String(row.content || '').trim()
+  const markers = ['登录系统', '退出系统', '上班打卡', '下班打卡', '提交补卡申请', '重新评估预警', '复核异常记录', '提交复核反馈', '修改系统配置']
+
+  for (const marker of markers) {
+    const markerIndex = content.indexOf(marker)
+    if (markerIndex > 0) {
+      return content.slice(0, markerIndex)
+    }
+  }
+
+  return '当前办理人'
+}
+
+function formatOperationSummary(row = {}) {
+  const content = String(row.content || '').trim()
+  if (!content) {
     return '-'
   }
 
-  return String(value).replace('T', ' ').slice(0, 19)
+  const actor = resolveOperationActor(row)
+  const withoutActor = actor && actor !== '当前办理人' && content.startsWith(actor)
+    ? content.slice(actor.length)
+    : content
+  return withoutActor.replace(/\d+$/g, '') || withoutActor
 }
 
 async function loadList() {

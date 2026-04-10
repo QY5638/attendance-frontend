@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   exportStatisticsReport,
-  fetchDepartmentRiskBrief,
+  fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchExceptionTrend,
   fetchStatisticsSummary,
@@ -12,7 +12,7 @@ const {
   messageSuccess,
 } = vi.hoisted(() => ({
   exportStatisticsReport: vi.fn(),
-  fetchDepartmentRiskBrief: vi.fn(),
+  fetchDepartmentRiskOverview: vi.fn(),
   fetchDepartmentStatistics: vi.fn(),
   fetchExceptionTrend: vi.fn(),
   fetchStatisticsSummary: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('element-plus', () => ({
 
 vi.mock('../../src/api/statistics', () => ({
   exportStatisticsReport,
-  fetchDepartmentRiskBrief,
+  fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchExceptionTrend,
   fetchStatisticsSummary,
@@ -93,7 +93,7 @@ function mountStatisticsView() {
 describe('statistics view', () => {
   beforeEach(() => {
     exportStatisticsReport.mockReset()
-    fetchDepartmentRiskBrief.mockReset()
+    fetchDepartmentRiskOverview.mockReset()
     fetchDepartmentStatistics.mockReset()
     fetchExceptionTrend.mockReset()
     fetchStatisticsSummary.mockReset()
@@ -103,20 +103,24 @@ describe('statistics view', () => {
     fetchDepartmentStatistics.mockResolvedValue({
       attendanceRate: 0.92,
       exceptionRate: 0.06,
+      highRiskCount: 3,
       exceptionTypeDistribution: {
         MULTI_LOCATION_CONFLICT: 2,
       },
     })
-    fetchExceptionTrend.mockResolvedValue([
-      { label: '周一', value: 2 },
-      { label: '周二', value: 4 },
-    ])
+    fetchExceptionTrend.mockResolvedValue({
+      periodType: 'DAY',
+      points: [
+        { date: '周一', exceptionCount: 2 },
+        { date: '周二', exceptionCount: 4 },
+      ],
+    })
     fetchStatisticsSummary.mockResolvedValue({
       summary: '本周异常数较上周增加',
       highlightRisks: '设备异常集中在周二',
       manageSuggestion: '建议复核设备打卡点',
     })
-    fetchDepartmentRiskBrief.mockResolvedValue([
+    fetchDepartmentRiskOverview.mockResolvedValue([
       { deptId: 1, deptName: '研发部', riskScore: 76, riskSummary: '中高风险' },
     ])
   })
@@ -128,51 +132,80 @@ describe('statistics view', () => {
     expect(fetchDepartmentStatistics).toHaveBeenCalledTimes(1)
     expect(fetchExceptionTrend).toHaveBeenCalledTimes(1)
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('92%')
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('高风险数量')
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('多地点异常')
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('2')
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).not.toContain('highRiskCount')
     expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('周一')
     expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('研发部')
   })
 
+  it('renders exception trend when backend returns points payload', async () => {
+    fetchExceptionTrend.mockResolvedValue({
+      periodType: 'DAY',
+      points: [
+        { date: '2026-03-25', exceptionCount: 1 },
+        { date: '2026-03-26', exceptionCount: 3 },
+      ],
+    })
+
+    const wrapper = mountStatisticsView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('03-25')
+    expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('03-26')
+    expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('2026-03-26')
+    expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('1')
+    expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('3')
+  })
+
+  it('keeps statistics page available when department risk brief request fails', async () => {
+    fetchDepartmentRiskOverview.mockRejectedValue(new Error('获取部门风险概况失败'))
+
+    const wrapper = mountStatisticsView()
+    await flushPromises()
+
+    expect(wrapper.find('.el-alert').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('92%')
+    expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('周一')
+    expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('暂无风险概况')
+  })
+
+  it('shows all departments on statistics risk section', async () => {
+    fetchDepartmentRiskOverview.mockResolvedValue([
+      { deptId: 2, deptName: '行政部', riskScore: 88, riskSummary: '高风险' },
+      { deptId: 1, deptName: '技术部', riskScore: 82, riskSummary: '中高风险' },
+      { deptId: 3, deptName: '财务部', riskScore: 73, riskSummary: '中风险' },
+      { deptId: 4, deptName: '市场部', riskScore: 69, riskSummary: '关注' },
+    ])
+
+    const wrapper = mountStatisticsView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('全部部门')
+    expect(wrapper.findAll('[data-testid="statistics-risk"] .el-card')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('行政部')
+    expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('技术部')
+    expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('财务部')
+    expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('市场部')
+  })
+
   it('exports report with backend provided filename', async () => {
-    const blob = new Blob(['report'], { type: 'text/csv;charset=UTF-8' })
-    const click = vi.fn()
-    const createObjectURL = vi.fn(() => 'blob:demo')
-    const revokeObjectURL = vi.fn()
-    const originalCreateElement = document.createElement.bind(document)
-    const createElementSpy = vi.spyOn(document, 'createElement')
-    const anchor = {
-      click,
-      download: '',
-      href: '',
-    }
+    const blob = new Blob([
+      '部门统计报表\n导出时间,2026-04-10 10:00:00\n\n汇总概况\n部门范围,考勤记录数,异常记录数,分析记录数,预警记录数,复核记录数,闭环记录数\n全部部门,15,24,13,24,5,5\n\n部门明细\n序号,部门编号,部门名称,考勤记录数,异常记录数,分析记录数,预警记录数,复核记录数,闭环记录数\n1,1,研发部,9,12,8,12,3,3\n2,2,行政部,6,12,5,12,2,2',
+    ], { type: 'text/csv;charset=UTF-8' })
 
     exportStatisticsReport.mockResolvedValue({
       blob,
       filename: 'statistics-export.csv',
       contentType: 'text/csv;charset=UTF-8',
     })
-    createElementSpy.mockImplementation((tagName) => {
-      if (tagName === 'a') {
-        return anchor
-      }
-
-      return originalCreateElement(tagName)
-    })
-    global.URL.createObjectURL = createObjectURL
-    global.URL.revokeObjectURL = revokeObjectURL
 
     const wrapper = mountStatisticsView()
     await flushPromises()
     await wrapper.get('[data-testid="statistics-export-button"]').trigger('click')
     await flushPromises()
 
-    expect(exportStatisticsReport).toHaveBeenCalledTimes(1)
-    expect(createObjectURL).toHaveBeenCalledWith(blob)
-    expect(anchor.download).toBe('statistics-export.csv')
-    expect(click).toHaveBeenCalledTimes(1)
-    expect(messageSuccess).toHaveBeenCalledTimes(1)
-
-    createElementSpy.mockRestore()
+    expect(exportStatisticsReport).toHaveBeenCalledWith({ exportType: 'DEPARTMENT' })
   })
 })

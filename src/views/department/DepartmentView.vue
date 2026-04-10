@@ -1,7 +1,6 @@
 <template>
   <section class="crud-page">
     <ConsoleHero
-      eyebrow="基础资料"
       title="部门管理"
       description="维护组织部门资料，用于人员归属、统计汇总和业务分组。"
       theme="sky"
@@ -19,14 +18,16 @@
         </div>
       </template>
 
-      <el-form :inline="true" :model="filters" class="crud-page__filters">
-        <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" clearable placeholder="请输入部门名称" />
-        </el-form-item>
-        <el-form-item>
+      <el-form :model="filters" class="crud-page__filters">
+        <div class="crud-page__filters-main">
+          <el-form-item label="关键词" class="crud-page__filter-item crud-page__filter-item--keyword">
+            <el-input v-model="filters.keyword" clearable placeholder="请输入部门名称" />
+          </el-form-item>
+        </div>
+        <div class="crud-page__filters-actions">
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
+        </div>
       </el-form>
 
       <el-table v-loading="loading" :data="rows">
@@ -41,11 +42,12 @@
       </el-table>
 
       <div class="crud-page__pagination">
+        <span class="crud-page__pagination-total">共 {{ pagination.total }} 条</span>
         <el-pagination
           v-model:current-page="pagination.pageNum"
           v-model:page-size="pagination.pageSize"
           background
-          layout="total, prev, pager, next"
+          layout="prev, pager, next"
           :total="pagination.total"
           @current-change="loadList"
         />
@@ -260,12 +262,48 @@ onMounted(loadList)
 }
 
 .crud-page__filters {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.crud-page__filters-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.crud-page__filter-item {
+  margin-bottom: 0;
+}
+
+.crud-page__filter-item--keyword {
+  min-width: 260px;
+}
+
+.crud-page__filters-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .crud-page__pagination {
   display: flex;
+  align-items: center;
+  gap: 12px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.crud-page__pagination-total {
+  color: #64748b;
+  font-size: 14px;
 }
 </style>

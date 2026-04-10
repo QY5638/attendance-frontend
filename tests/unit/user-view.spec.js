@@ -186,7 +186,7 @@ describe('user view', () => {
     })
     fetchUserList.mockResolvedValue({
       total: 1,
-      items: [{ id: 1, username: 'zhangsan', realName: '张三', deptId: 1, roleId: 2, status: 1 }],
+      items: [{ id: 1, username: 'zhangsan', realName: '张三', gender: '男', phone: '13800000000', deptId: 1, roleId: 2, status: 1 }],
     })
   })
 
@@ -276,5 +276,70 @@ describe('user view', () => {
       pageNum: 1,
       pageSize: 10,
     })
+  })
+
+  it('confirms before resetting password and shows notice only after success', async () => {
+    confirm.mockResolvedValue(undefined)
+    updateUser.mockResolvedValue(undefined)
+
+    const wrapper = mountUserView()
+    await flushPromises()
+
+    await wrapper.vm.handleResetPassword({
+      id: 1,
+      username: 'zhangsan',
+      realName: '张三',
+      gender: '男',
+      phone: '13800000000',
+      deptId: 1,
+      roleId: 2,
+      status: 1,
+    })
+    await flushPromises()
+
+    expect(confirm).toHaveBeenCalledWith(
+      '确定将员工“张三”的登录密码重置为 123456 吗？',
+      '重置密码确认',
+      expect.objectContaining({
+        type: 'warning',
+        confirmButtonText: '确认重置',
+        cancelButtonText: '取消',
+      }),
+    )
+    expect(updateUser).toHaveBeenCalledWith({
+      id: 1,
+      username: 'zhangsan',
+      password: '123456',
+      realName: '张三',
+      gender: '男',
+      phone: '13800000000',
+      deptId: 1,
+      roleId: 2,
+      status: 1,
+    })
+    expect(wrapper.text()).toContain('已重置为初始密码')
+    expect(wrapper.text()).toContain('员工张三的登录密码已恢复为 123456。')
+  })
+
+  it('does not reset password or show success notice when confirmation is cancelled', async () => {
+    confirm.mockRejectedValue('cancel')
+
+    const wrapper = mountUserView()
+    await flushPromises()
+
+    await wrapper.vm.handleResetPassword({
+      id: 1,
+      username: 'zhangsan',
+      realName: '张三',
+      gender: '男',
+      phone: '13800000000',
+      deptId: 1,
+      roleId: 2,
+      status: 1,
+    })
+    await flushPromises()
+
+    expect(updateUser).not.toHaveBeenCalled()
+    expect(wrapper.text()).not.toContain('已重置为初始密码')
   })
 })

@@ -132,6 +132,11 @@ export async function fetchDepartmentRiskBrief(params = {}) {
   return unwrapBusinessResponse(result, '获取部门风险画像失败')
 }
 
+export async function fetchDepartmentRiskOverview(params = {}) {
+  const result = await request.get('/statistics/department-risk-overview', buildGetConfig(params))
+  return unwrapBusinessResponse(result, '获取部门风险概况失败')
+}
+
 export async function exportStatisticsReport(params = {}) {
   const result = await request.get(
     '/statistics/export',

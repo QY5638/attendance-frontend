@@ -163,9 +163,39 @@ describe('exception view', () => {
       processStatus: '',
       userId: '',
     })
-    expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('3001')
+    expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('高风险代打卡异常')
     expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('代打卡')
     expect(wrapper.get('[data-testid="exception-list"]').text()).toContain('待处理')
+  })
+
+  it('replaces raw exception ids with readable exception subjects', async () => {
+    fetchExceptionList.mockResolvedValueOnce(createListPayload([
+      createExceptionRecord({
+        id: 123456789,
+        recordId: 987654321,
+        userId: 456789012,
+      }),
+    ]))
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionRecord({
+      id: 123456789,
+      recordId: 987654321,
+      userId: 456789012,
+    }))
+
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    const listText = wrapper.get('[data-testid="exception-list"]').text()
+    expect(listText).toContain('高风险代打卡异常')
+    expect(listText).not.toContain('123456789')
+
+    await wrapper.get('[data-testid="exception-open-detail-123456789"]').trigger('click')
+    await flushPromises()
+
+    const detailText = wrapper.get('[data-testid="exception-detail-dialog"]').text()
+    expect(detailText).toContain('高风险代打卡异常')
+    expect(detailText).toContain('基于当前打卡记录重新识别')
+    expect(detailText).not.toContain('123456789')
   })
 
   it('submits filters and refreshes the list with caller input', async () => {
@@ -384,5 +414,76 @@ describe('exception view', () => {
     expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: 2001, userId: 1001 })
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('综合识别结果')
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('重新识别后仍为高风险')
+  })
+
+  it('renders english conclusion codes and server error in Chinese on detail dialog', async () => {
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionRecord({ id: 3001, type: 'LATE' }))
+    fetchExceptionAnalysisBrief.mockResolvedValueOnce(createAnalysisBrief({ modelConclusion: 'EARLY_LEAVE' }))
+    fetchExceptionDecisionTrace.mockResolvedValueOnce([
+      createDecisionTrace({ id: 9501, finalDecision: 'PROXY_CHECKIN', modelResult: 'MULTI_LOCATION_CONFLICT' }),
+    ])
+    fetchExceptionComplexCheck.mockRejectedValueOnce({ message: 'server error' })
+
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-detail-3001"]').trigger('click')
+    await flushPromises()
+
+    const detailText = wrapper.get('[data-testid="exception-detail-dialog"]').text()
+    expect(detailText).toContain('早退')
+    expect(detailText).toContain('代打卡')
+    expect(detailText).toContain('多地点异常')
+
+    await wrapper.get('[data-testid="exception-run-complex-check"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="exception-manual-check-error"]').text()).toContain('服务器异常，请稍后重试')
+  })
+
+  it('refreshes detail sections and switches to latest model exception after complex check succeeds', async () => {
+    fetchExceptionList
+      .mockResolvedValueOnce(createListPayload([createExceptionRecord({ id: 3001, recordId: 2001 })]))
+      .mockResolvedValueOnce(createListPayload([
+        createExceptionRecord({ id: 4001, recordId: 2001, type: 'LATE', sourceType: 'MODEL' }),
+        createExceptionRecord({ id: 3001, recordId: 2001 }),
+      ]))
+    fetchExceptionDetail
+      .mockResolvedValueOnce(createExceptionRecord({ id: 3001, recordId: 2001, type: 'PROXY_CHECKIN' }))
+      .mockResolvedValueOnce(createExceptionRecord({ id: 4001, recordId: 2001, type: 'LATE', sourceType: 'MODEL', description: '新综合识别结果' }))
+    fetchExceptionAnalysisBrief
+      .mockResolvedValueOnce(createAnalysisBrief({ modelConclusion: 'PROXY_CHECKIN', reasonSummary: '旧分析摘要' }))
+      .mockResolvedValueOnce(createAnalysisBrief({ modelConclusion: 'LATE', reasonSummary: '新分析摘要' }))
+    fetchExceptionDecisionTrace
+      .mockResolvedValueOnce([createDecisionTrace({ id: 9501, finalDecision: 'PROXY_CHECKIN' })])
+      .mockResolvedValueOnce([createDecisionTrace({ id: 9601, finalDecision: 'LATE', modelResult: 'LATE' })])
+    fetchExceptionComplexCheck.mockResolvedValueOnce({
+      exceptionId: 4001,
+      type: 'LATE',
+      riskLevel: 'MEDIUM',
+      sourceType: 'MODEL',
+      processStatus: 'PENDING',
+      modelConclusion: 'LATE',
+      reasonSummary: '新综合识别摘要',
+      actionSuggestion: '建议关注',
+      confidenceScore: 71.2,
+    })
+
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-detail-3001"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="exception-run-complex-check"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchExceptionList).toHaveBeenCalledTimes(2)
+    expect(fetchExceptionDetail).toHaveBeenLastCalledWith(4001)
+    expect(fetchExceptionAnalysisBrief).toHaveBeenLastCalledWith(4001)
+    expect(fetchExceptionDecisionTrace).toHaveBeenLastCalledWith(4001)
+    const detailText = wrapper.get('[data-testid="exception-detail-dialog"]').text()
+    expect(detailText).toContain('新综合识别结果')
+    expect(detailText).toContain('新分析摘要')
+    expect(detailText).toContain('迟到')
   })
 })

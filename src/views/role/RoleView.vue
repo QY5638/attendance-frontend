@@ -1,7 +1,6 @@
 <template>
   <section class="crud-page">
     <ConsoleHero
-      eyebrow="基础资料"
       title="角色管理"
       description="维护岗位角色资料，用于区分页面访问范围和默认工作区。"
       theme="violet"
@@ -19,20 +18,23 @@
         </div>
       </template>
 
-        <el-form :inline="true" :model="filters" class="crud-page__filters">
-          <el-form-item label="关键词">
+      <el-form :model="filters" class="crud-page__filters">
+        <div class="crud-page__filters-main">
+          <el-form-item label="关键词" class="crud-page__filter-item crud-page__filter-item--keyword">
             <el-input v-model="filters.keyword" clearable placeholder="请输入角色名称" />
           </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filters.status" clearable placeholder="全部状态">
-            <el-option label="启用" :value="1" />
-            <el-option label="停用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
+          <el-form-item label="状态" class="crud-page__filter-item">
+            <el-select v-model="filters.status" class="crud-page__filter-select" placeholder="全部">
+              <el-option label="全部" :value="ALL_FILTER_VALUE" />
+              <el-option label="启用" :value="1" />
+              <el-option label="停用" :value="0" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="crud-page__filters-actions">
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
+        </div>
       </el-form>
 
       <el-table v-loading="loading" :data="rows">
@@ -59,11 +61,12 @@
       </el-table>
 
       <div class="crud-page__pagination">
+        <span class="crud-page__pagination-total">共 {{ pagination.total }} 条</span>
         <el-pagination
           v-model:current-page="pagination.pageNum"
           v-model:page-size="pagination.pageSize"
           background
-          layout="total, prev, pager, next"
+          layout="prev, pager, next"
           :total="pagination.total"
           @current-change="loadList"
         />
@@ -112,6 +115,7 @@ const submitting = ref(false)
 const dialogVisible = ref(false)
 const editingId = ref(null)
 const rows = ref([])
+const ALL_FILTER_VALUE = '__ALL__'
 
 const ROLE_CODE_LABELS = {
   ADMIN: '管理员',
@@ -120,7 +124,7 @@ const ROLE_CODE_LABELS = {
 
 const filters = reactive({
   keyword: '',
-  status: '',
+  status: ALL_FILTER_VALUE,
 })
 
 const pagination = reactive({
@@ -173,7 +177,7 @@ function buildListParams() {
     params.keyword = keyword
   }
 
-  if (filters.status !== '' && filters.status !== null && filters.status !== undefined) {
+  if (filters.status !== ALL_FILTER_VALUE && filters.status !== '' && filters.status !== null && filters.status !== undefined) {
     params.status = filters.status
   }
 
@@ -206,7 +210,7 @@ function handleSearch() {
 
 function handleReset() {
   filters.keyword = ''
-  filters.status = ''
+  filters.status = ALL_FILTER_VALUE
   pagination.pageNum = 1
   loadList()
 }
@@ -309,12 +313,52 @@ onMounted(loadList)
 }
 
 .crud-page__filters {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.crud-page__filters-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.crud-page__filter-item {
+  margin-bottom: 0;
+}
+
+.crud-page__filter-item--keyword {
+  min-width: 240px;
+}
+
+.crud-page__filter-select {
+  width: 180px;
+}
+
+.crud-page__filters-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .crud-page__pagination {
   display: flex;
+  align-items: center;
+  gap: 12px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.crud-page__pagination-total {
+  color: #64748b;
+  font-size: 14px;
 }
 </style>

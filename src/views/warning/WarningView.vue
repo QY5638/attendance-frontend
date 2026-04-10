@@ -1,7 +1,6 @@
 <template>
   <section class="warning-page">
     <ConsoleHero
-      eyebrow="风险预警"
       title="预警列表"
       description="集中查看预警信息、处置建议和关联异常，并支持进入人工复核。"
       theme="sky"
@@ -69,14 +68,14 @@
         <article v-for="item in warningList" :key="item.id" class="warning-item">
           <div class="warning-item__main">
             <div class="warning-item__title-row">
-                <strong>预警编号 {{ item.id }}</strong>
+                <strong>{{ buildWarningTitle(item) }}</strong>
               <span>{{ formatDateTime(item.sendTime) }}</span>
             </div>
 
             <dl class="warning-item__grid">
               <div>
-                <dt>异常编号</dt>
-                <dd>{{ item.exceptionId ?? '--' }}</dd>
+                <dt>关联异常</dt>
+                <dd>{{ buildWarningRelation(item) }}</dd>
               </div>
               <div>
                 <dt>异常类型</dt>
@@ -160,7 +159,7 @@
         <header class="warning-advice-dialog__header">
           <div>
             <p class="warning-page__eyebrow">处置建议</p>
-            <h3>预警编号 {{ selectedWarningId }}</h3>
+            <h3>{{ buildSelectedWarningTitle(selectedWarningId) }}</h3>
           </div>
 
           <div class="warning-advice-dialog__actions">
@@ -175,8 +174,8 @@
         </p>
         <div v-else-if="adviceDetail" class="warning-advice-grid">
           <div>
-            <dt>异常编号</dt>
-            <dd>{{ adviceDetail.exceptionId ?? '--' }}</dd>
+            <dt>关联异常</dt>
+            <dd>{{ buildWarningRelation(getWarningById(selectedWarningId) || adviceDetail) }}</dd>
           </div>
           <div>
             <dt>处置顺序</dt>
@@ -210,7 +209,7 @@
         <header class="warning-reevaluate-dialog__header">
           <div>
             <p class="warning-page__eyebrow">预警重评估</p>
-            <h3>重新评估预警编号 {{ reevaluateForm.warningId }}</h3>
+            <h3>重新评估{{ buildSelectedWarningTitle(reevaluateForm.warningId) }}</h3>
           </div>
 
           <button type="button" class="warning-reevaluate-dialog__close" @click="closeReevaluate">关闭</button>
@@ -256,6 +255,7 @@ import { useRouter } from 'vue-router'
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import { fetchFe06WarningAdvice, fetchFe06WarningList, fetchFe06WarningReevaluate } from '../../api/fe06-warning'
+import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const WARNING_TYPE_LABELS = {
   RISK_WARNING: '风险预警',
@@ -263,6 +263,11 @@ const WARNING_TYPE_LABELS = {
 }
 
 const WARNING_EXCEPTION_TYPE_LABELS = {
+  PROXY_CHECKIN: '代打卡',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非规定时间打卡',
+  REPEAT_CHECK: '重复打卡',
   MULTI_LOCATION_CONFLICT: '多地点异常',
 }
 
@@ -332,7 +337,7 @@ const overviewItems = computed(() => [
   {
     key: 'advice',
     label: '当前查看',
-    value: adviceVisible.value ? `预警编号 ${selectedWarningId.value}` : '未查看',
+    value: adviceVisible.value ? buildSelectedWarningTitle(selectedWarningId.value) : '未查看',
     desc: '可在建议中直接查看异常详情或进入人工复核',
   },
 ])
@@ -357,7 +362,46 @@ function formatDisplayValue(value, labelMap) {
 }
 
 function formatDateTime(value) {
-  return value || '--'
+  return formatDateTimeDisplay(value, '--')
+}
+
+function resolveLabel(value, labelMap) {
+  return value ? labelMap[value] || '' : ''
+}
+
+function getWarningById(warningId) {
+  const normalizedId = warningId === null || warningId === undefined ? '' : `${warningId}`.trim()
+  return warningList.value.find((item) => `${item.id}` === normalizedId) || null
+}
+
+function buildWarningTitle(item = {}) {
+  const levelLabel = resolveLabel(item.level, WARNING_LEVEL_LABELS)
+  const exceptionLabel = resolveLabel(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS)
+  const typeLabel = resolveLabel(item.type, WARNING_TYPE_LABELS)
+
+  if (exceptionLabel) {
+    return `${levelLabel || ''}${exceptionLabel}预警`
+  }
+
+  if (typeLabel === '风险预警') {
+    return `${levelLabel || ''}重点预警` || '重点预警'
+  }
+
+  if (typeLabel) {
+    return `${levelLabel || ''}${typeLabel}`
+  }
+
+  return levelLabel ? `${levelLabel}预警` : '预警记录'
+}
+
+function buildWarningRelation(item = {}) {
+  const exceptionLabel = resolveLabel(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS)
+  return exceptionLabel ? `${exceptionLabel}异常` : '关联异常记录'
+}
+
+function buildSelectedWarningTitle(warningId) {
+  const currentItem = getWarningById(warningId)
+  return currentItem ? buildWarningTitle(currentItem) : '当前预警'
 }
 
 function getWarningLevelClass(level) {

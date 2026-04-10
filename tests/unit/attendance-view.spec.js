@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   authStoreRef,
+  fetchDepartmentList,
   getAttendanceListRequest,
   getAttendanceDeviceOptionsRequest,
   loadAmapSdk,
@@ -17,6 +18,7 @@ const {
       realName: '张三',
     },
   },
+  fetchDepartmentList: vi.fn(),
   getAttendanceListRequest: vi.fn(),
   getAttendanceDeviceOptionsRequest: vi.fn(),
   loadAmapSdk: vi.fn(),
@@ -37,6 +39,10 @@ vi.mock('../../src/api/attendance', () => ({
   submitAttendanceCheckinRequest,
   submitAttendanceRepairRequest,
   verifyFaceRequest,
+}))
+
+vi.mock('../../src/api/department', () => ({
+  fetchDepartmentList,
 }))
 
 vi.mock('../../src/utils/amap', () => ({
@@ -96,6 +102,14 @@ async function setFaceImage(wrapper, imageData = 'base64-image') {
 describe('attendance view', () => {
   beforeEach(() => {
     authStoreRef.current = { roleCode: 'EMPLOYEE', realName: '张三' }
+    fetchDepartmentList.mockReset()
+    fetchDepartmentList.mockResolvedValue({
+      total: 2,
+      items: [
+        { id: 1, name: '研发部' },
+        { id: 2, name: '行政部' },
+      ],
+    })
     getAttendanceListRequest.mockReset()
     getAttendanceListRequest.mockResolvedValue(createRecordResponse())
     getAttendanceDeviceOptionsRequest.mockReset()
@@ -142,6 +156,7 @@ describe('attendance view', () => {
 
     expect(wrapper.find('[data-testid="attendance-tab-checkin"]').exists()).toBe(false)
     expect(getAttendanceDeviceOptionsRequest).not.toHaveBeenCalled()
+    expect(fetchDepartmentList).toHaveBeenCalledWith({ pageNum: 1, pageSize: 200 })
     expect(getAttendanceListRequest).toHaveBeenCalledWith({
       pageNum: 1,
       pageSize: 10,
@@ -152,9 +167,69 @@ describe('attendance view', () => {
       startDate: '',
       endDate: '',
     })
+    expect(wrapper.get('[data-testid="attendance-record-dept-id-input"]').text()).toContain('全部')
+    expect(wrapper.get('[data-testid="attendance-record-dept-id-input"]').html()).toContain('研发部')
     expect(wrapper.text()).toContain('张三')
-    expect(wrapper.text()).toContain('DEV-001')
     expect(wrapper.text()).toContain('办公区A')
+  })
+
+  it('submits admin record filters with text user input and selected department', async () => {
+    authStoreRef.current = { roleCode: 'ADMIN', realName: '管理员' }
+
+    const wrapper = mount(AttendanceView)
+    await flushPromises()
+    getAttendanceListRequest.mockClear()
+
+    await wrapper.get('[data-testid="attendance-record-user-id-input"]').setValue('1001')
+    await wrapper.get('[data-testid="attendance-record-dept-id-input"]').setValue('2')
+    await wrapper.get('[data-testid="attendance-record-check-type-select"]').setValue('IN')
+    await wrapper.get('[data-testid="attendance-record-status-select"]').setValue('NORMAL')
+    await wrapper.get('[data-testid="attendance-record-search"]').trigger('click')
+    await flushPromises()
+
+    expect(getAttendanceListRequest).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+      userId: 1001,
+      deptId: 2,
+      checkType: 'IN',
+      status: 'NORMAL',
+      startDate: '',
+      endDate: '',
+    })
+  })
+
+  it('resets admin record filters back to defaults', async () => {
+    authStoreRef.current = { roleCode: 'ADMIN', realName: '管理员' }
+
+    const wrapper = mount(AttendanceView)
+    await flushPromises()
+    getAttendanceListRequest.mockClear()
+
+    await wrapper.get('[data-testid="attendance-record-user-id-input"]').setValue('1001')
+    await wrapper.get('[data-testid="attendance-record-dept-id-input"]').setValue('2')
+    await wrapper.get('[data-testid="attendance-record-check-type-select"]').setValue('OUT')
+    await wrapper.get('[data-testid="attendance-record-status-select"]').setValue('EXCEPTION')
+    await wrapper.get('[data-testid="attendance-start-date-input"]').setValue('2026-04-01')
+    await wrapper.get('[data-testid="attendance-end-date-input"]').setValue('2026-04-30')
+    await wrapper.get('[data-testid="attendance-page-size-select"]').setValue('20')
+
+    await wrapper.get('[data-testid="attendance-record-reset"]').trigger('click')
+    await flushPromises()
+
+    expect(getAttendanceListRequest).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+      userId: undefined,
+      deptId: undefined,
+      checkType: '',
+      status: '',
+      startDate: '',
+      endDate: '',
+    })
+    expect(wrapper.get('[data-testid="attendance-record-user-id-input"]').element.value).toBe('')
+    expect(wrapper.get('[data-testid="attendance-record-dept-id-input"]').element.value).toBe('')
+    expect(wrapper.get('[data-testid="attendance-page-size-select"]').element.value).toBe('10')
   })
 
   it('renders dual tabs, defaults to checkin and loads devices with records in parallel on mount', async () => {

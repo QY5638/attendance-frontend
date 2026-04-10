@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   authStoreRef,
-  fetchDepartmentRiskBrief,
+  fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchPersonalStatistics,
   fetchStatisticsSummary,
@@ -16,7 +16,7 @@ const {
       realName: '张三',
     },
   },
-  fetchDepartmentRiskBrief: vi.fn(),
+  fetchDepartmentRiskOverview: vi.fn(),
   fetchDepartmentStatistics: vi.fn(),
   fetchPersonalStatistics: vi.fn(),
   fetchStatisticsSummary: vi.fn(),
@@ -28,7 +28,7 @@ vi.mock('../../src/store/auth', () => ({
 }))
 
 vi.mock('../../src/api/statistics', () => ({
-  fetchDepartmentRiskBrief,
+  fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchPersonalStatistics,
   fetchStatisticsSummary,
@@ -94,7 +94,7 @@ function mountDashboardView() {
 describe('dashboard view', () => {
   beforeEach(() => {
     authStoreRef.current = { roleCode: 'EMPLOYEE', realName: '张三' }
-    fetchDepartmentRiskBrief.mockReset()
+    fetchDepartmentRiskOverview.mockReset()
     fetchDepartmentStatistics.mockReset()
     fetchPersonalStatistics.mockReset()
     fetchStatisticsSummary.mockReset()
@@ -128,15 +128,17 @@ describe('dashboard view', () => {
       highlightRisks: '连续三天设备异常',
       manageSuggestion: '优先排查设备',
     })
-    fetchWarningList.mockResolvedValue([{ id: 1, level: 'HIGH', aiSummary: '高风险异常' }])
-    fetchDepartmentRiskBrief.mockResolvedValue([{ deptId: 1, deptName: '研发部', riskScore: 82 }])
+    fetchWarningList.mockResolvedValue([{ id: 123456789, type: 'RISK_WARNING', exceptionType: 'PROXY_CHECKIN', level: 'HIGH', aiSummary: '高风险异常' }])
+    fetchDepartmentRiskOverview.mockResolvedValue([{ deptId: 1, deptName: '研发部', riskScore: 82 }])
 
     const wrapper = mountDashboardView()
     await flushPromises()
 
     expect(fetchDepartmentStatistics).toHaveBeenCalledTimes(1)
     expect(fetchWarningList).toHaveBeenCalledWith({ pageNum: 1, pageSize: 5 })
+    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('高风险代打卡预警')
     expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('高风险异常')
+    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('风险预警')
     expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('研发部')
   })
 
@@ -149,7 +151,7 @@ describe('dashboard view', () => {
       manageSuggestion: '优先排查设备',
     })
     fetchWarningList.mockRejectedValue(new Error('获取预警列表失败'))
-    fetchDepartmentRiskBrief.mockResolvedValue([{ deptId: 1, deptName: '研发部', riskScore: 82 }])
+    fetchDepartmentRiskOverview.mockResolvedValue([{ deptId: 1, deptName: '研发部', riskScore: 82 }])
 
     const wrapper = mountDashboardView()
     await flushPromises()
@@ -158,5 +160,52 @@ describe('dashboard view', () => {
     expect(wrapper.get('[data-testid="dashboard-summary"]').text()).toContain('部门异常率上升')
     expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('研发部')
     expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('暂无摘要说明')
+  })
+
+  it('keeps dashboard available when department risk brief request fails', async () => {
+    authStoreRef.current = { roleCode: 'ADMIN', realName: '管理员' }
+    fetchDepartmentStatistics.mockResolvedValue({ attendanceRate: 0.91, exceptionRate: 0.08 })
+    fetchStatisticsSummary.mockResolvedValue({
+      summary: '部门异常率上升',
+      highlightRisks: '连续三天设备异常',
+      manageSuggestion: '优先排查设备',
+    })
+    fetchWarningList.mockResolvedValue([{ id: 1, level: 'HIGH', aiSummary: '高风险异常' }])
+    fetchDepartmentRiskOverview.mockRejectedValue(new Error('获取部门风险概况失败'))
+
+    const wrapper = mountDashboardView()
+    await flushPromises()
+
+    expect(wrapper.find('.el-alert').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="dashboard-summary"]').text()).toContain('部门异常率上升')
+    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('高风险异常')
+    expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('暂无风险概况')
+  })
+
+  it('shows all departments on dashboard risk section', async () => {
+    authStoreRef.current = { roleCode: 'ADMIN', realName: '管理员' }
+    fetchDepartmentStatistics.mockResolvedValue({ attendanceRate: 0.91, exceptionRate: 0.08 })
+    fetchStatisticsSummary.mockResolvedValue({
+      summary: '部门异常率上升',
+      highlightRisks: '连续三天设备异常',
+      manageSuggestion: '优先排查设备',
+    })
+    fetchWarningList.mockResolvedValue([{ id: 1, level: 'HIGH', aiSummary: '高风险异常' }])
+    fetchDepartmentRiskOverview.mockResolvedValue([
+      { deptId: 2, deptName: '行政部', riskScore: 88 },
+      { deptId: 1, deptName: '技术部', riskScore: 82 },
+      { deptId: 3, deptName: '财务部', riskScore: 73 },
+      { deptId: 4, deptName: '市场部', riskScore: 69 },
+    ])
+
+    const wrapper = mountDashboardView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('全部部门')
+    expect(wrapper.findAll('[data-testid="dashboard-risk"] .el-card')).toHaveLength(4)
+    expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('行政部')
+    expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('技术部')
+    expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('财务部')
+    expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('市场部')
   })
 })

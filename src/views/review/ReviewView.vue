@@ -10,6 +10,7 @@ import {
   submitReview,
   submitReviewFeedback,
 } from '../../api/review'
+import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const REVIEW_RESULT_OPTIONS = [
   { value: 'CONFIRMED', label: '确认异常' },
@@ -122,8 +123,8 @@ const assistantDisplayError = computed(() => {
 const heroCards = computed(() => [
   {
     key: 'exception',
-    label: '异常编号',
-    value: hasExceptionId.value ? exceptionId.value : '待选择',
+    label: '当前异常',
+    value: hasExceptionId.value ? buildCurrentExceptionTitle() : '待选择',
   },
   {
     key: 'assistant',
@@ -133,7 +134,7 @@ const heroCards = computed(() => [
   {
     key: 'latest',
     label: '最新办理',
-    value: latestReview.value?.id ? `编号 ${latestReview.value.id}` : '暂无',
+    value: latestReview.value ? formatLatestReviewSummary(latestReview.value) : '暂无',
   },
 ])
 
@@ -170,6 +171,30 @@ function formatDisplayValue(value, labelMap) {
 
 function formatText(value) {
   return value || '--'
+}
+
+function resolveLabel(value, labelMap) {
+  return value ? labelMap[value] || '' : ''
+}
+
+function buildExceptionTitle(item = {}) {
+  const riskLabel = resolveLabel(item.riskLevel, RISK_LEVEL_LABELS)
+  const typeLabel = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
+
+  if (typeLabel) {
+    return `${riskLabel || ''}${typeLabel}异常`
+  }
+
+  return riskLabel ? `${riskLabel}待核查异常` : '待核查异常'
+}
+
+function buildCurrentExceptionTitle() {
+  return exceptionDetail.value ? buildExceptionTitle(exceptionDetail.value) : '待加载异常详情'
+}
+
+function formatLatestReviewSummary(record = {}) {
+  const resultLabel = resolveLabel(record.reviewResult, REVIEW_RESULT_LABELS)
+  return resultLabel || '已提交处理意见'
 }
 
 function formatScore(value) {
@@ -438,7 +463,6 @@ watch(
 <template>
   <section class="review-page">
     <ConsoleHero
-      eyebrow="人工复核"
       title="人工复核"
       description="查看异常详情、处置参考和办理记录，并完成复核确认与补充说明。"
       theme="violet"
@@ -455,7 +479,7 @@ watch(
         <div class="review-panel__head">
           <div>
             <p class="review-panel__eyebrow">异常详情</p>
-            <h2>异常编号 {{ exceptionId }}</h2>
+            <h2>{{ buildCurrentExceptionTitle() }}</h2>
           </div>
           <span class="review-panel__tag">待复核</span>
         </div>
@@ -494,14 +518,6 @@ watch(
                 </span>
               </dd>
             </div>
-              <div>
-                <dt>考勤记录编号</dt>
-                <dd>{{ formatText(exceptionDetail?.recordId) }}</dd>
-              </div>
-              <div>
-                <dt>人员编号</dt>
-                <dd>{{ formatText(exceptionDetail?.userId) }}</dd>
-              </div>
           </dl>
 
           <p class="review-detail-grid__description">{{ formatText(exceptionDetail?.description) }}</p>
@@ -563,7 +579,7 @@ watch(
             </div>
             <div>
               <dt>复核时间</dt>
-              <dd>{{ formatText(latestReview.reviewTime) }}</dd>
+              <dd>{{ formatDateTimeDisplay(latestReview.reviewTime, '--') }}</dd>
             </div>
             <div>
               <dt>处理评价</dt>

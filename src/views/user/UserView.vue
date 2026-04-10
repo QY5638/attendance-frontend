@@ -1,7 +1,6 @@
 <template>
   <section class="crud-page">
     <ConsoleHero
-      eyebrow="基础资料"
       title="用户管理"
       description="维护人员资料，并关联所属部门、岗位角色和使用状态。"
       theme="indigo"
@@ -19,40 +18,42 @@
         </div>
       </template>
 
-        <el-form :inline="true" :model="filters" class="crud-page__filters">
-          <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" clearable placeholder="姓名或账号" />
+      <el-form :model="filters" class="crud-page__filters">
+        <div class="crud-page__filters-main">
+          <el-form-item label="关键词" class="crud-page__filter-item crud-page__filter-item--keyword">
+            <el-input v-model="filters.keyword" clearable placeholder="姓名或账号" />
           </el-form-item>
-        <el-form-item label="部门">
-          <el-select v-model="filters.deptId" clearable placeholder="全部部门">
-            <el-option v-for="item in departmentOptions" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filters.status" clearable placeholder="全部状态">
-            <el-option label="启用" :value="1" />
-            <el-option label="停用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
+          <el-form-item label="部门" class="crud-page__filter-item">
+            <el-select v-model="filters.deptId" class="crud-page__filter-select" placeholder="全部">
+              <el-option label="全部" :value="ALL_FILTER_VALUE" />
+              <el-option v-for="item in departmentOptions" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态" class="crud-page__filter-item">
+            <el-select v-model="filters.status" class="crud-page__filter-select" placeholder="全部">
+              <el-option label="全部" :value="ALL_FILTER_VALUE" />
+              <el-option label="启用" :value="1" />
+              <el-option label="停用" :value="0" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="crud-page__filters-actions">
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-        </el-form-item>
+        </div>
       </el-form>
 
       <el-table v-loading="loading" :data="rows">
-        <el-table-column prop="username" label="账号" min-width="140" />
         <el-table-column prop="realName" label="姓名" min-width="120" />
-        <el-table-column prop="gender" label="性别" width="90" />
-        <el-table-column prop="phone" label="手机号" min-width="150" />
-        <el-table-column label="部门" min-width="140">
-          <template #default="{ row }">
-            {{ getDepartmentName(row.deptId) }}
-          </template>
-        </el-table-column>
         <el-table-column label="角色" min-width="140">
           <template #default="{ row }">
             {{ getRoleName(row.roleId) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="gender" label="性别" width="90" />
+        <el-table-column label="部门" min-width="140">
+          <template #default="{ row }">
+            {{ getDepartmentName(row.deptId) }}
           </template>
         </el-table-column>
         <el-table-column label="状态" width="120">
@@ -62,7 +63,24 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" min-width="180" />
+        <el-table-column label="创建时间" min-width="180">
+          <template #default="{ row }">
+            {{ formatDateTimeDisplay(row.createTime, '-') }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="username" label="账号" min-width="140" />
+        <el-table-column label="密码" width="120">
+          <template #default="{ row }">
+            <el-button
+              link
+              type="primary"
+              :loading="resettingUserId === row.id"
+              @click="handleResetPassword(row)"
+            >
+              重置密码
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
@@ -72,11 +90,12 @@
       </el-table>
 
       <div class="crud-page__pagination">
+        <span class="crud-page__pagination-total">共 {{ pagination.total }} 条</span>
         <el-pagination
           v-model:current-page="pagination.pageNum"
           v-model:page-size="pagination.pageSize"
           background
-          layout="total, prev, pager, next"
+          layout="prev, pager, next"
           :total="pagination.total"
           @current-change="loadList"
         />
@@ -143,6 +162,19 @@
         <el-button type="primary" :loading="submitting" @click="handleSubmit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="resetNoticeVisible" width="360px" align-center :show-close="false" class="crud-page__notice-dialog">
+      <div class="crud-page__notice-card">
+        <div class="crud-page__notice-icon">✓</div>
+        <strong>已重置为初始密码</strong>
+        <p>{{ resetNoticeTarget }}</p>
+      </div>
+      <template #footer>
+        <div class="crud-page__notice-actions">
+          <el-button type="primary" @click="resetNoticeVisible = false">我知道了</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -154,20 +186,25 @@ import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { fetchDepartmentList } from '../../api/department'
 import { fetchRoleList } from '../../api/role'
 import { addUser, deleteUser, fetchUserList, updateUser } from '../../api/user'
+import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const formRef = ref()
 const loading = ref(false)
 const submitting = ref(false)
 const dialogVisible = ref(false)
 const editingId = ref(null)
+const resettingUserId = ref(null)
+const resetNoticeVisible = ref(false)
+const resetNoticeTarget = ref('请提醒用户及时登录后修改密码。')
 const rows = ref([])
 const departmentOptions = ref([])
 const roleOptions = ref([])
+const ALL_FILTER_VALUE = '__ALL__'
 
 const filters = reactive({
   keyword: '',
-  deptId: '',
-  status: '',
+  deptId: ALL_FILTER_VALUE,
+  status: ALL_FILTER_VALUE,
 })
 
 const pagination = reactive({
@@ -238,6 +275,51 @@ function getRoleName(roleId) {
   return roleOptions.value.find((item) => item.id === roleId)?.name || '-'
 }
 
+function buildResetPasswordPayload(row) {
+  return {
+    id: row.id,
+    username: row.username || '',
+    password: '123456',
+    realName: row.realName || '',
+    gender: row.gender || '男',
+    phone: row.phone || '',
+    deptId: row.deptId,
+    roleId: row.roleId,
+    status: row.status,
+  }
+}
+
+async function handleResetPassword(row) {
+  if (!row?.id || resettingUserId.value) {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定将员工“${row.realName || row.username || '该员工'}”的登录密码重置为 123456 吗？`,
+      '重置密码确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确认重置',
+        cancelButtonText: '取消',
+      },
+    )
+
+    resettingUserId.value = row.id
+    await updateUser(buildResetPasswordPayload(row))
+    resetNoticeTarget.value = `员工${row.realName || row.username || '该员工'}的登录密码已恢复为 123456。`
+    resetNoticeVisible.value = true
+    await loadList()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+    ElMessage.error(error.message || '密码重置失败')
+  } finally {
+    resettingUserId.value = null
+  }
+}
+
 function buildListParams() {
   const params = {
     pageNum: pagination.pageNum,
@@ -249,11 +331,11 @@ function buildListParams() {
     params.keyword = keyword
   }
 
-  if (filters.deptId !== '' && filters.deptId !== null && filters.deptId !== undefined) {
+  if (filters.deptId !== ALL_FILTER_VALUE && filters.deptId !== '' && filters.deptId !== null && filters.deptId !== undefined) {
     params.deptId = filters.deptId
   }
 
-  if (filters.status !== '' && filters.status !== null && filters.status !== undefined) {
+  if (filters.status !== ALL_FILTER_VALUE && filters.status !== '' && filters.status !== null && filters.status !== undefined) {
     params.status = filters.status
   }
 
@@ -313,8 +395,8 @@ function handleSearch() {
 
 function handleReset() {
   filters.keyword = ''
-  filters.deptId = ''
-  filters.status = ''
+  filters.deptId = ALL_FILTER_VALUE
+  filters.status = ALL_FILTER_VALUE
   pagination.pageNum = 1
   loadList()
 }
@@ -432,12 +514,91 @@ onMounted(async () => {
 }
 
 .crud-page__filters {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.crud-page__filters-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.crud-page__filter-item {
+  margin-bottom: 0;
+}
+
+.crud-page__filter-item--keyword {
+  min-width: 240px;
+}
+
+.crud-page__filter-select {
+  width: 180px;
+}
+
+.crud-page__filters-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .crud-page__pagination {
   display: flex;
+  align-items: center;
+  gap: 12px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+.crud-page__pagination-total {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.crud-page__notice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 4px;
+  text-align: center;
+}
+
+.crud-page__notice-card strong {
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.crud-page__notice-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.crud-page__notice-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(47, 105, 178, 0.16) 0%, rgba(36, 83, 145, 0.24) 100%);
+  color: #245391;
+  font-size: 28px;
+  font-weight: 700;
+  box-shadow: 0 18px 34px rgba(47, 105, 178, 0.12);
+}
+
+.crud-page__notice-actions {
+  display: flex;
+  justify-content: center;
 }
 </style>

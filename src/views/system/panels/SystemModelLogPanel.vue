@@ -25,12 +25,12 @@
         <input v-model="filters.businessType" type="text" placeholder="请输入办理场景关键字" />
       </label>
       <label>
-        <span>关联编号</span>
-        <input v-model="filters.businessId" type="text" placeholder="请输入关联编号" />
+        <span>关联事项</span>
+        <input v-model="filters.businessId" type="text" placeholder="按关联事项筛选" />
       </label>
       <label>
-        <span>方案编号</span>
-        <input v-model="filters.promptTemplateId" type="text" placeholder="请输入方案编号" />
+        <span>方案使用</span>
+        <input v-model="filters.promptTemplateId" type="text" placeholder="按方案使用情况筛选" />
       </label>
       <label>
         <span>办理状态</span>
@@ -42,11 +42,11 @@
       </label>
       <label>
         <span>开始日期</span>
-        <input v-model="filters.startDate" type="date" />
+        <input v-model="filters.startDate" :data-empty="String(!filters.startDate)" type="date" />
       </label>
       <label>
         <span>结束日期</span>
-        <input v-model="filters.endDate" type="date" />
+        <input v-model="filters.endDate" :data-empty="String(!filters.endDate)" type="date" />
       </label>
       <div class="panel-card__actions">
         <button type="submit" class="panel-card__primary">查询</button>
@@ -61,8 +61,8 @@
         <thead>
           <tr>
             <th>办理场景</th>
-            <th>关联编号</th>
-            <th>方案编号</th>
+            <th>关联事项</th>
+            <th>方案使用</th>
             <th>办理状态</th>
             <th>处理耗时</th>
             <th>输入概述</th>
@@ -83,8 +83,8 @@
                 {{ formatBusinessType(row.businessType) }}
               </span>
             </td>
-            <td>{{ row.businessId ?? '-' }}</td>
-            <td>{{ row.promptTemplateId ?? '-' }}</td>
+            <td>{{ formatBusinessReference(row) }}</td>
+            <td>{{ formatPromptReference(row) }}</td>
             <td>
               <span :class="['panel-card__status', getModelStatusClass(row.status)]">
                 {{ formatModelStatus(row.status) }}
@@ -117,6 +117,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import { fetchModelLogList } from '../../../api/system'
+import { formatDateTimeDisplay } from '../../../utils/date-time'
 
 const loading = ref(false)
 const rows = ref([])
@@ -180,16 +181,25 @@ function buildListParams() {
 }
 
 function formatDateTime(value) {
-  if (!value) {
-    return '-'
-  }
-
-  return String(value).replace('T', ' ').slice(0, 19)
+  return formatDateTimeDisplay(value, '-')
 }
 
 function formatLatency(value) {
   const latency = Number(value)
   return Number.isFinite(latency) ? `${latency} ms` : '-'
+}
+
+function formatBusinessReference(row = {}) {
+  const sceneLabel = formatBusinessType(row.businessType)
+  if (row.inputSummary) {
+    return `${sceneLabel}：${row.inputSummary}`
+  }
+
+  return sceneLabel === '-' ? '当前办理记录' : `${sceneLabel}记录`
+}
+
+function formatPromptReference(row = {}) {
+  return row.promptTemplateId ? '已关联专项方案' : '系统默认方案'
 }
 
 function resolveResultText(row) {

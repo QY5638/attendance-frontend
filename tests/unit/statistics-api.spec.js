@@ -12,7 +12,7 @@ vi.mock('../../src/utils/request', () => ({
 
 import {
   exportStatisticsReport,
-  fetchDepartmentRiskBrief,
+  fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchExceptionTrend,
   fetchPersonalStatistics,
@@ -46,11 +46,11 @@ describe('statistics api', () => {
 
     await expect(fetchExceptionTrend()).resolves.toEqual([{ label: '周一', value: 1 }])
     await expect(fetchStatisticsSummary()).resolves.toEqual({ summary: '整体稳定' })
-    await expect(fetchDepartmentRiskBrief()).resolves.toEqual([{ deptId: 1, deptName: '研发部' }])
+    await expect(fetchDepartmentRiskOverview()).resolves.toEqual([{ deptId: 1, deptName: '研发部' }])
 
     expect(requestGet).toHaveBeenNthCalledWith(1, '/statistics/exception-trend', undefined)
     expect(requestGet).toHaveBeenNthCalledWith(2, '/statistics/summary', undefined)
-    expect(requestGet).toHaveBeenNthCalledWith(3, '/statistics/department-risk-brief', undefined)
+    expect(requestGet).toHaveBeenNthCalledWith(3, '/statistics/department-risk-overview', undefined)
   })
 
   it('preserves backend export filename and content type', async () => {

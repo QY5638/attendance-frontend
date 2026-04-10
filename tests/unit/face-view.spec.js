@@ -12,6 +12,12 @@ vi.mock('../../src/api/face', () => ({
   verifyFace,
 }))
 
+vi.mock('../../src/store/auth', () => ({
+  useAuthStore: () => ({
+    realName: '张三',
+  }),
+}))
+
 import FaceCaptureView from '../../src/views/face/FaceCaptureView.vue'
 
 if (!Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'srcObject')) {
@@ -70,7 +76,7 @@ describe('face capture view', () => {
 
   it('uploads local image and shows verify result', async () => {
     verifyFace.mockResolvedValue({
-      userId: 1001,
+      userId: 123456789,
       registered: true,
       matched: true,
       faceScore: 98.56,
@@ -100,7 +106,7 @@ describe('face capture view', () => {
 
     expect(verifyFace).toHaveBeenCalledWith('data:image/png;base64,uploaded-face.png')
     expect(wrapper.get('[data-testid="face-result-message"]').text()).toBe('人脸验证通过')
-    expect(wrapper.get('[data-testid="face-result-user-id"]').text()).toContain('1001')
+    expect(wrapper.get('[data-testid="face-result-user-id"]').text()).toContain('当前账号：张三')
   })
 
   it('starts camera, captures image, submits register request, and stops stream on unmount', async () => {

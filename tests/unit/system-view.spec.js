@@ -58,6 +58,7 @@ vi.mock('../../src/utils/amap', () => ({
 
 import SystemView from '../../src/views/system/SystemView.vue'
 import SystemDevicePanel from '../../src/views/system/panels/SystemDevicePanel.vue'
+import SystemOperationLogPanel from '../../src/views/system/panels/SystemOperationLogPanel.vue'
 import SystemPromptPanel from '../../src/views/system/panels/SystemPromptPanel.vue'
 import SystemModelLogPanel from '../../src/views/system/panels/SystemModelLogPanel.vue'
 import SystemRiskLevelPanel from '../../src/views/system/panels/SystemRiskLevelPanel.vue'
@@ -126,7 +127,7 @@ describe('system view', () => {
     })
     fetchOperationLogList.mockResolvedValue({
       total: 1,
-      items: [{ id: 1, userId: 1001, type: 'LOGIN', content: '管理员登录系统', operationTime: '2026-04-04 09:00:00' }],
+      items: [{ id: 202604050099, userId: 20261001, type: 'LOGIN', content: '管理员登录系统', operationTime: '2026-04-04 09:00:00' }],
     })
     fetchModelLogList.mockResolvedValue({
       total: 1,
@@ -135,7 +136,7 @@ describe('system view', () => {
           id: 11,
           businessType: 'ATTENDANCE_ANALYSIS',
           businessId: 20260405001,
-          promptTemplateId: 1,
+          promptTemplateId: 123456789,
           inputSummary: '近 7 日打卡摘要',
           outputSummary: '识别出连续晚到风险',
           status: 'SUCCESS',
@@ -222,8 +223,22 @@ describe('system view', () => {
       pageSize: 10,
     })
     expect(wrapper.text()).toContain('考勤分析')
+    expect(wrapper.text()).toContain('考勤分析：近 7 日打卡摘要')
+    expect(wrapper.text()).toContain('已关联专项方案')
     expect(wrapper.text()).toContain('识别出连续晚到风险')
     expect(wrapper.text()).toContain('处理记录')
+  })
+
+  it('loads operation log panel with readable actor and summary', async () => {
+    const wrapper = await mountPanel(SystemOperationLogPanel)
+
+    expect(fetchOperationLogList).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+    })
+    expect(wrapper.text()).toContain('管理员')
+    expect(wrapper.text()).toContain('登录系统')
+    expect(wrapper.text()).toContain('登录')
   })
 
   it('shows maintained notice on risk level panel', async () => {
