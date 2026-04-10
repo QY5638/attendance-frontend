@@ -1,28 +1,21 @@
 <template>
   <el-container class="layout-shell">
-    <el-aside :width="collapsed ? '76px' : '248px'" class="layout-sidebar">
+    <el-aside width="248px" class="layout-sidebar">
       <div class="layout-brand">
         <div class="layout-brand__mark">勤</div>
-        <div v-if="!collapsed" class="layout-brand__copy">
+        <div class="layout-brand__copy">
           <div class="layout-brand__title">企业考勤管理系统</div>
           <div class="layout-brand__subtitle">内部办公平台</div>
         </div>
       </div>
 
-      <div class="layout-toggle">
-        <el-button text @click="collapsed = !collapsed">
-          {{ collapsed ? '展开菜单' : '收起菜单' }}
-        </el-button>
-      </div>
-
       <div class="layout-menu-groups">
         <section v-for="group in menuGroups" :key="group.name" class="layout-group">
-          <div v-if="!collapsed" class="layout-group__title">{{ group.name }}</div>
+          <div class="layout-group__title">{{ group.name }}</div>
 
           <el-menu
             :default-active="activePath"
             class="layout-menu"
-            :collapse="collapsed"
             router
           >
             <el-menu-item
@@ -37,7 +30,7 @@
         </section>
       </div>
 
-      <div v-if="!collapsed" class="layout-sidebar__footer">
+      <div class="layout-sidebar__footer">
         <span>当前角色</span>
         <strong>{{ roleLabel }}</strong>
       </div>
@@ -46,7 +39,6 @@
     <el-container class="layout-content-shell">
       <el-header class="layout-header">
         <div class="layout-header__intro">
-          <div class="layout-header__eyebrow">{{ currentSection }}</div>
           <div class="layout-header__title">{{ currentTitle }}</div>
           <div class="layout-header__desc">{{ currentDescription }}</div>
         </div>
@@ -71,7 +63,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getMenuGroups } from '../router/routes'
@@ -80,7 +72,6 @@ import { useAuthStore } from '../store/auth'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const collapsed = ref(false)
 
 const menuRoutes = computed(() => {
   const layoutRoute = router.options.routes.find((item) => item.path === '/')
@@ -90,7 +81,6 @@ const menuRoutes = computed(() => {
 const menuGroups = computed(() => getMenuGroups(menuRoutes.value, authStore.roleCode))
 const activePath = computed(() => route.path)
 const currentTitle = computed(() => route.meta?.title || '管理首页')
-const currentSection = computed(() => route.meta?.menuGroup || '工作区')
 const currentDescription = computed(() => {
   const descriptions = {
     概览工作台: '集中查看运行概况、重点提醒和常用入口。',
@@ -204,18 +194,6 @@ function handleLogout() {
   color: rgba(226, 232, 240, 0.72);
 }
 
-.layout-toggle {
-  padding: 0 16px 16px;
-}
-
-.layout-toggle :deep(.el-button) {
-  width: 100%;
-  min-height: 40px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
-}
-
 .layout-menu-groups {
   flex: 1;
   overflow-y: auto;
@@ -300,12 +278,6 @@ function handleLogout() {
   min-width: 0;
 }
 
-.layout-header__eyebrow {
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: #2f69b2;
-}
-
 .layout-header__title {
   font-size: 20px;
   font-weight: 700;
@@ -313,7 +285,7 @@ function handleLogout() {
 }
 
 .layout-header__desc {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 13px;
   color: #64748b;
 }

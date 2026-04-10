@@ -1,11 +1,17 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { loginRequest } = vi.hoisted(() => ({
+const { createAuthError, loginRequest } = vi.hoisted(() => ({
+  createAuthError: vi.fn((message, field = '') => ({
+    type: 'auth',
+    field,
+    message,
+  })),
   loginRequest: vi.fn(),
 }))
 
 vi.mock('../../src/api/auth', () => ({
+  createAuthError,
   loginRequest,
 }))
 
@@ -15,6 +21,7 @@ describe('auth store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    createAuthError.mockClear()
     loginRequest.mockReset()
   })
 
@@ -33,6 +40,27 @@ describe('auth store', () => {
     expect(store.realName).toBe('系统管理员')
     expect(store.defaultHomePath).toBe('/dashboard')
     expect(localStorage.getItem('attendance_token')).toBe('token-value')
+  })
+
+  it('rejects login when selected role does not match returned role', async () => {
+    loginRequest.mockResolvedValue({
+      token: 'token-value',
+      roleCode: 'EMPLOYEE',
+      realName: '张三',
+    })
+
+    const store = useAuthStore()
+
+    await expect(
+      store.login({ username: 'zhangsan', password: '123456', expectedRoleCode: 'ADMIN' }),
+    ).rejects.toMatchObject({
+      field: 'role',
+      message: '所选登录身份与账号角色不一致',
+    })
+
+    expect(store.token).toBe('')
+    expect(store.roleCode).toBe('')
+    expect(store.realName).toBe('')
   })
 
   it('rejects unsupported role and clears state', async () => {

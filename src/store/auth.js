@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-import { loginRequest } from '../api/auth'
+import { createAuthError, loginRequest } from '../api/auth'
 import { canAccessRoles, getDefaultHomePath, isSupportedRole } from '../router/access'
 import { clearAuthStorage, readAuthStorage, writeAuthStorage } from '../utils/auth'
 
@@ -19,11 +19,17 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     async login(payload) {
-      const data = await loginRequest(payload)
+      const { expectedRoleCode = '', ...loginPayload } = payload || {}
+      const data = await loginRequest(loginPayload)
 
       if (!isSupportedRole(data.roleCode)) {
         this.logout()
         throw new Error('当前账号暂无系统访问权限')
+      }
+
+      if (expectedRoleCode && data.roleCode !== expectedRoleCode) {
+        this.logout()
+        throw createAuthError('所选登录身份与账号角色不一致', 'role')
       }
 
       this.token = data.token || ''

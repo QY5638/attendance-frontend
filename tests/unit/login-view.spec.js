@@ -153,6 +153,10 @@ function getSubmitButton(wrapper) {
   return wrapper.get('[data-testid="login-submit-button"]')
 }
 
+function getRoleButton(wrapper, roleCode) {
+  return wrapper.get(`[data-testid="login-role-${roleCode.toLowerCase()}-button"]`)
+}
+
 describe('login view', () => {
   beforeEach(() => {
     login.mockReset()
@@ -174,6 +178,7 @@ describe('login view', () => {
 
     const wrapper = mountLoginView()
 
+    await getRoleButton(wrapper, 'ADMIN').trigger('click')
     await getUsernameInput(wrapper).setValue(' admin ')
     await getPasswordInput(wrapper).setValue('123456')
     await getSubmitButton(wrapper).trigger('click')
@@ -182,9 +187,34 @@ describe('login view', () => {
     expect(login).toHaveBeenCalledWith({
       username: 'admin',
       password: '123456',
+      expectedRoleCode: 'ADMIN',
     })
     expect(resolvePostLoginPath).toHaveBeenCalledWith('/attendance?tab=history', '/dashboard')
     expect(replace).toHaveBeenCalledWith('/attendance?tab=history')
+  })
+
+  it('renders the simplified enterprise portal copy on the left panel', () => {
+    const wrapper = mountLoginView()
+
+    expect(wrapper.text()).toContain('企业考勤管理系统')
+    expect(wrapper.text()).toContain('常用业务')
+    expect(wrapper.text()).toContain('登录要求')
+    expect(wrapper.text()).toContain('管理员')
+    expect(wrapper.text()).toContain('员工')
+    expect(wrapper.text()).not.toContain('适用范围')
+    expect(wrapper.text()).not.toContain('内部办公统一登录入口')
+  })
+
+  it('requires selecting a role before submitting', async () => {
+    const wrapper = mountLoginView()
+
+    await getUsernameInput(wrapper).setValue('admin')
+    await getPasswordInput(wrapper).setValue('123456')
+    await getSubmitButton(wrapper).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="login-role-error"]').text()).toBe('请选择登录身份')
+    expect(login).not.toHaveBeenCalled()
   })
 
   it('renders field-level submit errors without redirecting', async () => {
@@ -196,6 +226,7 @@ describe('login view', () => {
 
     const wrapper = mountLoginView()
 
+    await getRoleButton(wrapper, 'ADMIN').trigger('click')
     await getUsernameInput(wrapper).setValue('   ')
     await getPasswordInput(wrapper).setValue('123456')
     await getSubmitButton(wrapper).trigger('click')
@@ -215,6 +246,7 @@ describe('login view', () => {
 
     const wrapper = mountLoginView()
 
+    await getRoleButton(wrapper, 'ADMIN').trigger('click')
     await getUsernameInput(wrapper).setValue('disabled')
     await getPasswordInput(wrapper).setValue('123456')
     await getSubmitButton(wrapper).trigger('click')
@@ -234,6 +266,7 @@ describe('login view', () => {
 
     const wrapper = mountLoginView()
 
+    await getRoleButton(wrapper, 'ADMIN').trigger('click')
     await getUsernameInput(wrapper).setValue('admin')
     await getPasswordInput(wrapper).setValue('123456')
 
@@ -268,6 +301,7 @@ describe('login view', () => {
 
     const wrapper = mountLoginView()
 
+    await getRoleButton(wrapper, 'ADMIN').trigger('click')
     await getUsernameInput(wrapper).setValue('admin')
     await getPasswordInput(wrapper).setValue('123456')
     await getSubmitButton(wrapper).trigger('click')

@@ -14,23 +14,14 @@
         </div>
 
         <div class="login-page__hero-main">
-          <div class="login-page__hero-head">
-            <div class="login-page__brand-mark">勤</div>
-            <div>
-              <p class="login-page__eyebrow">企业考勤管理系统</p>
-              <h1>内部办公统一登录入口</h1>
+          <div class="login-page__hero-copy">
+            <div class="login-page__hero-head">
+              <h1>企业考勤管理系统</h1>
             </div>
-          </div>
 
-          <p class="login-page__hero-desc">
-            当前入口用于企业内部日常办公访问。请使用正式分配的账号登录，系统将根据账号身份进入对应工作页面。
-          </p>
-
-          <div class="login-page__hero-metrics">
-            <article v-for="item in heroMetrics" :key="item.label" class="login-page__metric-card">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </article>
+            <p class="login-page__hero-desc">
+              当前入口用于企业内部日常办公访问。请使用正式分配的账号登录，系统将根据账号身份进入对应工作页面。
+            </p>
           </div>
 
           <section class="login-page__service-board">
@@ -46,26 +37,21 @@
               </article>
             </div>
           </section>
-        </div>
 
-        <section class="login-page__notice-board">
-          <div class="login-page__section-head">
-            <strong>登录要求</strong>
-            <span>请确认账号状态正常后再登录</span>
-          </div>
+          <section class="login-page__notice-board">
+            <div class="login-page__section-head">
+              <strong>登录要求</strong>
+              <span>请确认账号状态正常后再登录</span>
+            </div>
 
-          <div class="login-page__notice-list">
-            <article v-for="item in noticeItems" :key="item.title" class="login-page__notice-card">
-              <small>{{ item.title }}</small>
-              <strong>{{ item.value }}</strong>
-              <span>{{ item.desc }}</span>
-            </article>
-          </div>
-        </section>
-
-        <div class="login-page__hero-footer">
-          <span>适用于企业内部办公场景</span>
-          <span>请妥善保管个人账号信息</span>
+            <div class="login-page__notice-list">
+              <article v-for="item in noticeItems" :key="item.title" class="login-page__notice-card">
+                <small>{{ item.title }}</small>
+                <strong>{{ item.value }}</strong>
+                <span>{{ item.desc }}</span>
+              </article>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -73,70 +59,103 @@
         <template #header>
           <div class="login-page__card-header">
             <div>
-              <strong>身份验证</strong>
-              <p>请输入账号和密码后登录系统</p>
+              <strong>账号登录</strong>
+              <p>请输入正式分配的账号和密码后进入系统</p>
             </div>
 
-            <span class="login-page__card-badge">内部访问</span>
+            <span class="login-page__card-badge">企业内部</span>
           </div>
         </template>
 
-        <div class="login-page__card-notice">
-          <strong>登录提醒</strong>
-          <p>本系统仅限已授权人员使用。请确认账号处于启用状态，并在登录后按权限办理业务。</p>
-        </div>
+        <div class="login-page__card-content">
+          <section class="login-page__form-panel">
+            <div class="login-page__form-head">
+              <strong>账号验证</strong>
+              <span>请输入账号信息完成身份校验后进入系统首页</span>
+            </div>
 
-        <el-form
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-position="top"
-          @keyup.enter="handleSubmit"
-        >
-          <el-form-item label="账号" prop="username" :error="fieldErrors.username">
-            <el-input
-              v-model="form.username"
-              data-testid="login-username-input"
-              placeholder="请输入账号"
-              clearable
-            />
-          </el-form-item>
+            <div class="login-page__role-group">
+              <span class="login-page__role-label">登录身份</span>
 
-          <el-form-item label="密码" prop="password" :error="fieldErrors.password">
-            <el-input
-              v-model="form.password"
-              data-testid="login-password-input"
-              placeholder="请输入密码"
-              show-password
-              clearable
-            />
-          </el-form-item>
+              <div class="login-page__role-actions">
+                <button
+                  v-for="item in roleOptions"
+                  :key="item.code"
+                  :data-testid="`login-role-${item.code.toLowerCase()}-button`"
+                  type="button"
+                  class="login-page__role-button"
+                  :class="{ 'login-page__role-button--active': selectedRoleCode === item.code }"
+                  @click="handleRoleSelect(item.code)"
+                >
+                  <strong>{{ item.label }}</strong>
+                  <span>{{ item.desc }}</span>
+                </button>
+              </div>
 
-          <el-alert
-            v-if="formError"
-            data-testid="login-form-error"
-            class="login-page__error"
-            type="error"
-            :closable="false"
-            :title="formError"
-          />
+              <p v-if="roleError" data-testid="login-role-error" class="login-page__role-error">{{ roleError }}</p>
+            </div>
 
-          <el-button
-            data-testid="login-submit-button"
-            type="primary"
-            class="login-page__submit"
-            :loading="submitting"
-            @click="handleSubmit"
-          >
-            登录系统
-          </el-button>
-        </el-form>
+            <el-form
+              ref="formRef"
+              class="login-page__form"
+              :model="form"
+              :rules="rules"
+              label-position="top"
+              @keyup.enter="handleSubmit"
+            >
+              <el-form-item label="账号" prop="username" :error="fieldErrors.username">
+                <el-input
+                  v-model="form.username"
+                  data-testid="login-username-input"
+                  placeholder="请输入账号"
+                  clearable
+                />
+              </el-form-item>
 
-        <div class="login-page__tips">
-          <div v-for="item in formTips" :key="item.title" class="login-page__tips-row">
-            <strong>{{ item.title }}</strong>
-            <span>{{ item.desc }}</span>
-          </div>
+              <el-form-item label="密码" prop="password" :error="fieldErrors.password">
+                <el-input
+                  v-model="form.password"
+                  data-testid="login-password-input"
+                  placeholder="请输入密码"
+                  show-password
+                  clearable
+                />
+              </el-form-item>
+
+              <el-alert
+                v-if="formError"
+                data-testid="login-form-error"
+                class="login-page__error"
+                type="error"
+                :closable="false"
+                :title="formError"
+              />
+
+              <el-button
+                data-testid="login-submit-button"
+                type="primary"
+                class="login-page__submit"
+                :loading="submitting"
+                @click="handleSubmit"
+              >
+                登录系统
+              </el-button>
+            </el-form>
+          </section>
+
+          <section class="login-page__tips-panel">
+            <div class="login-page__tips-head">
+              <strong>登录帮助</strong>
+              <span>如遇账号异常，请优先联系系统管理员处理</span>
+            </div>
+
+            <div class="login-page__tips">
+              <div v-for="item in formTips" :key="item.title" class="login-page__tips-row">
+                <strong>{{ item.title }}</strong>
+                <span>{{ item.desc }}</span>
+              </div>
+            </div>
+          </section>
         </div>
 
         <div class="login-page__card-footer">
@@ -149,7 +168,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus/es/components/message/index.mjs'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -160,8 +179,15 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
+const pageScrollState = {
+  htmlOverflow: '',
+  bodyOverflow: '',
+}
+
 const formRef = ref()
 const formError = ref('')
+const roleError = ref('')
+const selectedRoleCode = ref('')
 const fieldErrors = reactive({
   username: '',
   password: '',
@@ -177,22 +203,16 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
 
-const heroMetrics = [
+const roleOptions = [
   {
-    label: '适用范围',
-    value: '企业内部',
+    code: 'ADMIN',
+    label: '管理员',
+    desc: '系统配置与综合管理',
   },
   {
-    label: '登录方式',
-    value: '统一入口',
-  },
-  {
-    label: '账号维护',
-    value: '统一分配',
-  },
-  {
-    label: '业务覆盖',
-    value: '日常办公',
+    code: 'EMPLOYEE',
+    label: '员工',
+    desc: '日常打卡与个人业务',
   },
 ]
 
@@ -240,14 +260,41 @@ const formTips = [
   },
 ]
 
+onMounted(() => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  pageScrollState.htmlOverflow = document.documentElement.style.overflow
+  pageScrollState.bodyOverflow = document.body.style.overflow
+
+  document.documentElement.style.overflow = 'hidden'
+  document.body.style.overflow = 'hidden'
+})
+
+onBeforeUnmount(() => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  document.documentElement.style.overflow = pageScrollState.htmlOverflow
+  document.body.style.overflow = pageScrollState.bodyOverflow
+})
+
 function clearSubmitErrors() {
   formError.value = ''
+  roleError.value = ''
   fieldErrors.username = ''
   fieldErrors.password = ''
 }
 
 function applySubmitError(error) {
   const message = error?.message || '登录失败，请稍后重试'
+
+  if (error?.field === 'role') {
+    roleError.value = message
+    return
+  }
 
   if (error?.field && Object.prototype.hasOwnProperty.call(fieldErrors, error.field)) {
     fieldErrors[error.field] = message
@@ -257,6 +304,11 @@ function applySubmitError(error) {
   formError.value = message
 }
 
+function handleRoleSelect(roleCode) {
+  selectedRoleCode.value = roleCode
+  roleError.value = ''
+}
+
 async function handleSubmit() {
   if (submitting.value) {
     return
@@ -264,6 +316,13 @@ async function handleSubmit() {
 
   submitting.value = true
   clearSubmitErrors()
+
+  if (!selectedRoleCode.value) {
+    roleError.value = '请选择登录身份'
+    submitting.value = false
+    return
+  }
+
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) {
     submitting.value = false
@@ -274,6 +333,7 @@ async function handleSubmit() {
     await authStore.login({
       username: form.username.trim(),
       password: form.password,
+      expectedRoleCode: selectedRoleCode.value,
     })
 
     ElMessage.success('登录成功')
@@ -288,37 +348,40 @@ async function handleSubmit() {
 
 <style scoped>
 .login-page {
+  height: 100dvh;
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: 20px;
+  overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(18, 52, 86, 0.06) 0%, transparent 18%),
-    linear-gradient(180deg, #f3f5f8 0%, #f7f9fc 52%, #eef2f6 100%);
+    radial-gradient(circle at top left, rgba(36, 83, 145, 0.14), transparent 28%),
+    radial-gradient(circle at right 20%, rgba(15, 95, 148, 0.12), transparent 26%),
+    linear-gradient(135deg, #edf3f9 0%, #f6f8fb 50%, #edf2f7 100%);
 }
 
 .login-page__panel {
-  width: min(1140px, 100%);
+  width: min(1240px, 100%);
+  height: min(760px, calc(100dvh - 40px));
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 420px);
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
   align-items: stretch;
 }
 
 .login-page__hero,
 .login-page__card {
-  border-radius: 24px;
+  height: 100%;
+  border-radius: 28px;
 }
 
 .login-page__hero {
-  display: grid;
-  align-content: space-between;
-  gap: 22px;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
   color: #1f2937;
-  background: #ffffff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, #ffffff 100%);
   border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
   overflow: hidden;
 }
 
@@ -327,8 +390,8 @@ async function handleSubmit() {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 28px;
-  background: linear-gradient(135deg, #1f4d7f 0%, #245391 100%);
+  padding: 22px 28px;
+  background: linear-gradient(135deg, #16395f 0%, #245391 58%, #2f69b2 100%);
   color: #ffffff;
 }
 
@@ -339,6 +402,7 @@ async function handleSubmit() {
 
 .login-page__portal-head strong {
   font-size: 18px;
+  letter-spacing: 0.04em;
 }
 
 .login-page__portal-head span {
@@ -355,12 +419,12 @@ async function handleSubmit() {
 
 .login-page__portal-badges span {
   margin: 0;
-  min-height: 30px;
+  min-height: 34px;
   display: inline-flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
@@ -368,99 +432,56 @@ async function handleSubmit() {
 
 .login-page__hero-main {
   display: grid;
-  gap: 22px;
-  padding: 28px 32px 0;
+  flex: 1;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 18px;
+  padding: 30px 32px 32px;
+}
+
+.login-page__hero-copy {
+  display: grid;
+  gap: 18px;
 }
 
 .login-page__hero-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.login-page__brand-mark {
-  width: 52px;
-  height: 52px;
   display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1f4d7f 0%, #245391 100%);
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: 700;
+  justify-items: center;
+  text-align: center;
 }
 
 .login-page__hero h1 {
-  margin: 8px 0 0;
-  max-width: 680px;
-  font-size: clamp(30px, 4vw, 40px);
-  line-height: 1.3;
+  margin: 0;
+  font-size: clamp(34px, 3.5vw, 46px);
+  line-height: 1.22;
+  color: #0f172a;
 }
 
 .login-page__hero p {
   margin: 0;
-  max-width: 560px;
   line-height: 1.8;
   color: #475569;
 }
 
 .login-page__hero-desc {
-  font-size: 15px;
-}
-
-.login-page__eyebrow {
-  font-size: 13px;
-  color: #1f4d7f;
-}
-
-.login-page__hero-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.login-page__metric-card {
-  padding: 16px 18px;
-  border-radius: 12px;
-  background: #f7f9fc;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-}
-
-.login-page__metric-card span,
-.login-page__metric-card strong {
-  display: block;
-}
-
-.login-page__metric-card span {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.login-page__metric-card strong {
-  margin-top: 8px;
-  color: #0f172a;
-  font-size: 18px;
+  max-width: 520px;
+  font-size: 14px;
+  justify-self: center;
+  text-align: center;
 }
 
 .login-page__service-board,
 .login-page__notice-board {
   display: grid;
-  gap: 14px;
-  padding: 20px 24px;
-  border-radius: 0;
-  background: #f9fbfd;
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(247, 250, 252, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
   border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.login-page__service-board {
-  border-left: 0;
-  border-right: 0;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 
 .login-page__notice-board {
-  margin: 0 32px;
-  border-radius: 12px;
-  background: #ffffff;
+  align-content: start;
 }
 
 .login-page__section-head {
@@ -472,47 +493,62 @@ async function handleSubmit() {
 
 .login-page__section-head strong {
   color: #0f172a;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .login-page__section-head span {
   color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .login-page__service-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .login-page__service-card {
   display: grid;
-  gap: 8px;
-  padding: 16px 18px;
-  border-radius: 12px;
+  gap: 6px;
+  padding: 14px 14px 15px;
+  border-radius: 16px;
   background: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.12);
-  border-top: 3px solid rgba(36, 83, 145, 0.2);
+  border-top: 3px solid rgba(36, 83, 145, 0.18);
 }
 
 .login-page__service-card strong {
   color: #0f172a;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .login-page__service-card span {
   color: #64748b;
-  line-height: 1.7;
-  font-size: 13px;
+  line-height: 1.6;
+  font-size: 12px;
 }
 
 .login-page__card {
-  align-self: center;
+  display: flex;
+  flex-direction: column;
   border: none;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.login-page__card :deep(.el-card__header) {
+  padding: 28px 28px 0;
+  border-bottom: none;
+}
+
+.login-page__card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px 28px 24px;
 }
 
 .login-page__card-header {
@@ -544,15 +580,17 @@ async function handleSubmit() {
 }
 
 .login-page__card-header p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .login-page__card-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 14px;
   border-radius: 999px;
   background: rgba(31, 77, 127, 0.08);
   color: #245391;
@@ -560,46 +598,170 @@ async function handleSubmit() {
   font-weight: 600;
 }
 
-.login-page__card-notice {
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(47, 105, 178, 0.08);
+.login-page__card-content {
+  display: grid;
+  gap: 14px;
 }
 
-.login-page__card-notice strong {
-  display: block;
-  color: #245391;
+.login-page__form-panel,
+.login-page__tips-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.login-page__form-head,
+.login-page__tips-head {
+  display: grid;
+  gap: 4px;
+}
+
+.login-page__form-head strong,
+.login-page__tips-head strong {
+  color: #0f172a;
   font-size: 14px;
 }
 
-.login-page__card-notice p {
-  margin: 8px 0 0;
-  color: #475569;
-  line-height: 1.7;
-  font-size: 13px;
+.login-page__form-head span,
+.login-page__tips-head span {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-page__role-group {
+  display: grid;
+  gap: 8px;
+}
+
+.login-page__role-label {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-page__role-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(226, 232, 240, 0.72) 0%, rgba(241, 245, 249, 0.92) 100%);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+}
+
+.login-page__role-button {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 3px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.login-page__role-button:hover {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.login-page__role-button--active {
+  border-color: rgba(36, 83, 145, 0.26);
+  background: linear-gradient(135deg, #245391 0%, #2f69b2 100%);
+  box-shadow: 0 10px 20px rgba(36, 83, 145, 0.18);
+}
+
+.login-page__role-button--active:hover {
+  background: linear-gradient(135deg, #1f4d7f 0%, #2b63a8 100%);
+  border-color: rgba(31, 77, 127, 0.34);
+  box-shadow: 0 12px 22px rgba(36, 83, 145, 0.22);
+}
+
+.login-page__role-button strong,
+.login-page__role-button span {
+  display: block;
+}
+
+.login-page__role-button strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.login-page__role-button span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.login-page__role-button--active strong {
+  color: #ffffff;
+}
+
+.login-page__role-button--active span {
+  color: rgba(241, 245, 249, 0.9);
+}
+
+.login-page__role-error {
+  margin: 0;
+  color: #c2410c;
+  font-size: 12px;
+}
+
+.login-page__form :deep(.el-form-item) {
+  margin-bottom: 14px;
+}
+
+.login-page__form :deep(.el-form-item:last-of-type) {
+  margin-bottom: 6px;
+}
+
+.login-page__form :deep(.el-form-item__label) {
+  padding-bottom: 6px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.login-page__form :deep(.el-input__wrapper) {
+  min-height: 42px;
+}
+
+.login-page__form :deep(.el-form-item__error) {
+  display: none;
+}
+
+.login-page__form :deep(.el-form-item.is-error .el-input__wrapper) {
+  box-shadow: 0 0 0 1px rgba(194, 65, 12, 0.52) inset !important;
+  background-color: #fff7ed !important;
 }
 
 .login-page__submit {
   width: 100%;
-  margin-top: 8px;
+  margin-top: 10px;
   min-height: 46px;
-  border-radius: 14px;
+  border-radius: 16px;
 }
 
 .login-page__error {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .login-page__notice-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .login-page__notice-card {
-  padding: 18px;
-  border-radius: 12px;
+  padding: 14px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid rgba(148, 163, 184, 0.12);
 }
@@ -612,84 +774,71 @@ async function handleSubmit() {
 
 .login-page__notice-card strong {
   display: block;
-  margin: 8px 0 10px;
-  font-size: 15px;
+  margin: 6px 0 8px;
+  font-size: 14px;
   color: #0f172a;
 }
 
 .login-page__notice-card span {
-  line-height: 1.7;
+  line-height: 1.6;
   color: #64748b;
-}
-
-.login-page__hero-footer {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin: 0 32px 28px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
-  color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .login-page__tips {
-  margin-top: 16px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .login-page__tips-row {
   display: grid;
-  gap: 6px;
-  padding: 12px 0;
+  gap: 4px;
+  padding: 10px 0 0;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.login-page__tips-row:first-child {
+  padding-top: 0;
+  border-top: none;
 }
 
 .login-page__tips-row strong {
   color: #0f172a;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .login-page__tips-row span {
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 .login-page__card-footer {
   display: flex;
-  gap: 18px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: auto;
+  padding-top: 12px;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
+  .login-page {
+    padding: 16px;
+  }
+
   .login-page__panel {
+    height: calc(100dvh - 32px);
     grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 
   .login-page__hero {
-    gap: 18px;
+    min-height: 0;
   }
 
-  .login-page__hero-head {
-    align-items: flex-start;
-  }
-
-  .login-page__notice-list {
-    grid-template-columns: 1fr;
-  }
-
-  .login-page__hero-metrics {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .login-page__section-head,
   .login-page__card-header {
     flex-direction: column;
     align-items: flex-start;
@@ -701,47 +850,98 @@ async function handleSubmit() {
     padding-right: 24px;
   }
 
-  .login-page__notice-board,
-  .login-page__hero-footer {
-    margin-left: 24px;
-    margin-right: 24px;
+  .login-page__hero-main {
+    grid-template-rows: auto auto auto;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    gap: 18px;
   }
 
-  .login-page__service-list {
+  .login-page__service-list,
+  .login-page__notice-list {
     grid-template-columns: 1fr;
+  }
+
+  .login-page__card :deep(.el-card__header),
+  .login-page__card :deep(.el-card__body) {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .login-page__form-panel,
+  .login-page__tips-panel {
+    padding: 14px;
+  }
+
+  .login-page__role-actions {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .login-page {
-    padding: 16px;
-  }
-
   .login-page__hero,
   .login-page__card {
     border-radius: 20px;
   }
 
-  .login-page__card :deep(.el-card__body) {
-    padding: 24px;
+  .login-page__panel {
+    gap: 14px;
   }
 
   .login-page__portal-head,
-  .login-page__hero-main,
-  .login-page__notice-board,
-  .login-page__hero-footer {
-    margin-left: 0;
-    margin-right: 0;
+  .login-page__hero-main {
     padding-left: 20px;
     padding-right: 20px;
   }
 
-  .login-page__hero-footer {
-    margin-bottom: 20px;
+  .login-page__portal-head {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: 18px;
+    padding-bottom: 18px;
   }
 
-  .login-page__hero-metrics {
+  .login-page__hero-main {
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+
+  .login-page__hero-copy {
+    gap: 16px;
+  }
+
+  .login-page__service-board,
+  .login-page__notice-board {
+    padding: 16px;
+  }
+
+  .login-page__card :deep(.el-card__header),
+  .login-page__card :deep(.el-card__body) {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .login-page__card-content {
+    gap: 12px;
+  }
+
+  .login-page__form-panel,
+  .login-page__tips-panel {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .login-page__role-actions {
     grid-template-columns: 1fr;
+  }
+
+  .login-page__role-button {
+    min-height: 56px;
+    padding: 10px 12px;
+  }
+
+  .login-page__card-header strong {
+    font-size: 20px;
   }
 }
 </style>

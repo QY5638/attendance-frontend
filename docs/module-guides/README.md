@@ -2,6 +2,8 @@
 
 ## 1. 使用方式
 
+- 当前前端文档总入口：`D:\Graduation project\frontend\docs\README.md`
+- 当前运行、构建、测试和环境变量口径以 `D:\Graduation project\frontend\README.md` 为准。
 - 开发任一前端模块前，先读取：
   - `D:\Graduation project\frontend\AGENTS.md`
   - `D:\Graduation project\backend\docs\progress\前端并发开发模块清单.md`

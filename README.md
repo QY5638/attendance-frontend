@@ -53,6 +53,14 @@ npm run dev
 
 项目未额外指定开发端口时，Vite 默认使用 `5173`。启动后可在浏览器打开本地开发地址进行调试。
 
+## 文档入口
+
+- 当前前端文档入口：`docs/README.md`
+- 模块开发指南入口：`docs/module-guides/README.md`
+- 历史设计与计划归档入口：`docs/superpowers/README.md`
+
+说明：当前运行、构建、代理和环境变量口径以本 README 为准；历史设计稿与实施计划仅用于回溯，不作为当前仓库行为的唯一依据。
+
 ## 常用命令
 
 ```bash

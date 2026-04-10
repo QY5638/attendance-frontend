@@ -1,7 +1,6 @@
 <template>
   <section class="system-view">
     <ConsoleHero
-      eyebrow="系统管理"
       title="系统配置"
       description="集中维护基础配置、分析方案和业务记录，便于统一管理系统设置。"
       theme="violet"
