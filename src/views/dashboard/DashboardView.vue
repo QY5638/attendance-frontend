@@ -59,9 +59,9 @@
         </div>
 
         <div class="dashboard-summary-card__content">
-          <p>{{ summaryData.summary || '暂无概述信息' }}</p>
-          <p><strong>重点关注：</strong>{{ summaryData.highlightRisks || '暂无重点关注内容' }}</p>
-          <p><strong>处理建议：</strong>{{ summaryData.manageSuggestion || '暂无处理建议' }}</p>
+          <p>{{ formatReadableText(summaryData.summary, '暂无概述信息') }}</p>
+          <p><strong>重点关注：</strong>{{ formatReadableText(summaryData.highlightRisks, '暂无重点关注内容') }}</p>
+          <p><strong>处理建议：</strong>{{ formatReadableText(summaryData.manageSuggestion, '暂无处理建议') }}</p>
         </div>
       </section>
 
@@ -81,7 +81,7 @@
               <strong>{{ buildWarningTitle(item) }}</strong>
               <span class="dashboard-list__meta">{{ buildWarningMeta(item) }}</span>
             </div>
-            <p>{{ item.aiSummary || item.disposeSuggestion || '暂无摘要说明' }}</p>
+            <p>{{ formatReadableText(item.aiSummary || item.disposeSuggestion, '暂无摘要说明') }}</p>
           </el-card>
         </div>
         <el-empty v-else description="暂无摘要说明" />
@@ -103,7 +103,7 @@
               <strong>{{ item.deptName || '未知部门' }}</strong>
               <span>{{ item.riskScore ?? '--' }}</span>
             </div>
-            <p>{{ item.riskSummary || item.manageSuggestion || '暂无情况说明' }}</p>
+            <p>{{ formatReadableText(item.riskSummary || item.manageSuggestion, '暂无情况说明') }}</p>
           </el-card>
         </div>
         <el-empty v-else description="暂无风险概况" />
@@ -125,6 +125,7 @@ import {
 } from '../../api/statistics'
 import { fetchWarningList } from '../../api/warning'
 import { useAuthStore } from '../../store/auth'
+import { formatReadableText } from '../../utils/readable-text'
 
 const authStore = useAuthStore()
 

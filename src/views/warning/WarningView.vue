@@ -111,7 +111,7 @@
               </div>
             </dl>
 
-            <p class="warning-item__summary">{{ item.aiSummary || item.disposeSuggestion || '暂无情况说明' }}</p>
+            <p class="warning-item__summary">{{ formatReadableText(item.aiSummary || item.disposeSuggestion, '暂无情况说明') }}</p>
           </div>
 
           <div class="warning-item__actions">
@@ -191,11 +191,11 @@
           </div>
           <div>
             <dt>情况概述</dt>
-            <dd>{{ adviceDetail.aiSummary || '--' }}</dd>
+            <dd>{{ formatReadableText(adviceDetail.aiSummary) }}</dd>
           </div>
           <div>
             <dt>处置建议</dt>
-            <dd>{{ adviceDetail.disposeSuggestion || '--' }}</dd>
+            <dd>{{ formatReadableText(adviceDetail.disposeSuggestion) }}</dd>
           </div>
         </div>
         <p v-else class="warning-feedback">暂无处置建议</p>
@@ -256,6 +256,7 @@ import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
 import { fetchFe06WarningAdvice, fetchFe06WarningList, fetchFe06WarningReevaluate } from '../../api/fe06-warning'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import { formatReadableText } from '../../utils/readable-text'
 
 const WARNING_TYPE_LABELS = {
   RISK_WARNING: '风险预警',

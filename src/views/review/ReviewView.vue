@@ -11,6 +11,7 @@ import {
   submitReviewFeedback,
 } from '../../api/review'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import { formatReadableText } from '../../utils/readable-text'
 
 const REVIEW_RESULT_OPTIONS = [
   { value: 'CONFIRMED', label: '确认异常' },
@@ -170,7 +171,7 @@ function formatDisplayValue(value, labelMap) {
 }
 
 function formatText(value) {
-  return value || '--'
+  return formatReadableText(value, '--')
 }
 
 function resolveLabel(value, labelMap) {

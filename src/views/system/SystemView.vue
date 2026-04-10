@@ -49,7 +49,7 @@ const route = useRoute()
 const router = useRouter()
 
 const navItems = [
-  { key: 'device', label: '设备管理', desc: '设备台账与启停状态', component: SystemDevicePanel },
+  { key: 'device', label: '打卡地点管理', desc: '地点档案与启停状态', component: SystemDevicePanel },
   { key: 'rule', label: '规则配置', desc: '考勤规则与阈值管理', component: SystemRulePanel },
   { key: 'prompt', label: '分析方案', desc: '方案维护、编辑与启停管理', component: SystemPromptPanel },
   { key: 'risk-level', label: '风险等级', desc: '风险名称、说明与状态', component: SystemRiskLevelPanel },
@@ -93,7 +93,7 @@ const overviewItems = computed(() => [
     key: 'scope',
     label: '配置范围',
     value: '7 个配置域',
-    desc: '覆盖设备、规则、方案、风险分级与业务记录。',
+    desc: '覆盖打卡地点、规则、方案、风险分级与业务记录。',
   },
   {
     key: 'suggestion',

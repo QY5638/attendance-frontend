@@ -84,11 +84,11 @@ function readDeviceOptions(response) {
   const payload = readWrappedData(response)
 
   if (!Array.isArray(payload)) {
-    throw new Error('设备选项加载失败，请稍后重试')
+    throw new Error('打卡地点加载失败，请稍后重试')
   }
 
   if (payload.length === 0) {
-    throw new Error('暂无可用考勤设备，当前暂不可办理打卡')
+    throw new Error('暂无可用打卡地点，当前暂不可办理打卡')
   }
 
   return payload.map((item) => ({
@@ -191,14 +191,14 @@ const heroCards = computed(() => {
       value: activeTab.value === 'checkin' ? '打卡办理' : '记录查询',
     },
     {
-      key: 'device',
-      label: '当前设备',
-      value: selectedDevice.value ? (selectedDevice.value.name || selectedDevice.value.id) : '未选择',
+      key: 'location',
+      label: '当前地点',
+      value: selectedDevice.value ? (selectedDevice.value.location || selectedDevice.value.name || selectedDevice.value.id) : '未选择',
     },
     {
-      key: 'image',
-      label: '采集状态',
-      value: checkinForm.imageData ? '已准备' : '待采集',
+      key: 'computer',
+      label: '当前电脑',
+      value: buildComputerDeviceInfo(),
     },
   ]
 })
@@ -225,6 +225,42 @@ const EXCEPTION_TYPE_LABELS = {
   EARLY_LEAVE: '早退',
   ILLEGAL_TIME: '非规定时间打卡',
   REPEAT_CHECK: '重复打卡',
+}
+
+function detectBrowserName() {
+  if (typeof navigator === 'undefined') {
+    return '网页浏览器'
+  }
+
+  const userAgent = navigator.userAgent || ''
+  if (userAgent.includes('Edg/')) {
+    return 'Microsoft Edge'
+  }
+  if (userAgent.includes('Chrome/')) {
+    return 'Google Chrome'
+  }
+  if (userAgent.includes('Firefox/')) {
+    return 'Mozilla Firefox'
+  }
+  if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) {
+    return 'Safari'
+  }
+  return '网页浏览器'
+}
+
+function buildComputerDeviceInfo() {
+  if (typeof navigator === 'undefined') {
+    return '网页端电脑'
+  }
+
+  const platform = navigator.userAgentData?.platform || navigator.platform || '未知系统'
+  const model = navigator.userAgentData?.model || ''
+  const browser = detectBrowserName()
+  const resolution = typeof window !== 'undefined' && window.screen?.width && window.screen?.height
+    ? `${window.screen.width}x${window.screen.height}`
+    : ''
+
+  return [model || platform, browser, resolution].filter(Boolean).join(' · ')
 }
 
 function buildRecordQuery() {
@@ -440,7 +476,7 @@ async function syncSelectedDeviceMap() {
     devicePreviewMarker?.setPosition?.(coordinates)
   } catch (error) {
     destroyDevicePreviewMap()
-    deviceMapError.value = error?.message || '设备地图加载失败'
+    deviceMapError.value = error?.message || '地点地图加载失败'
   }
 }
 
@@ -452,7 +488,7 @@ async function loadDeviceOptions() {
   } catch (error) {
     deviceOptions.value = []
     checkinForm.deviceId = ''
-    deviceOptionsError.value = error?.message || '设备选项加载失败，请稍后重试'
+    deviceOptionsError.value = error?.message || '打卡地点加载失败，请稍后重试'
   }
 }
 
@@ -571,6 +607,14 @@ function formatRecordStatus(status) {
   return RECORD_STATUS_LABELS[status] || '其他状态'
 }
 
+function formatComputerDevice(deviceInfo) {
+  if (!deviceInfo) {
+    return '--'
+  }
+
+  return deviceInfo
+}
+
 function openRepairDialog(record) {
   repairForm.checkType = record?.checkType || ''
   repairForm.checkTime = record?.checkTime || ''
@@ -612,6 +656,7 @@ async function handleSubmitCheckin() {
       await submitAttendanceCheckinRequest({
         checkType: checkinForm.checkType,
         deviceId: checkinForm.deviceId,
+        deviceInfo: buildComputerDeviceInfo(),
         imageData: checkinForm.imageData,
       }),
     )
@@ -716,7 +761,7 @@ onBeforeUnmount(() => {
         <div class="attendance-card__head">
           <div>
             <p class="attendance-card__eyebrow">打卡信息</p>
-            <h2>选择打卡类型与设备</h2>
+            <h2>选择打卡类型与地点</h2>
           </div>
           <span class="attendance-card__badge">信息确认</span>
         </div>
@@ -734,21 +779,25 @@ onBeforeUnmount(() => {
         </label>
 
         <label class="attendance-field">
-          <span>打卡设备</span>
+          <span>打卡地点</span>
           <select v-model="checkinForm.deviceId" data-testid="attendance-device-select" :disabled="isDeviceSelectDisabled">
-            <option value="">请选择设备</option>
+            <option value="">请选择打卡地点</option>
             <option v-for="item in deviceOptions" :key="item.id" :value="item.id">
-              {{ item.name || item.id }}
+              {{ item.location || item.name || item.id }}
             </option>
           </select>
         </label>
 
+        <p data-testid="attendance-computer-device" class="attendance-hint">
+          当前电脑：{{ buildComputerDeviceInfo() }}
+        </p>
+
         <p v-if="selectedDeviceLocation" data-testid="attendance-device-location" class="attendance-hint">
-          设备位置：{{ selectedDeviceLocation }}
+          打卡地点：{{ selectedDeviceLocation }}
         </p>
 
         <p v-if="selectedDeviceCoordinate" data-testid="attendance-device-coordinate" class="attendance-hint">
-          设备经纬度：{{ selectedDeviceCoordinate }}
+          地点经纬度：{{ selectedDeviceCoordinate }}
         </p>
 
         <div v-if="checkinForm.deviceId" class="attendance-map-card">
@@ -756,7 +805,7 @@ onBeforeUnmount(() => {
             {{ deviceMapError }}
           </div>
           <p v-else-if="!hasSelectedDeviceCoordinates" data-testid="attendance-device-map-empty" class="attendance-hint">
-            当前设备未配置地图坐标，暂无法展示地图预览
+            当前打卡地点未配置地图坐标，暂无法展示地图预览
           </p>
           <div v-else ref="deviceMapContainer" data-testid="attendance-device-map" class="attendance-device-map"></div>
         </div>
@@ -1036,7 +1085,8 @@ onBeforeUnmount(() => {
             <th v-if="isAdmin">姓名</th>
             <th>打卡类型</th>
             <th>时间</th>
-            <th v-if="isAdmin">设备位置</th>
+            <th v-if="isAdmin">打卡地点</th>
+            <th v-if="isAdmin">电脑设备</th>
             <th>状态</th>
             <th>异常识别</th>
             <th v-if="!isAdmin">操作</th>
@@ -1044,13 +1094,14 @@ onBeforeUnmount(() => {
         </thead>
         <tbody>
           <tr v-if="!recordError && !recordsLoading && recordList.length === 0">
-            <td data-testid="attendance-record-empty" :colspan="isAdmin ? 6 : 5">暂无记录</td>
+            <td data-testid="attendance-record-empty" :colspan="isAdmin ? 7 : 5">暂无记录</td>
           </tr>
           <tr v-for="record in recordList" :key="record.id">
             <td v-if="isAdmin">{{ record.realName || '--' }}</td>
             <td>{{ formatCheckType(record.checkType) }}</td>
             <td>{{ formatDateTime(record.checkTime) }}</td>
             <td v-if="isAdmin">{{ record.location || '--' }}</td>
+            <td v-if="isAdmin">{{ formatComputerDevice(record.deviceInfo) }}</td>
             <td>{{ formatRecordStatus(record.status) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
             <td v-if="!isAdmin">

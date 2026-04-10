@@ -2,27 +2,27 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>设备管理</h2>
-        <p>维护设备档案信息，用于位置管理和启停控制。</p>
+        <h2>打卡地点管理</h2>
+        <p>维护打卡地点档案信息，用于地点管理和启停控制。</p>
       </div>
-      <button type="button" class="panel-card__primary" @click="openCreateDialog">新增设备</button>
+      <button type="button" class="panel-card__primary" @click="openCreateDialog">新增地点</button>
     </header>
 
     <section class="panel-card__hero-strip">
       <article>
         <span>配置目标</span>
-        <strong>设备档案</strong>
+          <strong>打卡地点档案</strong>
       </article>
       <article>
         <span>能力范围</span>
-        <strong>位置维护 / 启停控制</strong>
+          <strong>地点维护 / 启停控制</strong>
       </article>
     </section>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
         <span>关键词</span>
-        <input v-model="filters.keyword" type="text" placeholder="设备名称、位置或档案标识" />
+        <input v-model="filters.keyword" type="text" placeholder="地点名称、地点地址或地点编号" />
       </label>
       <label>
         <span>状态</span>
@@ -45,9 +45,9 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>设备标识</th>
-            <th>设备名称</th>
-            <th>位置信息</th>
+            <th>地点编号</th>
+            <th>管理名称</th>
+            <th>打卡地点</th>
             <th>状态</th>
             <th>说明</th>
             <th>操作</th>
@@ -58,7 +58,7 @@
             <td colspan="6">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="6">暂无设备档案</td>
+            <td colspan="6">暂无打卡地点档案</td>
           </tr>
           <tr v-for="row in rows" :key="row.deviceId">
             <td>{{ formatDeviceIdentifier(row.deviceId) }}</td>
@@ -69,7 +69,7 @@
                 <small v-if="hasCoordinatePair(row)">
                   经度 {{ formatCoordinate(row.longitude) }} / 纬度 {{ formatCoordinate(row.latitude) }}
                 </small>
-                <small v-else>未维护位置坐标</small>
+                <small v-else>未维护地点坐标</small>
               </div>
             </td>
             <td>
@@ -104,28 +104,28 @@
       <div class="panel-card__dialog">
         <div class="panel-card__dialog-head">
           <div>
-            <strong>{{ editingId ? '编辑设备' : '新增设备' }}</strong>
-            <p>设备标识用于档案管理，请按单位规则填写并保持唯一。</p>
+            <strong>{{ editingId ? '编辑打卡地点' : '新增打卡地点' }}</strong>
+            <p>地点编号用于档案管理，请按单位规则填写并保持唯一。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
         </div>
 
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>设备标识</span>
-            <input v-if="!editingId" v-model="form.deviceId" type="text" placeholder="例如 门禁机-01" />
+            <span>地点编号</span>
+            <input v-if="!editingId" v-model="form.deviceId" type="text" placeholder="例如 LOC-A" />
             <input v-else :value="formatDeviceIdentifier(form.deviceId)" type="text" disabled />
           </label>
           <label>
-            <span>设备名称</span>
-            <input v-model="form.name" type="text" placeholder="例如 东门门禁机" />
+            <span>管理名称</span>
+            <input v-model="form.name" type="text" placeholder="例如 行政办公区主点位" />
           </label>
           <label>
-            <span>设备位置</span>
-            <input v-model="form.location" type="text" placeholder="例如 一层大厅东侧" />
+            <span>打卡地点</span>
+            <input v-model="form.location" type="text" placeholder="例如 办公区A" />
           </label>
           <label>
-            <span>设备经度</span>
+            <span>地点经度</span>
             <input
               v-model="form.longitude"
               data-testid="system-device-longitude-input"
@@ -134,7 +134,7 @@
             />
           </label>
           <label>
-            <span>设备纬度</span>
+            <span>地点纬度</span>
             <input
               v-model="form.latitude"
               data-testid="system-device-latitude-input"
@@ -146,14 +146,14 @@
             <div class="panel-card__map-head">
               <div>
                 <strong>位置选点</strong>
-                <p>点击地图可自动回填位置坐标，也可直接手动录入。</p>
+                <p>点击地图可自动回填地点坐标，也可直接手动录入。</p>
               </div>
               <span>{{ coordinateSummary }}</span>
             </div>
             <p v-if="mapError" class="panel-card__feedback panel-card__feedback--error">{{ mapError }}</p>
             <p v-else-if="mapLoading" class="panel-card__feedback">地图加载中...</p>
             <div ref="mapContainerRef" data-testid="system-device-map" class="panel-card__map"></div>
-            <p class="panel-card__map-note">建议优先使用地图选点，确保档案位置与现场保持一致。</p>
+            <p class="panel-card__map-note">建议优先使用地图选点，确保地点档案与办公区域保持一致。</p>
           </div>
           <label>
             <span>状态</span>
@@ -164,7 +164,7 @@
           </label>
           <label class="panel-card__full-width">
             <span>说明</span>
-            <textarea v-model="form.description" rows="3" placeholder="请输入设备说明"></textarea>
+            <textarea v-model="form.description" rows="3" placeholder="请输入地点说明"></textarea>
           </label>
           <div class="panel-card__dialog-actions panel-card__full-width">
             <button type="button" @click="dialogVisible = false">取消</button>
@@ -277,9 +277,9 @@ function formatDeviceIdentifier(deviceId) {
     return '-'
   }
 
-  const matched = normalized.match(/^DEV[-_]?(.+)$/i)
-  if (matched?.[1]) {
-    return `设备-${matched[1]}`
+  const matched = normalized.match(/^(DEV|LOC)[-_]?(.+)$/i)
+  if (matched?.[2]) {
+    return `地点-${matched[2]}`
   }
 
   return normalized
@@ -407,7 +407,7 @@ async function loadList() {
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
-    error.value = requestError?.message || '设备列表加载失败'
+    error.value = requestError?.message || '打卡地点列表加载失败'
   } finally {
     loading.value = false
   }
@@ -450,7 +450,7 @@ async function handleSubmit() {
   }
 
   if (!form.deviceId.trim() || !form.name.trim()) {
-    error.value = '请完整填写设备标识和设备名称'
+    error.value = '请完整填写地点编号和管理名称'
     return
   }
 
@@ -460,16 +460,16 @@ async function handleSubmit() {
   try {
     if (editingId.value) {
       await updateDevice(form)
-      notice.value = '设备档案更新成功'
+      notice.value = '打卡地点更新成功'
     } else {
       await addDevice(form)
-      notice.value = '设备档案新增成功'
+      notice.value = '打卡地点新增成功'
     }
 
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '设备档案保存失败'
+    error.value = requestError?.message || '打卡地点保存失败'
   } finally {
     submitting.value = false
   }
@@ -484,17 +484,17 @@ async function handleToggleStatus(row) {
       deviceId: row.deviceId,
       status: row.status === 1 ? 0 : 1,
     })
-    notice.value = `设备“${formatDeviceIdentifier(row.deviceId)}”状态已更新`
+    notice.value = `打卡地点“${formatDeviceIdentifier(row.deviceId)}”状态已更新`
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '设备状态更新失败'
+    error.value = requestError?.message || '打卡地点状态更新失败'
   }
 }
 
 async function handleDelete(row) {
   const confirmed = typeof window === 'undefined' || typeof window.confirm !== 'function'
     ? true
-    : window.confirm(`确定删除设备档案“${formatDeviceIdentifier(row.deviceId)}”吗？`)
+    : window.confirm(`确定删除打卡地点档案“${formatDeviceIdentifier(row.deviceId)}”吗？`)
 
   if (!confirmed) {
     return
@@ -508,10 +508,10 @@ async function handleDelete(row) {
     if (rows.value.length === 1 && pagination.pageNum > 1) {
       pagination.pageNum -= 1
     }
-    notice.value = '设备档案删除成功'
+    notice.value = '打卡地点档案删除成功'
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '设备档案删除失败'
+    error.value = requestError?.message || '打卡地点档案删除失败'
   }
 }
 

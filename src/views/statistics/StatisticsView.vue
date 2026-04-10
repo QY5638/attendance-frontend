@@ -140,9 +140,9 @@
         </div>
 
         <div class="statistics-summary-card__content">
-          <p>{{ summaryData.summary || '暂无概述信息' }}</p>
-          <p><strong>重点关注：</strong>{{ summaryData.highlightRisks || '暂无重点关注内容' }}</p>
-          <p><strong>处理建议：</strong>{{ summaryData.manageSuggestion || '暂无处理建议' }}</p>
+          <p>{{ formatReadableText(summaryData.summary, '暂无概述信息') }}</p>
+          <p><strong>重点关注：</strong>{{ formatReadableText(summaryData.highlightRisks, '暂无重点关注内容') }}</p>
+          <p><strong>处理建议：</strong>{{ formatReadableText(summaryData.manageSuggestion, '暂无处理建议') }}</p>
         </div>
       </section>
 
@@ -158,7 +158,7 @@
               <strong>{{ item.deptName || '未知部门' }}</strong>
               <span>{{ formatRiskScore(item.riskScore) }}</span>
             </div>
-            <p>{{ item.riskSummary || item.manageSuggestion || '暂无情况说明' }}</p>
+            <p>{{ formatReadableText(item.riskSummary || item.manageSuggestion, '暂无情况说明') }}</p>
           </el-card>
         </div>
         <el-empty v-else description="暂无风险概况" />
@@ -180,6 +180,7 @@ import {
   fetchExceptionTrend,
   fetchStatisticsSummary,
 } from '../../api/statistics'
+import { formatReadableText } from '../../utils/readable-text'
 
 const loading = ref(true)
 const exporting = ref(false)

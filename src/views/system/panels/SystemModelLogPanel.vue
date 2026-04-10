@@ -92,7 +92,7 @@
             </td>
             <td>{{ formatLatency(row.latencyMs) }}</td>
             <td>
-              <p class="panel-card__summary-text">{{ row.inputSummary || '-' }}</p>
+              <p class="panel-card__summary-text">{{ formatReadableText(row.inputSummary, '-') }}</p>
             </td>
             <td>
               <p class="panel-card__summary-text">{{ resolveResultText(row) }}</p>
@@ -118,6 +118,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 
 import { fetchModelLogList } from '../../../api/system'
 import { formatDateTimeDisplay } from '../../../utils/date-time'
+import { formatReadableText } from '../../../utils/readable-text'
 
 const loading = ref(false)
 const rows = ref([])
@@ -208,10 +209,10 @@ function resolveResultText(row) {
   }
 
   if (row.status === 'RUNNING' || row.status === 'PENDING') {
-    return row.outputSummary || '处理中'
+    return formatReadableText(row.outputSummary, '处理中')
   }
 
-  return row.outputSummary || '-'
+  return formatReadableText(row.outputSummary, '-')
 }
 
 function formatModelStatus(status) {

@@ -111,7 +111,7 @@ describe('system view', () => {
 
     fetchDeviceList.mockResolvedValue({
       total: 1,
-      items: [{ deviceId: 'DEV-001', name: '前台考勤机1', location: '办公区A', longitude: 116.397128, latitude: 39.916527, status: 1, description: '默认设备' }],
+      items: [{ deviceId: 'LOC-A', name: '行政办公区主点位', location: '办公区A', longitude: 116.397128, latitude: 39.916527, status: 1, description: '默认地点' }],
     })
     fetchRuleList.mockResolvedValue({
       total: 1,
@@ -182,8 +182,8 @@ describe('system view', () => {
     const { wrapper } = await mountSystemView('/system')
 
     expect(wrapper.text()).toContain('系统配置')
-    expect(wrapper.text()).toContain('设备管理')
-    expect(wrapper.get('[data-tab="device"]').text()).toContain('设备台账与启停状态')
+    expect(wrapper.text()).toContain('打卡地点管理')
+    expect(wrapper.get('[data-tab="device"]').text()).toContain('地点档案与启停状态')
   })
 
   it('switches to rule panel by query tab', async () => {
@@ -252,18 +252,18 @@ describe('system view', () => {
     })
   })
 
-  it('opens device dialog, loads amap sdk and submits coordinates with device payload', async () => {
+  it('opens location dialog, loads amap sdk and submits coordinates with location payload', async () => {
     const wrapper = await mountPanel(SystemDevicePanel)
 
-    const createButton = wrapper.findAll('button').find((button) => button.text() === '新增设备')
+    const createButton = wrapper.findAll('button').find((button) => button.text() === '新增地点')
     await createButton.trigger('click')
     await flushPromises()
 
     expect(loadAmapSdk).toHaveBeenCalledTimes(1)
 
-    await wrapper.get('input[placeholder="例如 门禁机-01"]').setValue('DEV-010')
-    await wrapper.get('input[placeholder="例如 东门门禁机"]').setValue('后门考勤机')
-    await wrapper.get('input[placeholder="例如 一层大厅东侧"]').setValue('办公区C')
+    await wrapper.get('input[placeholder="例如 LOC-A"]').setValue('LOC-C')
+    await wrapper.get('input[placeholder="例如 行政办公区主点位"]').setValue('市场办公区备用点位')
+    await wrapper.get('input[placeholder="例如 办公区A"]').setValue('办公区C')
     await wrapper.get('[data-testid="system-device-longitude-input"]').setValue('116.397128')
     await wrapper.get('[data-testid="system-device-latitude-input"]').setValue('39.916527')
 
@@ -271,8 +271,8 @@ describe('system view', () => {
     await flushPromises()
 
     expect(addDevice).toHaveBeenCalledWith({
-      deviceId: 'DEV-010',
-      name: '后门考勤机',
+      deviceId: 'LOC-C',
+      name: '市场办公区备用点位',
       location: '办公区C',
       longitude: '116.397128',
       latitude: '39.916527',

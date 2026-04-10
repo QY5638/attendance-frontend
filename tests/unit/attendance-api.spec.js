@@ -26,20 +26,21 @@ describe('attendance api', () => {
     post.mockReset()
   })
 
-  it('gets device options from the attendance device options endpoint', async () => {
-    const response = [{ deviceId: 'DEVICE-01', name: '前台设备', location: '一楼大厅' }]
+  it('gets punch location options from the attendance device options endpoint', async () => {
+    const response = [{ deviceId: 'LOC-A', name: '行政办公区主点位', location: '办公区A' }]
     get.mockResolvedValue(response)
 
     await expect(getAttendanceDeviceOptionsRequest()).resolves.toEqual(response)
     expect(get).toHaveBeenCalledWith('/attendance/device-options')
   })
 
-  it('posts checkin with only check type, device id and image data', async () => {
+  it('posts checkin with selected location and computer device info', async () => {
     post.mockResolvedValue({ code: 200 })
 
     await submitAttendanceCheckinRequest({
       checkType: 'IN',
-      deviceId: 'DEVICE-01',
+      deviceId: 'LOC-A',
+      deviceInfo: 'Windows 11 · Google Chrome · 1920x1080',
       imageData: 'base64-image',
       userId: 1001,
       location: 'front-desk',
@@ -47,7 +48,8 @@ describe('attendance api', () => {
 
     expect(post).toHaveBeenCalledWith('/attendance/checkin', {
       checkType: 'IN',
-      deviceId: 'DEVICE-01',
+      deviceId: 'LOC-A',
+      deviceInfo: 'Windows 11 · Google Chrome · 1920x1080',
       imageData: 'base64-image',
     })
   })

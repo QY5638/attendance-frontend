@@ -261,9 +261,9 @@ describe('attendance view', () => {
   it('shows selected device location and runs face verify from an explicit precheck action with result feedback', async () => {
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
-        deviceId: 'DEVICE-01',
-        name: '前台设备',
-        location: '一楼前台',
+        deviceId: 'LOC-A',
+        name: '行政办公区主点位',
+        location: '办公区A',
         longitude: 116.397128,
         latitude: 39.916527,
       },
@@ -279,11 +279,12 @@ describe('attendance view', () => {
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
+    await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
     await setFaceImage(wrapper)
 
-    expect(wrapper.get('[data-testid="attendance-device-select"]').text()).toContain('前台设备')
-    expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('一楼前台')
+    expect(wrapper.get('[data-testid="attendance-device-select"]').text()).toContain('办公区A')
+    expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('办公区A')
+    expect(wrapper.get('[data-testid="attendance-computer-device"]').text()).toContain('当前电脑')
     expect(wrapper.get('[data-testid="attendance-face-verify-button"]').attributes('disabled')).toBeUndefined()
 
     expect(wrapper.find('[data-testid="attendance-face-verify-result"]').exists()).toBe(false)
@@ -300,9 +301,9 @@ describe('attendance view', () => {
   it('renders a real map preview for the selected device when coordinates are available', async () => {
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
-        deviceId: 'DEVICE-01',
-        name: '前台设备',
-        location: '一楼前台',
+        deviceId: 'LOC-A',
+        name: '行政办公区主点位',
+        location: '办公区A',
         longitude: 116.397128,
         latitude: 39.916527,
       },
@@ -312,7 +313,7 @@ describe('attendance view', () => {
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
+    await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
     await flushPromises()
 
     expect(loadAmapSdk).toHaveBeenCalledTimes(1)
@@ -323,9 +324,9 @@ describe('attendance view', () => {
   it('submits checkin without implicitly triggering face verify and refreshes records after success', async () => {
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
-        deviceId: 'DEVICE-01',
-        name: '前台设备',
-        location: '一楼前台',
+        deviceId: 'LOC-A',
+        name: '行政办公区主点位',
+        location: '办公区A',
       },
     ]))
     getMyAttendanceRecordRequest
@@ -335,26 +336,27 @@ describe('attendance view', () => {
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
+    await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
     await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 
     expect(verifyFaceRequest).not.toHaveBeenCalled()
-    expect(submitAttendanceCheckinRequest).toHaveBeenCalledWith({
+    expect(submitAttendanceCheckinRequest).toHaveBeenCalledWith(expect.objectContaining({
       checkType: 'IN',
-      deviceId: 'DEVICE-01',
+      deviceId: 'LOC-A',
       imageData: 'base64-image',
-    })
+      deviceInfo: expect.any(String),
+    }))
     expect(getMyAttendanceRecordRequest).toHaveBeenCalledTimes(2)
   })
 
   it('shows a visible error and does not refresh records when checkin returns a wrapped business failure', async () => {
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
-        deviceId: 'DEVICE-01',
-        name: '前台设备',
-        location: '一楼前台',
+        deviceId: 'LOC-A',
+        name: '行政办公区主点位',
+        location: '办公区A',
       },
     ]))
     getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse())
@@ -363,7 +365,7 @@ describe('attendance view', () => {
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
+    await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
     await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
@@ -374,7 +376,7 @@ describe('attendance view', () => {
 
   it('shows a blocking prompt and disables device selection with checkin submit in the device loading error state', async () => {
     getAttendanceDeviceOptionsRequest.mockRejectedValueOnce({
-      message: '设备选项加载失败，请稍后重试',
+      message: '打卡地点加载失败，请稍后重试',
     })
 
     const wrapper = mount(AttendanceView)
@@ -383,7 +385,7 @@ describe('attendance view', () => {
     await setFaceImage(wrapper)
 
     expect(wrapper.get('[data-testid="attendance-device-blocking-error"]').text()).toContain(
-      '设备选项加载失败，请稍后重试',
+      '打卡地点加载失败，请稍后重试',
     )
     expect(wrapper.get('[data-testid="attendance-device-select"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="attendance-checkin-submit"]').attributes('disabled')).toBeDefined()
@@ -400,7 +402,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="attendance-device-blocking-error"]').text()).toContain(
-      '暂无可用考勤设备，当前暂不可办理打卡',
+      '暂无可用打卡地点，当前暂不可办理打卡',
     )
     expect(wrapper.get('[data-testid="attendance-device-select"]').attributes('disabled')).toBeDefined()
     expect(wrapper.get('[data-testid="attendance-checkin-submit"]').attributes('disabled')).toBeDefined()
@@ -472,9 +474,9 @@ describe('attendance view', () => {
 
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
-        deviceId: 'DEVICE-01',
-        name: '前台设备',
-        location: '一楼前台',
+        deviceId: 'LOC-A',
+        name: '行政办公区主点位',
+        location: '办公区A',
       },
     ]))
     getMyAttendanceRecordRequest
@@ -591,9 +593,9 @@ describe('attendance view', () => {
   it('shows a visible refresh failure on the checkin tab when record refresh fails after a successful checkin', async () => {
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
-        deviceId: 'DEVICE-01',
-        name: '前台设备',
-        location: '一楼前台',
+        deviceId: 'LOC-A',
+        name: '行政办公区主点位',
+        location: '办公区A',
       },
     ]))
     getMyAttendanceRecordRequest
@@ -605,7 +607,7 @@ describe('attendance view', () => {
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="attendance-device-select"]').setValue('DEVICE-01')
+    await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
     await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()

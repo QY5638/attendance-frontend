@@ -252,8 +252,8 @@
                 <p><strong>异常类型：</strong>{{ formatDisplayValue(complexCheckResult.type, EXCEPTION_TYPE_LABELS) }}</p>
                 <p><strong>风险等级：</strong>{{ formatDisplayValue(complexCheckResult.riskLevel, RISK_LEVEL_LABELS) }}</p>
                 <p><strong>系统结论：</strong>{{ formatDecisionLabel(complexCheckResult.modelConclusion) }}</p>
-                <p><strong>说明摘要：</strong>{{ complexCheckResult.reasonSummary || '--' }}</p>
-                <p><strong>处理建议：</strong>{{ complexCheckResult.actionSuggestion || '--' }}</p>
+                <p><strong>说明摘要：</strong>{{ formatReadableText(complexCheckResult.reasonSummary) }}</p>
+                <p><strong>处理建议：</strong>{{ formatReadableText(complexCheckResult.actionSuggestion) }}</p>
                 <p><strong>可信度：</strong>{{ formatScore(complexCheckResult.confidenceScore) }}</p>
               </article>
             </div>
@@ -279,15 +279,15 @@
               </div>
               <div>
                 <dt>说明摘要</dt>
-                <dd>{{ analysisBrief.reasonSummary || '--' }}</dd>
+                <dd>{{ formatReadableText(analysisBrief.reasonSummary) }}</dd>
               </div>
               <div>
                 <dt>处理建议</dt>
-                <dd>{{ analysisBrief.actionSuggestion || '--' }}</dd>
+                <dd>{{ formatReadableText(analysisBrief.actionSuggestion) }}</dd>
               </div>
               <div>
                 <dt>关联案例</dt>
-                <dd>{{ analysisBrief.similarCaseSummary || '--' }}</dd>
+                <dd>{{ formatReadableText(analysisBrief.similarCaseSummary) }}</dd>
               </div>
             </div>
             <p v-else class="exception-feedback">暂无分析摘要</p>
@@ -307,9 +307,9 @@
                   <strong>{{ formatDecisionLabel(item.finalDecision, '未生成最终结论') }}</strong>
                   <span>{{ formatScore(item.confidenceScore) }}</span>
                 </div>
-                <p><strong>规则校验：</strong>{{ item.ruleResult || '--' }}</p>
+                <p><strong>规则校验：</strong>{{ formatReadableText(item.ruleResult) }}</p>
                 <p><strong>综合识别：</strong>{{ formatDecisionLabel(item.modelResult) }}</p>
-                <p><strong>判定依据：</strong>{{ item.decisionReason || '--' }}</p>
+                <p><strong>判定依据：</strong>{{ formatReadableText(item.decisionReason) }}</p>
               </article>
             </div>
           </section>
@@ -335,6 +335,7 @@ import {
   fetchExceptionRuleCheck,
 } from '../../api/exception'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import { formatReadableText } from '../../utils/readable-text'
 
 const EXCEPTION_TYPE_LABELS = {
   PROXY_CHECKIN: '代打卡',
