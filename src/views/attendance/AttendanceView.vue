@@ -12,7 +12,7 @@ import {
   verifyFaceRequest,
 } from '../../api/attendance'
 import { fetchDepartmentList } from '../../api/department'
-import { loadAmapSdk } from '../../utils/amap'
+import { loadAmapPlugins, loadAmapSdk } from '../../utils/amap'
 import { formatDateTimeDisplay } from '../../utils/date-time'
 
 const authStore = useAuthStore()
@@ -33,6 +33,9 @@ const repairDialogVisible = ref(false)
 const repairError = ref('')
 const faceVerifyLoading = ref(false)
 const faceVerifyResult = ref('')
+const currentLocationLoading = ref(false)
+const currentLocationError = ref('')
+const currentLocationSummary = ref('未获取当前位置')
 const faceInputSource = ref('camera')
 const faceCameraStarting = ref(false)
 const faceCameraError = ref('')
@@ -48,6 +51,8 @@ let devicePreviewMarker = null
 const checkinForm = reactive({
   checkType: 'IN',
   deviceId: '',
+  clientLongitude: null,
+  clientLatitude: null,
   imageData: '',
 })
 
@@ -97,6 +102,7 @@ function readDeviceOptions(response) {
     location: item.location,
     longitude: item.longitude,
     latitude: item.latitude,
+    radiusMeters: item.radiusMeters,
   }))
 }
 
@@ -142,6 +148,7 @@ const selectedDeviceCoordinate = computed(() => {
 
   return `${formatCoordinate(coordinates[0])}, ${formatCoordinate(coordinates[1])}`
 })
+const selectedDeviceRadius = computed(() => selectedDevice.value?.radiusMeters || 30)
 const hasSelectedDeviceCoordinates = computed(() => Boolean(readCoordinatePair(selectedDevice.value)))
 
 const isDeviceSelectDisabled = computed(() => Boolean(deviceOptionsError.value))
@@ -261,6 +268,54 @@ function buildComputerDeviceInfo() {
     : ''
 
   return [model || platform, browser, resolution].filter(Boolean).join(' · ')
+}
+
+async function resolveCurrentLocationLabel(longitude, latitude) {
+  try {
+    const AMap = await loadAmapPlugins(['AMap.Geocoder'])
+    const geocoder = new AMap.Geocoder()
+    return await new Promise((resolve, reject) => {
+      geocoder.getAddress([longitude, latitude], (status, result) => {
+        if (status !== 'complete' || !result?.regeocode) {
+          reject(new Error('定位地址解析失败'))
+          return
+        }
+        resolve(result.regeocode.formattedAddress || `${formatCoordinate(longitude)}, ${formatCoordinate(latitude)}`)
+      })
+    })
+  } catch (error) {
+    return `${formatCoordinate(longitude)}, ${formatCoordinate(latitude)}`
+  }
+}
+
+async function ensureCurrentLocation() {
+  if (checkinForm.clientLongitude !== null && checkinForm.clientLatitude !== null) {
+    return
+  }
+
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    throw new Error('当前浏览器不支持定位，请更换浏览器或开启定位服务')
+  }
+
+  currentLocationLoading.value = true
+  currentLocationError.value = ''
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      })
+    })
+    checkinForm.clientLongitude = Number(position.coords.longitude)
+    checkinForm.clientLatitude = Number(position.coords.latitude)
+    currentLocationSummary.value = await resolveCurrentLocationLabel(checkinForm.clientLongitude, checkinForm.clientLatitude)
+  } catch (error) {
+    throw new Error('未获取当前位置，请允许浏览器定位后重试')
+  } finally {
+    currentLocationLoading.value = false
+  }
 }
 
 function buildRecordQuery() {
@@ -437,6 +492,13 @@ function resetFaceImage() {
   faceCameraError.value = ''
   faceUploadError.value = ''
   clearFaceCheckinState()
+}
+
+function resetCurrentLocation() {
+  checkinForm.clientLongitude = null
+  checkinForm.clientLatitude = null
+  currentLocationSummary.value = '未获取当前位置'
+  currentLocationError.value = ''
 }
 
 async function syncSelectedDeviceMap() {
@@ -631,12 +693,14 @@ async function handleVerifyFace() {
   faceVerifyLoading.value = true
 
   try {
+    await ensureCurrentLocation()
     const response = await verifyFaceRequest({
       imageData: checkinForm.imageData,
     })
 
     faceVerifyResult.value = normalizeFaceVerifyResult(response)
   } catch (error) {
+    currentLocationError.value = error?.message || ''
     faceVerifyResult.value = error?.message || '人脸预检失败'
   } finally {
     faceVerifyLoading.value = false
@@ -652,11 +716,14 @@ async function handleSubmitCheckin() {
   checkinError.value = ''
 
   try {
+    await ensureCurrentLocation()
     readWrappedData(
       await submitAttendanceCheckinRequest({
         checkType: checkinForm.checkType,
         deviceId: checkinForm.deviceId,
         deviceInfo: buildComputerDeviceInfo(),
+        clientLongitude: checkinForm.clientLongitude,
+        clientLatitude: checkinForm.clientLatitude,
         imageData: checkinForm.imageData,
       }),
     )
@@ -664,7 +731,9 @@ async function handleSubmitCheckin() {
     if (recordError.value) {
       checkinError.value = recordError.value
     }
+    resetCurrentLocation()
   } catch (error) {
+    currentLocationError.value = error?.message || ''
     checkinError.value = error?.message || '打卡失败，请稍后重试'
   } finally {
     checkinSubmitting.value = false
@@ -706,6 +775,7 @@ onMounted(() => {
 })
 
 watch(() => checkinForm.deviceId, () => {
+  resetCurrentLocation()
   void syncSelectedDeviceMap()
 })
 
@@ -793,11 +863,27 @@ onBeforeUnmount(() => {
         </p>
 
         <p v-if="selectedDeviceLocation" data-testid="attendance-device-location" class="attendance-hint">
-          打卡地点：{{ selectedDeviceLocation }}
+          打卡地点：{{ selectedDeviceLocation }}（允许半径 {{ selectedDeviceRadius }} 米）
         </p>
 
         <p v-if="selectedDeviceCoordinate" data-testid="attendance-device-coordinate" class="attendance-hint">
           地点经纬度：{{ selectedDeviceCoordinate }}
+        </p>
+
+        <div class="attendance-location-actions">
+          <button
+            type="button"
+            data-testid="attendance-current-location-button"
+            :disabled="currentLocationLoading"
+            @click="ensureCurrentLocation"
+          >
+            {{ currentLocationLoading ? '定位中...' : '获取当前位置' }}
+          </button>
+          <span class="attendance-hint">当前位置：{{ currentLocationSummary }}</span>
+        </div>
+
+        <p v-if="currentLocationError" data-testid="attendance-current-location-error" class="attendance-error">
+          {{ currentLocationError }}
         </p>
 
         <div v-if="checkinForm.deviceId" class="attendance-map-card">

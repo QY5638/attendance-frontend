@@ -2,6 +2,7 @@ const AMAP_SCRIPT_ID = 'attendance-amap-sdk'
 const AMAP_BASE_URL = 'https://webapi.amap.com/maps'
 
 let amapLoaderPromise
+const pluginLoaderCache = new Map()
 
 function buildAmapUrl(key) {
   return `${AMAP_BASE_URL}?v=2.0&key=${encodeURIComponent(key)}`
@@ -74,4 +75,24 @@ export function loadAmapSdk() {
   })
 
   return amapLoaderPromise
+}
+
+export async function loadAmapPlugins(pluginNames = []) {
+  const AMap = await loadAmapSdk()
+  const normalizedPluginNames = pluginNames.filter(Boolean)
+  if (!normalizedPluginNames.length) {
+    return AMap
+  }
+
+  const cacheKey = normalizedPluginNames.slice().sort().join('|')
+  if (!pluginLoaderCache.has(cacheKey)) {
+    pluginLoaderCache.set(cacheKey, new Promise((resolve, reject) => {
+      AMap.plugin(normalizedPluginNames, () => {
+        resolve(AMap)
+      })
+      setTimeout(() => reject(new Error('地图插件加载超时')), 10000)
+    }))
+  }
+
+  return pluginLoaderCache.get(cacheKey)
 }

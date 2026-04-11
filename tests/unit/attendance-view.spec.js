@@ -101,6 +101,17 @@ async function setFaceImage(wrapper, imageData = 'base64-image') {
 
 describe('attendance view', () => {
   beforeEach(() => {
+    Object.defineProperty(global.navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition: vi.fn((success) => success({
+          coords: {
+            longitude: 116.397128,
+            latitude: 39.916527,
+          },
+        })),
+      },
+    })
     authStoreRef.current = { roleCode: 'EMPLOYEE', realName: '张三' }
     fetchDepartmentList.mockReset()
     fetchDepartmentList.mockResolvedValue({
@@ -118,12 +129,17 @@ describe('attendance view', () => {
     loadAmapSdk.mockResolvedValue({
       Map: vi.fn(() => ({
         destroy: vi.fn(),
-        on: vi.fn(),
         setCenter: vi.fn(),
       })),
       Marker: vi.fn(() => ({
         setPosition: vi.fn(),
       })),
+      Geocoder: vi.fn(() => ({
+        getAddress: vi.fn((coords, callback) => callback('complete', {
+          regeocode: { formattedAddress: '办公区A', pois: [{ name: '办公区A' }] },
+        })),
+      })),
+      plugin: vi.fn((plugins, callback) => callback?.()),
     })
     getMyAttendanceRecordRequest.mockReset()
     getMyAttendanceRecordRequest.mockResolvedValue(createRecordResponse())
@@ -145,6 +161,7 @@ describe('attendance view', () => {
         checkType: 'IN',
         checkTime: '2026-04-04T09:00:00',
         deviceId: 'DEV-001',
+        deviceInfo: 'Windows 11 · Google Chrome · 1920x1080',
         location: '办公区A',
         status: 'NORMAL',
         exceptionType: 'MULTI_LOCATION_CONFLICT',
@@ -171,6 +188,7 @@ describe('attendance view', () => {
     expect(wrapper.get('[data-testid="attendance-record-dept-id-input"]').html()).toContain('研发部')
     expect(wrapper.text()).toContain('张三')
     expect(wrapper.text()).toContain('办公区A')
+    expect(wrapper.text()).toContain('Windows 11')
   })
 
   it('submits admin record filters with text user input and selected department', async () => {
@@ -266,6 +284,7 @@ describe('attendance view', () => {
         location: '办公区A',
         longitude: 116.397128,
         latitude: 39.916527,
+        radiusMeters: 30,
       },
     ]))
     getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse())
@@ -283,7 +302,7 @@ describe('attendance view', () => {
     await setFaceImage(wrapper)
 
     expect(wrapper.get('[data-testid="attendance-device-select"]').text()).toContain('办公区A')
-    expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('办公区A')
+    expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('办公区A（允许半径 30 米）')
     expect(wrapper.get('[data-testid="attendance-computer-device"]').text()).toContain('当前电脑')
     expect(wrapper.get('[data-testid="attendance-face-verify-button"]').attributes('disabled')).toBeUndefined()
 
@@ -306,6 +325,7 @@ describe('attendance view', () => {
         location: '办公区A',
         longitude: 116.397128,
         latitude: 39.916527,
+        radiusMeters: 30,
       },
     ]))
     getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse())
@@ -327,6 +347,9 @@ describe('attendance view', () => {
         deviceId: 'LOC-A',
         name: '行政办公区主点位',
         location: '办公区A',
+        longitude: 116.397128,
+        latitude: 39.916527,
+        radiusMeters: 30,
       },
     ]))
     getMyAttendanceRecordRequest
@@ -347,6 +370,8 @@ describe('attendance view', () => {
       deviceId: 'LOC-A',
       imageData: 'base64-image',
       deviceInfo: expect.any(String),
+      clientLongitude: 116.397128,
+      clientLatitude: 39.916527,
     }))
     expect(getMyAttendanceRecordRequest).toHaveBeenCalledTimes(2)
   })
@@ -357,6 +382,9 @@ describe('attendance view', () => {
         deviceId: 'LOC-A',
         name: '行政办公区主点位',
         location: '办公区A',
+        longitude: 116.397128,
+        latitude: 39.916527,
+        radiusMeters: 30,
       },
     ]))
     getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse())

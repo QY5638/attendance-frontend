@@ -81,26 +81,28 @@ describe('system api', () => {
     })
   })
 
-  it('posts trimmed device payload to add endpoint', async () => {
+  it('posts trimmed location payload with radius to add endpoint', async () => {
     post.mockResolvedValue({ code: 200, data: null })
 
     await addDevice({
       deviceId: ' DEV-009 ',
-      name: ' 南门设备 ',
+      name: ' 南门地点 ',
       location: ' 大厅 ',
       longitude: ' 116.397128 ',
       latitude: ' 39.916527 ',
-      description: ' 新增设备 ',
+      radiusMeters: 40,
+      description: ' 新增地点 ',
       status: 1,
     })
 
     expect(post).toHaveBeenCalledWith('/device/add', {
       deviceId: 'DEV-009',
-      name: '南门设备',
+      name: '南门地点',
       location: '大厅',
       longitude: '116.397128',
       latitude: '39.916527',
-      description: '新增设备',
+      radiusMeters: 40,
+      description: '新增地点',
       status: 1,
     })
   })

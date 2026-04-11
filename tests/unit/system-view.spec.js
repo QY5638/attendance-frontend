@@ -12,6 +12,7 @@ const {
   fetchPromptTemplateList,
   fetchRiskLevelList,
   fetchRuleList,
+  loadAmapPlugins,
   loadAmapSdk,
   updatePromptTemplate,
   updatePromptTemplateStatus,
@@ -25,6 +26,7 @@ const {
   fetchPromptTemplateList: vi.fn(),
   fetchRiskLevelList: vi.fn(),
   fetchRuleList: vi.fn(),
+  loadAmapPlugins: vi.fn(),
   loadAmapSdk: vi.fn(),
   updatePromptTemplate: vi.fn(),
   updatePromptTemplateStatus: vi.fn(),
@@ -53,6 +55,7 @@ vi.mock('../../src/api/system', () => ({
 }))
 
 vi.mock('../../src/utils/amap', () => ({
+  loadAmapPlugins,
   loadAmapSdk,
 }))
 
@@ -105,13 +108,14 @@ describe('system view', () => {
     fetchPromptTemplateList.mockReset()
     fetchRiskLevelList.mockReset()
     fetchRuleList.mockReset()
+    loadAmapPlugins.mockReset()
     loadAmapSdk.mockReset()
     updatePromptTemplate.mockReset()
     updatePromptTemplateStatus.mockReset()
 
     fetchDeviceList.mockResolvedValue({
       total: 1,
-      items: [{ deviceId: 'LOC-A', name: '行政办公区主点位', location: '办公区A', longitude: 116.397128, latitude: 39.916527, status: 1, description: '默认地点' }],
+      items: [{ deviceId: 'LOC-A', name: '行政办公区主点位', location: '办公区A', longitude: 116.397128, latitude: 39.916527, radiusMeters: 30, status: 1, description: '默认地点' }],
     })
     fetchRuleList.mockResolvedValue({
       total: 1,
@@ -169,11 +173,20 @@ describe('system view', () => {
     loadAmapSdk.mockResolvedValue({
       Map: vi.fn(() => ({
         destroy: vi.fn(),
-        on: vi.fn(),
         setCenter: vi.fn(),
       })),
       Marker: vi.fn(() => ({
         setPosition: vi.fn(),
+      })),
+    })
+    loadAmapPlugins.mockResolvedValue({
+      Geocoder: vi.fn(() => ({
+        getLocation: vi.fn((keyword, callback) => callback('complete', {
+          geocodes: [{ formattedAddress: '办公区C', location: { lng: 116.397128, lat: 39.916527 } }],
+        })),
+        getAddress: vi.fn((coords, callback) => callback('complete', {
+          regeocode: { formattedAddress: '办公区C', pois: [{ name: '办公区C' }] },
+        })),
       })),
     })
   })
@@ -252,7 +265,7 @@ describe('system view', () => {
     })
   })
 
-  it('opens location dialog, loads amap sdk and submits coordinates with location payload', async () => {
+  it('opens location dialog, searches by map name and submits radius payload', async () => {
     const wrapper = await mountPanel(SystemDevicePanel)
 
     const createButton = wrapper.findAll('button').find((button) => button.text() === '新增地点')
@@ -263,9 +276,10 @@ describe('system view', () => {
 
     await wrapper.get('input[placeholder="例如 LOC-A"]').setValue('LOC-C')
     await wrapper.get('input[placeholder="例如 行政办公区主点位"]').setValue('市场办公区备用点位')
-    await wrapper.get('input[placeholder="例如 办公区A"]').setValue('办公区C')
-    await wrapper.get('[data-testid="system-device-longitude-input"]').setValue('116.397128')
-    await wrapper.get('[data-testid="system-device-latitude-input"]').setValue('39.916527')
+    await wrapper.get('input[placeholder="输入真实地图地点名称，例如 办公区A"]').setValue('办公区C')
+    await wrapper.findAll('button').find((button) => button.text() === '按地点名称定位').trigger('click')
+    await flushPromises()
+    await wrapper.get('input[placeholder="最多50米"]').setValue('40')
 
     await wrapper.get('.panel-card__dialog-form').trigger('submit.prevent')
     await flushPromises()
@@ -276,7 +290,8 @@ describe('system view', () => {
       location: '办公区C',
       longitude: '116.397128',
       latitude: '39.916527',
-      description: '',
+      radiusMeters: 40,
+      description: '办公区C',
       status: 1,
     })
   })

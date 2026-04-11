@@ -1,12 +1,14 @@
 import request from '../utils/request'
 
 function createCheckinPayload(payload = {}) {
-  const { checkType, deviceId, deviceInfo, imageData } = payload
+  const { checkType, deviceId, deviceInfo, clientLongitude, clientLatitude, imageData } = payload
 
   return {
     checkType,
     deviceId,
     deviceInfo,
+    clientLongitude,
+    clientLatitude,
     imageData,
   }
 }

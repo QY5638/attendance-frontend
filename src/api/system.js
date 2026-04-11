@@ -63,6 +63,7 @@ function normalizeDevicePayload(payload = {}) {
     location: trimString(payload.location),
     longitude: normalizeCoordinate(payload.longitude),
     latitude: normalizeCoordinate(payload.latitude),
+    radiusMeters: payload.radiusMeters,
     description: trimString(payload.description),
     status: payload.status,
   })

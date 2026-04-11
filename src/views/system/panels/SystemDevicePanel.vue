@@ -66,6 +66,7 @@
             <td>
               <div class="panel-card__location-cell">
                 <span>{{ row.location || '-' }}</span>
+                <small>有效半径 {{ row.radiusMeters || 30 }} 米</small>
                 <small v-if="hasCoordinatePair(row)">
                   经度 {{ formatCoordinate(row.longitude) }} / 纬度 {{ formatCoordinate(row.latitude) }}
                 </small>
@@ -124,31 +125,31 @@
             <span>打卡地点</span>
             <input v-model="form.location" type="text" placeholder="例如 办公区A" />
           </label>
+          <div class="panel-card__full-width panel-card__location-tools">
+            <label class="panel-card__location-search">
+              <span>地图地点名称</span>
+              <input v-model="locationSearchKeyword" type="text" placeholder="输入真实地图地点名称，例如 办公区A" />
+            </label>
+            <div class="panel-card__location-actions">
+              <button type="button" :disabled="locationSearchLoading" @click="handleSearchLocationByName">
+                {{ locationSearchLoading ? '定位中...' : '按地点名称定位' }}
+              </button>
+              <button type="button" :disabled="currentLocationLoading" @click="handleUseCurrentLocation">
+                {{ currentLocationLoading ? '获取中...' : '使用当前位置' }}
+              </button>
+            </div>
+          </div>
           <label>
-            <span>地点经度</span>
-            <input
-              v-model="form.longitude"
-              data-testid="system-device-longitude-input"
-              type="text"
-              placeholder="可地图选点或手动输入"
-            />
-          </label>
-          <label>
-            <span>地点纬度</span>
-            <input
-              v-model="form.latitude"
-              data-testid="system-device-latitude-input"
-              type="text"
-              placeholder="可地图选点或手动输入"
-            />
+            <span>打卡半径（米）</span>
+            <input v-model.number="form.radiusMeters" type="number" min="1" max="50" placeholder="最多50米" />
           </label>
           <div class="panel-card__full-width panel-card__map-card">
             <div class="panel-card__map-head">
               <div>
-                <strong>位置选点</strong>
-                <p>点击地图可自动回填地点坐标，也可直接手动录入。</p>
+                <strong>地点预览</strong>
+                <p>可通过地点名称搜索或当前位置设点完成设置，系统会自动保存对应坐标。</p>
               </div>
-              <span>{{ coordinateSummary }}</span>
+              <span>{{ coordinateSummary }} / 半径 {{ form.radiusMeters || 30 }} 米</span>
             </div>
             <p v-if="mapError" class="panel-card__feedback panel-card__feedback--error">{{ mapError }}</p>
             <p v-else-if="mapLoading" class="panel-card__feedback">地图加载中...</p>
@@ -182,7 +183,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import { addDevice, deleteDevice, fetchDeviceList, updateDevice, updateDeviceStatus } from '../../../api/system'
-import { loadAmapSdk } from '../../../utils/amap'
+import { loadAmapPlugins, loadAmapSdk } from '../../../utils/amap'
 
 const DEFAULT_MAP_CENTER = [116.397128, 39.916527]
 
@@ -196,6 +197,9 @@ const notice = ref('')
 const mapContainerRef = ref(null)
 const mapError = ref('')
 const mapLoading = ref(false)
+const locationSearchKeyword = ref('')
+const locationSearchLoading = ref(false)
+const currentLocationLoading = ref(false)
 let dialogMap = null
 let dialogMarker = null
 
@@ -216,6 +220,7 @@ const form = reactive({
   location: '',
   longitude: '',
   latitude: '',
+  radiusMeters: 30,
   description: '',
   status: 1,
 })
@@ -253,8 +258,10 @@ function resetForm() {
   form.location = ''
   form.longitude = ''
   form.latitude = ''
+  form.radiusMeters = 30
   form.description = ''
   form.status = 1
+  locationSearchKeyword.value = ''
 }
 
 function formatCoordinate(value) {
@@ -311,6 +318,11 @@ function hasCoordinatePair(target = form) {
 function setFormCoordinates(longitude, latitude) {
   form.longitude = formatCoordinate(longitude)
   form.latitude = formatCoordinate(latitude)
+}
+
+function setFormLocation(locationText, longitude, latitude) {
+  form.location = locationText || form.location
+  setFormCoordinates(longitude, latitude)
 }
 
 function readMapClickCoordinates(event) {
@@ -376,15 +388,6 @@ async function ensureDialogMap() {
         map: dialogMap,
         position: coordinates,
       })
-      dialogMap.on?.('click', (event) => {
-        const clickedCoordinates = readMapClickCoordinates(event)
-        if (!clickedCoordinates) {
-          return
-        }
-
-        setFormCoordinates(clickedCoordinates[0], clickedCoordinates[1])
-        syncDialogMapFromForm()
-      })
     }
 
     syncDialogMapFromForm()
@@ -439,8 +442,10 @@ function openEditDialog(row) {
   form.location = row.location || ''
   form.longitude = formatCoordinate(row.longitude)
   form.latitude = formatCoordinate(row.latitude)
+  form.radiusMeters = row.radiusMeters ?? 30
   form.description = row.description || ''
   form.status = row.status ?? 1
+  locationSearchKeyword.value = row.location || row.name || ''
   dialogVisible.value = true
 }
 
@@ -451,6 +456,11 @@ async function handleSubmit() {
 
   if (!form.deviceId.trim() || !form.name.trim()) {
     error.value = '请完整填写地点编号和管理名称'
+    return
+  }
+
+  if (!form.location.trim() || !hasCoordinatePair(form)) {
+    error.value = '请先通过地点名称定位或当前位置设点完成地点设置'
     return
   }
 
@@ -488,6 +498,108 @@ async function handleToggleStatus(row) {
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '打卡地点状态更新失败'
+  }
+}
+
+async function resolveAddressFromCoordinates(longitude, latitude) {
+  const AMap = await loadAmapPlugins(['AMap.Geocoder'])
+  const geocoder = new AMap.Geocoder()
+
+  return new Promise((resolve, reject) => {
+    geocoder.getAddress([longitude, latitude], (status, result) => {
+      if (status !== 'complete' || !result?.regeocode) {
+        reject(new Error('当前坐标未找到可用地点，请重试'))
+        return
+      }
+
+      const address = result.regeocode.formattedAddress || ''
+      const poiName = result.regeocode.pois?.[0]?.name || ''
+      resolve({
+        location: poiName || address,
+        description: address,
+      })
+    })
+  })
+}
+
+async function handleSearchLocationByName() {
+  const keyword = locationSearchKeyword.value.trim()
+  if (!keyword) {
+    error.value = '请输入真实地图地点名称后再定位'
+    return
+  }
+
+  locationSearchLoading.value = true
+  mapError.value = ''
+  error.value = ''
+
+  try {
+    const AMap = await loadAmapPlugins(['AMap.Geocoder'])
+    const geocoder = new AMap.Geocoder()
+    const geocodeResult = await new Promise((resolve, reject) => {
+      geocoder.getLocation(keyword, (status, result) => {
+        if (status !== 'complete' || !result?.geocodes?.length) {
+          reject(new Error('未找到对应地点，请换一个更准确的地点名称'))
+          return
+        }
+        resolve(result.geocodes[0])
+      })
+    })
+
+    const longitude = Number(geocodeResult.location?.lng)
+    const latitude = Number(geocodeResult.location?.lat)
+    setFormLocation(geocodeResult.formattedAddress || keyword, longitude, latitude)
+    if (!form.name.trim()) {
+      form.name = `${keyword}点位`
+    }
+    if (!form.description.trim()) {
+      form.description = geocodeResult.formattedAddress || keyword
+    }
+    await ensureDialogMap()
+    syncDialogMapFromForm()
+  } catch (requestError) {
+    error.value = requestError?.message || '地点名称定位失败'
+  } finally {
+    locationSearchLoading.value = false
+  }
+}
+
+async function handleUseCurrentLocation() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    error.value = '当前浏览器不支持定位，请改用地点名称定位'
+    return
+  }
+
+  currentLocationLoading.value = true
+  mapError.value = ''
+  error.value = ''
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      })
+    })
+
+    const longitude = Number(position.coords.longitude)
+    const latitude = Number(position.coords.latitude)
+    const addressInfo = await resolveAddressFromCoordinates(longitude, latitude)
+    setFormLocation(addressInfo.location, longitude, latitude)
+    locationSearchKeyword.value = addressInfo.location
+    if (!form.name.trim()) {
+      form.name = `${addressInfo.location}点位`
+    }
+    if (!form.description.trim()) {
+      form.description = addressInfo.description
+    }
+    await ensureDialogMap()
+    syncDialogMapFromForm()
+  } catch (requestError) {
+    error.value = requestError?.message || '当前位置获取失败，请检查定位权限'
+  } finally {
+    currentLocationLoading.value = false
   }
 }
 
@@ -629,6 +741,24 @@ onBeforeUnmount(() => {
   min-width: 180px;
   color: #334155;
   font-size: 14px;
+}
+
+.panel-card__location-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.panel-card__location-search {
+  min-width: 0 !important;
+}
+
+.panel-card__location-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .panel-card input,
@@ -852,6 +982,10 @@ onBeforeUnmount(() => {
 
   .panel-card__map-head {
     flex-direction: column;
+  }
+
+  .panel-card__location-tools {
+    grid-template-columns: 1fr;
   }
 }
 </style>
