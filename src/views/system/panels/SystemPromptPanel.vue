@@ -181,6 +181,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import {
   addPromptTemplate,
@@ -393,6 +394,7 @@ async function handleSubmit() {
       notice.value = '分析方案新增成功'
     }
 
+    ElMessage.success(notice.value)
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
@@ -412,6 +414,7 @@ async function handleToggleStatus(row) {
       status: nextStatus,
     })
     notice.value = '分析方案状态更新成功'
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '分析方案状态更新失败'

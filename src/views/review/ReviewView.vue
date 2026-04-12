@@ -1,5 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRoute } from 'vue-router'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
@@ -391,6 +392,7 @@ async function handleSubmitReview() {
 
     applyLatestReview(savedReview)
     submitSuccess.value = '复核结果提交成功'
+    ElMessage.success('复核结果提交成功')
 
     if (reviewForm.feedbackTag) {
       const strategyFeedback = normalizeText(reviewForm.strategyFeedback)
@@ -408,6 +410,7 @@ async function handleSubmitReview() {
           strategyFeedback,
         })
         feedbackSuccess.value = '补充说明已保存'
+        ElMessage.success('补充说明已保存')
       } catch (error) {
         feedbackForm.feedbackTag = reviewForm.feedbackTag
         feedbackForm.strategyFeedback = reviewForm.strategyFeedback
@@ -447,6 +450,7 @@ async function handleSubmitLatestFeedback() {
       strategyFeedback,
     })
     feedbackSuccess.value = '补充说明已保存'
+    ElMessage.success('补充说明已保存')
   } catch (error) {
     feedbackError.value = error?.message || '补充说明保存失败，请稍后重试'
   } finally {

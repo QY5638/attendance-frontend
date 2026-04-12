@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { completeFaceLiveness, createFaceLivenessSession } from '../../api/face'
@@ -9,7 +10,6 @@ import {
   getAttendanceDeviceOptionsRequest,
   getMyAttendanceRecordRequest,
   submitAttendanceCheckinRequest,
-  submitAttendanceRepairRequest,
   verifyFaceRequest,
 } from '../../api/attendance'
 import { fetchDepartmentList } from '../../api/department'
@@ -18,10 +18,27 @@ import { formatDateTimeDisplay } from '../../utils/date-time'
 import { describeLivenessAction, runFaceLivenessChallenge } from '../../utils/face-liveness'
 import { getTerminalId } from '../../utils/terminal-id'
 
+const props = defineProps({
+  viewMode: {
+    type: String,
+    default: 'auto',
+  },
+})
+
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
+const forcedTab = computed(() => {
+  if (props.viewMode === 'checkin') {
+    return 'checkin'
+  }
 
-const activeTab = ref(isAdmin.value ? 'records' : 'checkin')
+  if (props.viewMode === 'records') {
+    return 'records'
+  }
+
+  return ''
+})
+const activeTab = ref(isAdmin.value ? 'records' : (forcedTab.value || 'checkin'))
 const deviceOptions = ref([])
 const departmentOptions = ref([])
 const deviceOptionsError = ref('')
@@ -31,9 +48,6 @@ const recordTotal = ref(0)
 const recordError = ref('')
 const recordsLoading = ref(false)
 const checkinSubmitting = ref(false)
-const repairSubmitting = ref(false)
-const repairDialogVisible = ref(false)
-const repairError = ref('')
 const faceVerifyLoading = ref(false)
 const faceVerifyResult = ref('')
 const currentLocationLoading = ref(false)
@@ -81,12 +95,6 @@ const recordQuery = reactive({
   status: '',
   startDate: '',
   endDate: '',
-})
-
-const repairForm = reactive({
-  checkType: '',
-  checkTime: '',
-  repairReason: '',
 })
 
 function readWrappedData(response) {
@@ -194,6 +202,28 @@ const isRepairSubmitDisabled = computed(() => {
   return Boolean(repairSubmitting.value || !repairForm.repairReason.trim())
 })
 
+const showTabSwitcher = computed(() => props.viewMode === 'auto')
+const showCheckinPanel = computed(() => !isAdmin.value && activeTab.value === 'checkin')
+const showRecordPanel = computed(() => isAdmin.value || activeTab.value === 'records')
+const pageTitle = computed(() => {
+  if (isAdmin.value) {
+    return '考勤记录'
+  }
+
+  return showCheckinPanel.value ? '考勤打卡' : '考勤记录'
+})
+const pageDescription = computed(() => {
+  if (isAdmin.value) {
+    return '支持按人员、部门和时间范围查询考勤记录，便于统一核查。'
+  }
+
+  if (showCheckinPanel.value) {
+    return '分步骤完成地点确认、活体校验和正式打卡。'
+  }
+
+  return '集中查看个人考勤记录，并在需要时提交补卡申请。'
+})
+
 const totalPages = computed(() => {
   return Math.max(1, Math.ceil(recordTotal.value / recordQuery.pageSize) || 1)
 })
@@ -250,6 +280,7 @@ const CHECK_TYPE_LABELS = {
 
 const RECORD_STATUS_LABELS = {
   NORMAL: '正常',
+  ABNORMAL: '异常',
   EXCEPTION: '异常',
   REPAIRED: '已补卡',
   REPAIR_PENDING: '补卡处理中',
@@ -257,6 +288,8 @@ const RECORD_STATUS_LABELS = {
   LATE: '迟到',
   EARLY_LEAVE: '早退',
 }
+
+const REPAIRABLE_RECORD_STATUSES = new Set(['ABNORMAL', 'ABSENT', 'LATE', 'EARLY_LEAVE'])
 
 const EXCEPTION_TYPE_LABELS = {
   MULTI_LOCATION_CONFLICT: '多地点异常',
@@ -944,12 +977,8 @@ function formatComputerDevice(deviceInfo) {
   return deviceInfo
 }
 
-function openRepairDialog(record) {
-  repairForm.checkType = record?.checkType || ''
-  repairForm.checkTime = record?.checkTime || ''
-  repairForm.repairReason = ''
-  repairError.value = ''
-  repairDialogVisible.value = true
+function isRepairableRecord(record) {
+  return REPAIRABLE_RECORD_STATUSES.has(String(record?.status || '').toUpperCase())
 }
 
 async function handleVerifyFace() {
@@ -1003,41 +1032,19 @@ async function handleSubmitCheckin() {
         livenessToken,
       }),
     )
-    await loadRecords()
-    if (recordError.value) {
-      checkinError.value = recordError.value
+    if (showTabSwitcher.value || showRecordPanel.value) {
+      await loadRecords()
+      if (recordError.value) {
+        checkinError.value = recordError.value
+      }
     }
+    ElMessage.success('打卡提交成功')
     resetCurrentLocation()
   } catch (error) {
     currentLocationError.value = error?.message || ''
     checkinError.value = formatFaceSubmitError(error)
   } finally {
     checkinSubmitting.value = false
-  }
-}
-
-async function handleSubmitRepair() {
-  if (isRepairSubmitDisabled.value) {
-    return
-  }
-
-  repairSubmitting.value = true
-  repairError.value = ''
-
-  try {
-    readWrappedData(
-      await submitAttendanceRepairRequest({
-        checkType: repairForm.checkType,
-        checkTime: repairForm.checkTime,
-        repairReason: repairForm.repairReason,
-      }),
-    )
-    repairDialogVisible.value = false
-    await loadRecords()
-  } catch (error) {
-    repairError.value = error?.message || '补卡失败，请稍后重试'
-  } finally {
-    repairSubmitting.value = false
   }
 }
 
@@ -1049,7 +1056,47 @@ onMounted(() => {
     return
   }
 
-  void Promise.allSettled([loadDeviceOptions(), loadRecords()])
+  if (showTabSwitcher.value) {
+    void Promise.allSettled([loadDeviceOptions(), loadRecords()])
+    return
+  }
+
+  const tasks = []
+  if (showCheckinPanel.value) {
+    tasks.push(loadDeviceOptions())
+  }
+  if (showRecordPanel.value) {
+    tasks.push(loadRecords())
+  }
+  void Promise.allSettled(tasks)
+})
+
+watch(forcedTab, (nextTab) => {
+  if (!nextTab) {
+    return
+  }
+
+  activeTab.value = nextTab
+})
+
+watch(showCheckinPanel, (visible) => {
+  if (isAdmin.value || !visible) {
+    return
+  }
+
+  if (!deviceOptions.value.length && !deviceOptionsError.value) {
+    void loadDeviceOptions()
+  }
+})
+
+watch(showRecordPanel, (visible) => {
+  if (!visible) {
+    return
+  }
+
+  if (!recordList.value.length && !recordsLoading.value && !recordError.value) {
+    void loadRecords()
+  }
 })
 
 watch(() => checkinForm.deviceId, () => {
@@ -1076,13 +1123,13 @@ onBeforeUnmount(() => {
 <template>
   <section class="attendance-view">
     <ConsoleHero
-      title="考勤记录"
-      :description="isAdmin ? '支持按人员、部门和时间范围查询考勤记录，便于统一核查。' : '完成打卡、补卡申请和个人记录查询，相关办理集中在当前页面完成。'"
+      :title="pageTitle"
+      :description="pageDescription"
       theme="indigo"
       :cards="heroCards"
     />
 
-    <div class="attendance-tabs" role="tablist" aria-label="考勤页面切换">
+    <div v-if="showTabSwitcher" class="attendance-tabs" role="tablist" aria-label="考勤页面切换">
       <button
         v-if="!isAdmin"
         data-testid="attendance-tab-checkin"
@@ -1104,7 +1151,7 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <section v-if="!isAdmin && activeTab === 'checkin'" data-testid="attendance-checkin-panel" class="attendance-panel">
+    <section v-if="showCheckinPanel" data-testid="attendance-checkin-panel" class="attendance-panel">
       <section class="attendance-card attendance-card--soft">
         <div class="attendance-card__head">
           <div>
@@ -1179,140 +1226,148 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <section class="attendance-face-card attendance-card">
-        <div class="attendance-face-card__header">
-          <div>
-            <p class="attendance-card__eyebrow">人脸采集</p>
-            <h2>采集人脸图像</h2>
-            <p class="attendance-hint">打卡必须通过摄像头完成人脸活体检测，本地图片上传不可用于正式打卡。</p>
+      <div class="attendance-checkin-grid">
+        <section class="attendance-face-card attendance-card">
+          <div class="attendance-card__head attendance-card__head--checkin-grid">
+            <div>
+              <p class="attendance-card__eyebrow">人脸采集</p>
+              <h2>采集人脸图像</h2>
+            </div>
+            <span class="attendance-card__badge">活体验证</span>
           </div>
-        </div>
+          <p class="attendance-checkin-grid__intro">打卡必须通过摄像头完成人脸活体检测，本地图片上传不可用于正式打卡。</p>
 
-        <div class="attendance-face-capture">
-          <video ref="faceVideoRef" class="attendance-face-camera" autoplay muted playsinline></video>
-          <div class="attendance-face-actions">
-            <button
-              type="button"
-              data-testid="attendance-face-camera-start"
-              :disabled="faceCameraStarting"
-              @click="startFaceCamera"
-            >
-              {{ faceCameraStarting ? '开启中...' : '开启摄像头' }}
-            </button>
-            <button
-              type="button"
-              data-testid="attendance-face-camera-capture"
-              :disabled="!hasLiveFaceCamera"
-              @click="captureFaceFrame"
-            >
-              拍照
-            </button>
-            <button
-              type="button"
-              data-testid="attendance-face-reset"
-              :disabled="!checkinForm.imageData"
-              @click="resetFaceImage"
-            >
-              清空图像
-            </button>
+          <div class="attendance-face-capture">
+            <video ref="faceVideoRef" class="attendance-face-camera" autoplay muted playsinline></video>
+            <div class="attendance-face-actions">
+              <button
+                type="button"
+                data-testid="attendance-face-camera-start"
+                :disabled="faceCameraStarting"
+                @click="startFaceCamera"
+              >
+                {{ faceCameraStarting ? '开启中...' : '开启摄像头' }}
+              </button>
+              <button
+                type="button"
+                data-testid="attendance-face-camera-capture"
+                :disabled="!hasLiveFaceCamera"
+                @click="captureFaceFrame"
+              >
+                拍照
+              </button>
+              <button
+                type="button"
+                data-testid="attendance-face-reset"
+                :disabled="!checkinForm.imageData"
+                @click="resetFaceImage"
+              >
+                清空图像
+              </button>
+            </div>
+            <p v-if="faceCameraError" data-testid="attendance-face-camera-error" class="attendance-error">
+              {{ faceCameraError }}
+            </p>
           </div>
-          <p v-if="faceCameraError" data-testid="attendance-face-camera-error" class="attendance-error">
-            {{ faceCameraError }}
+
+          <div class="attendance-face-liveness">
+            <div class="attendance-face-liveness__header">
+              <strong>活体挑战</strong>
+              <button
+                type="button"
+                data-testid="attendance-face-liveness-button"
+                :disabled="!hasLiveFaceCamera || faceLivenessState.running"
+                @click="handleFaceLivenessButton"
+              >
+                {{ faceLivenessState.running ? '挑战中...' : hasValidFaceLivenessProof ? '重新挑战' : '开始活体挑战' }}
+              </button>
+            </div>
+            <p class="attendance-hint">
+              {{ faceLivenessState.message || '打卡前必须先完成随机活体挑战，再进行人脸预检或正式提交。' }}
+            </p>
+            <p v-if="faceLivenessState.score !== null" class="attendance-hint attendance-hint--accent">
+              活体分值：{{ Number(faceLivenessState.score).toFixed(2) }}
+            </p>
+            <div v-if="faceLivenessState.actions.length" class="attendance-face-liveness__steps">
+              <span
+                v-for="(action, index) in faceLivenessState.actions"
+                :key="`${action}-${index}`"
+                :class="[
+                  'attendance-face-liveness__step',
+                  {
+                    'attendance-face-liveness__step--completed': index < faceLivenessState.completedCount,
+                    'attendance-face-liveness__step--active': index === faceLivenessState.currentIndex,
+                  },
+                ]"
+              >
+                {{ describeLivenessAction(action) }}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section class="attendance-card attendance-card--soft attendance-preview-card">
+          <div class="attendance-card__head attendance-card__head--checkin-grid">
+            <div>
+              <p class="attendance-card__eyebrow">图像预览</p>
+              <h2>确认预览并提交打卡</h2>
+            </div>
+            <span class="attendance-card__badge">打卡提交</span>
+          </div>
+          <p class="attendance-checkin-grid__intro">拍照后右侧会展示当前抓拍结果，便于在预检通过后再正式提交打卡。</p>
+
+          <div v-if="checkinForm.imageData && !faceLivenessState.running" class="attendance-face-preview">
+            <img :src="checkinForm.imageData" alt="打卡人脸预览" data-testid="attendance-face-preview" />
+          </div>
+          <div v-else class="attendance-face-preview attendance-face-preview--empty" data-testid="attendance-image-input">
+            {{ faceLivenessState.running ? '活体挑战进行中，请跟随提示完成动作' : '请先开启摄像头拍照，再完成活体挑战' }}
+          </div>
+
+          <button
+            data-testid="attendance-face-verify-button"
+            type="button"
+            :disabled="faceVerifyLoading || !checkinForm.imageData"
+            @click="handleVerifyFace"
+          >
+            先行校验
+          </button>
+
+          <p v-if="faceVerifyResult" data-testid="attendance-face-verify-result" class="attendance-hint">
+            {{ faceVerifyResult }}
           </p>
-        </div>
 
-        <div v-if="checkinForm.imageData" class="attendance-face-preview">
-          <img :src="checkinForm.imageData" alt="打卡人脸预览" data-testid="attendance-face-preview" />
-        </div>
-        <p v-else data-testid="attendance-image-input" class="attendance-hint">请先开启摄像头拍照，再完成活体挑战</p>
-
-        <div class="attendance-face-liveness">
-          <div class="attendance-face-liveness__header">
-            <strong>活体挑战</strong>
-            <button
-              type="button"
-              data-testid="attendance-face-liveness-button"
-              :disabled="!hasLiveFaceCamera || faceLivenessState.running"
-              @click="handleFaceLivenessButton"
-            >
-              {{ faceLivenessState.running ? '挑战中...' : hasValidFaceLivenessProof ? '重新挑战' : '开始活体挑战' }}
-            </button>
+          <div class="attendance-face-card__tips">
+            <span>打卡前必须完成活体挑战，人脸预检通过后再正式提交。</span>
+            <span>右侧预览会展示当前抓拍结果，便于提交前再次确认。</span>
           </div>
-          <p class="attendance-hint">
-            {{ faceLivenessState.message || '打卡前必须先完成随机活体挑战，再进行人脸预检或正式提交。' }}
-          </p>
-          <p v-if="faceLivenessState.score !== null" class="attendance-hint attendance-hint--accent">
-            活体分值：{{ Number(faceLivenessState.score).toFixed(2) }}
-          </p>
-          <div v-if="faceLivenessState.actions.length" class="attendance-face-liveness__steps">
-            <span
-              v-for="(action, index) in faceLivenessState.actions"
-              :key="`${action}-${index}`"
-              :class="[
-                'attendance-face-liveness__step',
-                {
-                  'attendance-face-liveness__step--completed': index < faceLivenessState.completedCount,
-                  'attendance-face-liveness__step--active': index === faceLivenessState.currentIndex,
-                },
-              ]"
-            >
-              {{ describeLivenessAction(action) }}
-            </span>
+
+          <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
+            {{ checkinError }}
           </div>
-        </div>
-      </section>
 
-      <section class="attendance-card attendance-card--soft">
-        <div class="attendance-card__head">
-          <div>
-            <p class="attendance-card__eyebrow">提交确认</p>
-            <h2>完成人脸校验并提交打卡</h2>
-          </div>
-          <span class="attendance-card__badge">打卡提交</span>
-        </div>
-
-        <button
-          data-testid="attendance-face-verify-button"
-          type="button"
-          :disabled="faceVerifyLoading || !checkinForm.imageData"
-          @click="handleVerifyFace"
-        >
-          先行校验
-        </button>
-
-        <p v-if="faceVerifyResult" data-testid="attendance-face-verify-result" class="attendance-hint">
-          {{ faceVerifyResult }}
-        </p>
-
-        <div class="attendance-face-card__tips">
-          <span>打卡前必须完成活体挑战，人脸预检通过后再正式提交。</span>
-          <span>当前打卡仅支持摄像头采集，不支持本地图片上传。</span>
-        </div>
-
-        <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
-          {{ checkinError }}
-        </div>
-
-        <button
-          data-testid="attendance-checkin-submit"
-          type="button"
-          :disabled="isCheckinDisabled"
-          @click="handleSubmitCheckin"
-        >
-          提交打卡
-        </button>
-      </section>
+          <button
+            data-testid="attendance-checkin-submit"
+            type="button"
+            :disabled="isCheckinDisabled"
+            @click="handleSubmitCheckin"
+          >
+            提交打卡
+          </button>
+        </section>
+      </div>
     </section>
 
-    <section v-else data-testid="attendance-record-panel" class="attendance-panel">
+    <section v-if="showRecordPanel" data-testid="attendance-record-panel" class="attendance-panel">
       <section class="attendance-card attendance-card--soft">
         <div class="attendance-card__head">
           <div>
             <p class="attendance-card__eyebrow">记录查询</p>
             <h2>{{ isAdmin ? '查询人员考勤记录' : '查询个人考勤记录' }}</h2>
           </div>
-          <span class="attendance-card__badge">{{ isAdmin ? '支持筛选' : '支持补卡' }}</span>
+          <span class="attendance-card__badge">{{ isAdmin ? '支持筛选' : '仅查看记录' }}</span>
         </div>
+
+        <p v-if="!isAdmin" class="attendance-hint attendance-record__hint">补卡申请已拆分为独立页面；当前列表仅标记可补卡记录，正常记录不再显示补卡入口。</p>
 
         <div class="attendance-record-filters">
           <div :class="['attendance-record-filters__fields', { 'attendance-record-filters__fields--admin': isAdmin }]">
@@ -1450,7 +1505,7 @@ onBeforeUnmount(() => {
             <th v-if="isAdmin">电脑设备</th>
             <th>状态</th>
             <th>异常识别</th>
-            <th v-if="!isAdmin">操作</th>
+            <th v-if="!isAdmin">补卡标记</th>
           </tr>
         </thead>
         <tbody>
@@ -1466,58 +1521,13 @@ onBeforeUnmount(() => {
             <td>{{ formatRecordStatus(record.status) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
             <td v-if="!isAdmin">
-              <button
-                :data-testid="`attendance-repair-open-${record.id}`"
-                type="button"
-                @click="openRepairDialog(record)"
-              >
-                申请补卡
-              </button>
+              <span v-if="isRepairableRecord(record)" :data-testid="`attendance-repair-tag-${record.id}`" class="attendance-record-tag">可补卡</span>
             </td>
           </tr>
         </tbody>
         </table>
       </section>
     </section>
-
-    <div v-if="repairDialogVisible" class="attendance-repair-dialog">
-      <div class="attendance-repair-dialog__backdrop" @click="repairDialogVisible = false"></div>
-      <div data-testid="attendance-repair-dialog" class="attendance-repair-dialog__panel">
-        <div class="attendance-card__head attendance-card__head--dialog">
-          <div>
-            <p class="attendance-card__eyebrow">补卡申请</p>
-            <h2>填写补卡说明</h2>
-          </div>
-          <button type="button" class="attendance-repair-dialog__close" @click="repairDialogVisible = false">关闭</button>
-        </div>
-
-        <div class="attendance-repair-dialog__meta">
-          <p>打卡类型：{{ formatCheckType(repairForm.checkType) }}</p>
-          <p>打卡时间：{{ formatDateTime(repairForm.checkTime) }}</p>
-        </div>
-
-        <div v-if="repairError" data-testid="attendance-repair-error" class="attendance-error">
-          {{ repairError }}
-        </div>
-
-        <label class="attendance-field">
-          <span>补卡说明</span>
-          <textarea v-model="repairForm.repairReason" data-testid="attendance-repair-reason-input" rows="3" />
-        </label>
-
-        <div class="attendance-repair-dialog__actions">
-          <button type="button" @click="repairDialogVisible = false">取消</button>
-          <button
-            data-testid="attendance-repair-submit"
-            type="button"
-            :disabled="isRepairSubmitDisabled"
-            @click="handleSubmitRepair"
-          >
-            提交申请
-          </button>
-        </div>
-      </div>
-    </div>
   </section>
 </template>
 
@@ -1748,6 +1758,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1120px) {
+  .attendance-checkin-grid,
   .attendance-record-filters__fields--admin,
   .attendance-record-filters__fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1776,17 +1787,33 @@ onBeforeUnmount(() => {
   background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
 }
 
+.attendance-checkin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
 .attendance-face-card {
   display: grid;
   gap: 12px;
 }
 
-.attendance-face-card__header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: space-between;
-  align-items: center;
+.attendance-preview-card {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.attendance-card__head--checkin-grid {
+  margin-bottom: 0;
+  align-items: flex-start;
+}
+
+.attendance-checkin-grid__intro {
+  margin: 0;
+  min-height: 48px;
+  color: #64748b;
+  line-height: 1.7;
 }
 
 .attendance-face-source-switch {
@@ -1808,14 +1835,17 @@ onBeforeUnmount(() => {
 .attendance-face-camera,
 .attendance-face-preview {
   width: 100%;
-  min-height: 240px;
+  aspect-ratio: 4 / 3;
+  min-height: 200px;
+  max-height: min(50vh, 320px);
   border-radius: 18px;
-  background: #f5f7fa;
+  background: #0f172a;
   overflow: hidden;
 }
 
 .attendance-face-camera {
-  object-fit: cover;
+  display: block;
+  object-fit: contain;
 }
 
 .attendance-face-actions {
@@ -1877,7 +1907,17 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #0f172a;
+}
+
+.attendance-face-preview--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #64748b;
+  text-align: center;
 }
 
 .attendance-device-map {
@@ -2020,7 +2060,12 @@ onBeforeUnmount(() => {
     flex-direction: column;
   }
 
-  .attendance-record-filters__fields {
+  .attendance-checkin-grid__intro {
+    min-height: 0;
+  }
+
+  .attendance-record-filters__fields,
+  .attendance-checkin-grid {
     grid-template-columns: 1fr;
   }
 

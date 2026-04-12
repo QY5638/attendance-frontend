@@ -8,6 +8,8 @@ const DepartmentView = () => import('../views/department/DepartmentView.vue')
 const RoleView = () => import('../views/role/RoleView.vue')
 const FaceCaptureView = () => import('../views/face/FaceCaptureView.vue')
 const AttendanceView = () => import('../views/attendance/AttendanceView.vue')
+const AttendanceRepairView = () => import('../views/attendance/AttendanceRepairView.vue')
+const ProfileView = () => import('../views/profile/ProfileView.vue')
 const ExceptionView = () => import('../views/exception/ExceptionView.vue')
 const WarningView = () => import('../views/warning/WarningView.vue')
 const ReviewView = () => import('../views/review/ReviewView.vue')
@@ -92,12 +94,69 @@ export const protectedChildRoutes = [
     path: 'attendance',
     name: 'attendance',
     component: AttendanceView,
+    props: {
+      viewMode: 'auto',
+    },
     meta: {
       requiresAuth: true,
       title: '考勤记录',
       menuGroup: '考勤业务',
-      roles: ['ADMIN', 'EMPLOYEE'],
+      roles: ['ADMIN'],
       moduleCode: 'FE-05',
+    },
+  },
+  {
+    path: 'attendance/checkin',
+    name: 'attendance-checkin',
+    component: AttendanceView,
+    props: {
+      viewMode: 'checkin',
+    },
+    meta: {
+      requiresAuth: true,
+      title: '考勤打卡',
+      menuGroup: '考勤业务',
+      roles: ['EMPLOYEE'],
+      moduleCode: 'FE-05',
+    },
+  },
+  {
+    path: 'attendance/records',
+    name: 'attendance-records',
+    component: AttendanceView,
+    props: {
+      viewMode: 'records',
+    },
+    meta: {
+      requiresAuth: true,
+      title: '考勤记录',
+      menuGroup: '考勤业务',
+      roles: ['EMPLOYEE'],
+      moduleCode: 'FE-05',
+    },
+  },
+  {
+    path: 'attendance/repair',
+    name: 'attendance-repair',
+    component: AttendanceRepairView,
+    meta: {
+      requiresAuth: true,
+      title: '补卡申请',
+      menuGroup: '考勤业务',
+      roles: ['EMPLOYEE'],
+      moduleCode: 'FE-05',
+    },
+  },
+  {
+    path: 'profile',
+    name: 'profile',
+    component: ProfileView,
+    meta: {
+      requiresAuth: true,
+      title: '个人中心',
+      menuGroup: '个人服务',
+      roles: ['EMPLOYEE'],
+      moduleCode: 'FE-03',
     },
   },
   {

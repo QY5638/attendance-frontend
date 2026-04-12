@@ -292,6 +292,33 @@ describe('attendance view', () => {
     await flushPromises()
   })
 
+  it('hides tab switcher when mounted in dedicated employee checkin mode', async () => {
+    const wrapper = mount(AttendanceView, {
+      props: {
+        viewMode: 'checkin',
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="attendance-tab-checkin"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="attendance-checkin-panel"]').exists()).toBe(true)
+  })
+
+  it('hides static face preview while liveness challenge is running', async () => {
+    const wrapper = mount(AttendanceView)
+    await flushPromises()
+
+    await setFaceImage(wrapper)
+    wrapper.vm.faceLivenessState.running = true
+    wrapper.vm.faceLivenessState.message = '请快速眨眼'
+    wrapper.vm.faceLivenessState.actions = ['BLINK']
+    wrapper.vm.faceLivenessState.currentIndex = 0
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="attendance-face-preview"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('请快速眨眼')
+  })
+
   it('shows selected device location and runs face verify from an explicit precheck action with result feedback', async () => {
     getAttendanceDeviceOptionsRequest.mockResolvedValueOnce(createApiResponse([
       {
@@ -569,7 +596,7 @@ describe('attendance view', () => {
     expect(wrapper.text()).not.toContain('2026-04-04 09:00:00')
   })
 
-  it('submits a repair request from wrapped records and refreshes records after success', async () => {
+  it('marks only repairable records in the employee record list', async () => {
     const records = [
       {
         id: 1,
@@ -577,66 +604,22 @@ describe('attendance view', () => {
         checkTime: '2026-04-04 18:00:00',
         status: 'NORMAL',
       },
-    ]
-
-    getMyAttendanceRecordRequest
-      .mockResolvedValueOnce(createRecordResponse(records))
-      .mockResolvedValueOnce(createRecordResponse(records))
-
-    const wrapper = mount(AttendanceView)
-    await flushPromises()
-
-    await wrapper.get('[data-testid="attendance-tab-records"]').trigger('click')
-
-    await wrapper.get('[data-testid="attendance-repair-open-1"]').trigger('click')
-
-    expect(wrapper.get('[data-testid="attendance-repair-dialog"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="attendance-repair-submit"]').attributes('disabled')).toBeDefined()
-
-    await wrapper.get('[data-testid="attendance-repair-reason-input"]').setValue('漏签退补卡')
-    expect(wrapper.get('[data-testid="attendance-repair-submit"]').attributes('disabled')).toBeUndefined()
-    await wrapper.get('[data-testid="attendance-repair-submit"]').trigger('click')
-    await flushPromises()
-
-    expect(submitAttendanceRepairRequest).toHaveBeenCalledWith({
-      checkType: 'OUT',
-      checkTime: '2026-04-04 18:00:00',
-      repairReason: '漏签退补卡',
-    })
-    expect(getMyAttendanceRecordRequest).toHaveBeenCalledTimes(2)
-    expect(getMyAttendanceRecordRequest).toHaveBeenLastCalledWith({
-      pageNum: 1,
-      pageSize: 10,
-      startDate: '',
-      endDate: '',
-    })
-  })
-
-  it('keeps the repair dialog open and shows a visible error without refreshing records when repair returns a wrapped business failure', async () => {
-    const records = [
       {
-        id: 1,
-        checkType: 'OUT',
-        checkTime: '2026-04-04 18:00:00',
-        status: 'NORMAL',
+        id: 2,
+        checkType: 'IN',
+        checkTime: '2026-04-04 09:00:00',
+        status: 'ABNORMAL',
       },
     ]
 
     getMyAttendanceRecordRequest.mockResolvedValueOnce(createRecordResponse(records))
-    submitAttendanceRepairRequest.mockResolvedValueOnce(createBusinessFailureResponse('当前记录无需补卡'))
 
     const wrapper = mount(AttendanceView)
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-tab-records"]').trigger('click')
-    await wrapper.get('[data-testid="attendance-repair-open-1"]').trigger('click')
-    await wrapper.get('[data-testid="attendance-repair-reason-input"]').setValue('重复提交补卡')
-    await wrapper.get('[data-testid="attendance-repair-submit"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.get('[data-testid="attendance-repair-dialog"]').exists()).toBe(true)
-    expect(wrapper.get('[data-testid="attendance-repair-error"]').text()).toContain('当前记录无需补卡')
-    expect(getMyAttendanceRecordRequest).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[data-testid="attendance-repair-tag-1"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="attendance-repair-tag-2"]').text()).toContain('可补卡')
   })
 
   it('shows a visible refresh failure on the checkin tab when record refresh fails after a successful checkin', async () => {

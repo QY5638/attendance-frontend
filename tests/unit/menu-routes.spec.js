@@ -17,8 +17,11 @@ describe('menu routes', () => {
     const paths = groups.flatMap((group) => group.items.map((item) => item.path))
 
     expect(paths).toContain('/dashboard')
-    expect(paths).toContain('/attendance')
+    expect(paths).toContain('/attendance/checkin')
+    expect(paths).toContain('/attendance/records')
+    expect(paths).toContain('/attendance/repair')
     expect(paths).toContain('/face')
+    expect(paths).toContain('/profile')
     expect(paths).not.toContain('/statistics')
     expect(paths).not.toContain('/user')
   })
@@ -32,9 +35,15 @@ describe('menu routes', () => {
 
   it('keeps attendance route metadata aligned with FE-05 contract', () => {
     const attendanceRoute = protectedChildRoutes.find((route) => route.path === 'attendance')
+    const attendanceCheckinRoute = protectedChildRoutes.find((route) => route.path === 'attendance/checkin')
+    const attendanceRecordsRoute = protectedChildRoutes.find((route) => route.path === 'attendance/records')
+    const attendanceRepairRoute = protectedChildRoutes.find((route) => route.path === 'attendance/repair')
 
-    expect(attendanceRoute?.meta.roles).toEqual(['ADMIN', 'EMPLOYEE'])
+    expect(attendanceRoute?.meta.roles).toEqual(['ADMIN'])
     expect(attendanceRoute?.meta.menuGroup).toBe('考勤业务')
     expect(attendanceRoute?.meta.moduleCode).toBe('FE-05')
+    expect(attendanceCheckinRoute?.meta.roles).toEqual(['EMPLOYEE'])
+    expect(attendanceRecordsRoute?.meta.roles).toEqual(['EMPLOYEE'])
+    expect(attendanceRepairRoute?.meta.roles).toEqual(['EMPLOYEE'])
   })
 })

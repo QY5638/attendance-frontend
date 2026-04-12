@@ -181,6 +181,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import { addDevice, deleteDevice, fetchDeviceList, updateDevice, updateDeviceStatus } from '../../../api/system'
 import { loadAmapPlugins, loadAmapSdk } from '../../../utils/amap'
@@ -476,6 +477,7 @@ async function handleSubmit() {
       notice.value = '打卡地点新增成功'
     }
 
+    ElMessage.success(notice.value)
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
@@ -495,6 +497,7 @@ async function handleToggleStatus(row) {
       status: row.status === 1 ? 0 : 1,
     })
     notice.value = `打卡地点“${formatDeviceIdentifier(row.deviceId)}”状态已更新`
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '打卡地点状态更新失败'
@@ -621,6 +624,7 @@ async function handleDelete(row) {
       pagination.pageNum -= 1
     }
     notice.value = '打卡地点档案删除成功'
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '打卡地点档案删除失败'

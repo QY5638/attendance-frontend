@@ -102,7 +102,7 @@ describe('auth store', () => {
     expect(store.token).toBe('restored-token')
     expect(store.roleCode).toBe('EMPLOYEE')
     expect(store.realName).toBe('张三')
-    expect(store.defaultHomePath).toBe('/attendance')
+    expect(store.defaultHomePath).toBe('/attendance/checkin')
   })
 
   it('migrates legacy auth state from local storage on restore', () => {

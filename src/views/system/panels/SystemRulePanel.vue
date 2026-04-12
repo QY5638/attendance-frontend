@@ -151,6 +151,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import { addRule, fetchRuleList, updateRule, updateRuleStatus } from '../../../api/system'
 
@@ -286,6 +287,7 @@ async function handleSubmit() {
       notice.value = '规则创建成功'
     }
 
+    ElMessage.success(notice.value)
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
@@ -305,6 +307,7 @@ async function handleToggleStatus(row) {
       status: row.status === 1 ? 0 : 1,
     })
     notice.value = `规则“${row.name}”状态已更新`
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '规则状态更新失败'

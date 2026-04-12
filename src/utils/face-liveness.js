@@ -5,9 +5,9 @@ function resolveStaticAssetPath(relativePath) {
 
 let faceLandmarkerPromise = null
 
-const BASELINE_SAMPLE_COUNT = 18
-const ACTION_TRANSITION_HOLD_MS = 600
-const MAX_CHALLENGE_DURATION_MS = 45000
+const BASELINE_SAMPLE_COUNT = 20
+const ACTION_TRANSITION_HOLD_MS = 1200
+const MAX_CHALLENGE_DURATION_MS = 60000
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
@@ -192,9 +192,9 @@ function describeRunningMessage(action, score) {
     case 'BLINK':
       return `请快速眨眼，当前完成度 ${percentage}`
     case 'TURN_LEFT':
-      return `请将脸部转向画面左侧，当前完成度 ${percentage}`
+      return `请按你自己的方向向左转头，当前完成度 ${percentage}`
     case 'TURN_RIGHT':
-      return `请将脸部转向画面右侧，当前完成度 ${percentage}`
+      return `请按你自己的方向向右转头，当前完成度 ${percentage}`
     case 'MOUTH_OPEN':
       return `请自然张嘴，当前完成度 ${percentage}`
     default:
@@ -217,14 +217,14 @@ function evaluateBlink(metrics, baseline, stepState) {
   const reopened = stepState.closed && metrics.eyeOpenness >= baseline.eyeOpenness * 0.82 && metrics.blinkBlend < 0.25
   return {
     score: stepState.bestScore,
-    completed: reopened && stepState.bestScore >= 0.65 && stepState.stableFrames >= 2,
+    completed: reopened && stepState.bestScore >= 0.68 && stepState.stableFrames >= 4,
     message: describeRunningMessage('BLINK', stepState.bestScore),
   }
 }
 
 function evaluateMouthOpen(metrics, baseline, stepState) {
-  const ratioScore = normalizeScore(metrics.mouthOpenness / Math.max(baseline.mouthOpenness, 1e-6), 1.4, 2.3)
-  const blendScore = normalizeScore(metrics.mouthBlend, 0.28, 0.82)
+  const ratioScore = normalizeScore(metrics.mouthOpenness / Math.max(baseline.mouthOpenness, 1e-6), 1.55, 2.45)
+  const blendScore = normalizeScore(metrics.mouthBlend, 0.32, 0.86)
   const score = Math.max(ratioScore, blendScore)
 
   stepState.bestScore = Math.max(stepState.bestScore, score)
@@ -237,15 +237,16 @@ function evaluateMouthOpen(metrics, baseline, stepState) {
 
   return {
     score: stepState.bestScore,
-    completed: stepState.holdFrames >= 4 && stepState.bestScore >= 0.65,
+    completed: stepState.holdFrames >= 6 && stepState.bestScore >= 0.68,
     message: describeRunningMessage('MOUTH_OPEN', stepState.bestScore),
   }
 }
 
 function evaluateTurn(action, metrics, baseline, stepState) {
   const delta = metrics.yawRatio - baseline.yawRatio
-  const signedDelta = action === 'TURN_LEFT' ? baseline.yawRatio - metrics.yawRatio : delta
-  const score = normalizeScore(signedDelta, 0.05, 0.18)
+  // 左右转头按采集者自己的方向判断，而不是按屏幕左右判断。
+  const signedDelta = action === 'TURN_LEFT' ? delta : baseline.yawRatio - metrics.yawRatio
+  const score = normalizeScore(signedDelta, 0.08, 0.24)
 
   stepState.bestScore = Math.max(stepState.bestScore, score)
   if (score > 0.65) {
@@ -257,7 +258,7 @@ function evaluateTurn(action, metrics, baseline, stepState) {
 
   return {
     score: stepState.bestScore,
-    completed: stepState.holdFrames >= 4 && stepState.bestScore >= 0.7,
+    completed: stepState.holdFrames >= 6 && stepState.bestScore >= 0.72,
     message: describeRunningMessage(action, stepState.bestScore),
   }
 }
@@ -332,9 +333,9 @@ export function describeLivenessAction(action) {
     case 'BLINK':
       return '快速眨眼'
     case 'TURN_LEFT':
-      return '转向画面左侧'
+      return '向左转头'
     case 'TURN_RIGHT':
-      return '转向画面右侧'
+      return '向右转头'
     case 'MOUTH_OPEN':
       return '自然张嘴'
     default:

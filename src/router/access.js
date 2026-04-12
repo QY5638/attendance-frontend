@@ -2,7 +2,7 @@ export const SUPPORTED_ROLE_CODES = ['ADMIN', 'EMPLOYEE']
 
 const DEFAULT_HOME_BY_ROLE = {
   ADMIN: '/dashboard',
-  EMPLOYEE: '/attendance',
+  EMPLOYEE: '/attendance/checkin',
 }
 
 function normalizeRoutePath(path = '') {

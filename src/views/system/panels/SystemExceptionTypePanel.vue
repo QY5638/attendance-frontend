@@ -119,6 +119,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import { fetchExceptionTypeList, updateExceptionType } from '../../../api/system'
 
@@ -237,6 +238,7 @@ async function handleSubmit() {
     await updateExceptionType(form)
     dialogVisible.value = false
     notice.value = '异常类型更新成功'
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '异常类型更新失败'

@@ -215,6 +215,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { completeFaceLiveness, createFaceLivenessSession, fetchFaceRegisterStatus, registerFace, submitFaceRegisterApply, verifyFace } from '../../api/face'
@@ -431,6 +432,7 @@ async function handleSubmitRegisterApply() {
     const data = await submitFaceRegisterApply(registerApplyReason.value)
     syncRegisterPermission(data)
     registerApplyReason.value = ''
+    ElMessage.success('人脸重录申请已提交')
     registerStatusNotice.value = '人脸重录申请已提交，请等待管理员审批'
   } catch (error) {
     registerStatusError.value = error?.message || '人脸重录申请提交失败，请稍后重试'
@@ -667,6 +669,9 @@ async function submit(action, request) {
       type: action,
     }
     if (action === 'register') {
+      ElMessage.success('人脸录入成功')
+    }
+    if (action === 'register') {
       registerStatusNotice.value = ''
       await loadRegisterStatus()
     }
@@ -755,14 +760,17 @@ onMounted(() => {
 .face-panel__camera,
 .face-preview {
   width: 100%;
-  min-height: 240px;
+  aspect-ratio: 4 / 3;
+  min-height: 200px;
+  max-height: min(50vh, 320px);
   border-radius: 18px;
-  background: #e2e8f0;
+  background: #0f172a;
   overflow: hidden;
 }
 
 .face-panel__camera {
-  object-fit: cover;
+  display: block;
+  object-fit: contain;
 }
 
 .face-preview {
@@ -776,7 +784,8 @@ onMounted(() => {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #0f172a;
 }
 
 .face-preview--empty {

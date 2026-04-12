@@ -90,5 +90,19 @@ export const useAuthStore = defineStore('auth', {
     hasRole(roles = []) {
       return canAccessRoles(this.roleCode, roles)
     },
+
+    updateIdentity(payload = {}) {
+      if (typeof payload.realName === 'string') {
+        this.realName = payload.realName
+      }
+
+      const { refreshToken } = readAuthStorage()
+      writeAuthStorage({
+        token: this.token,
+        refreshToken,
+        roleCode: this.roleCode,
+        realName: this.realName,
+      })
+    },
   },
 })

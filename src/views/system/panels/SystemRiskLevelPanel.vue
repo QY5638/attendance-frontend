@@ -121,6 +121,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import { fetchRiskLevelList, updateRiskLevel } from '../../../api/system'
 
@@ -228,6 +229,7 @@ async function handleSubmit() {
     await updateRiskLevel(form)
     dialogVisible.value = false
     notice.value = '风险等级更新成功'
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '风险等级更新失败'

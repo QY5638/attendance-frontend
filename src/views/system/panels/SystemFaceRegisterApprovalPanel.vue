@@ -130,6 +130,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 
 import { fetchFaceRegisterApprovalList, reviewFaceRegisterApproval } from '../../../api/system'
 import { formatDateTimeDisplay } from '../../../utils/date-time'
@@ -266,6 +267,7 @@ async function handleSubmit() {
     })
     dialogVisible.value = false
     notice.value = form.status === 'APPROVED' ? '人脸重录申请已审批通过' : '人脸重录申请已驳回'
+    ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
     error.value = requestError?.message || '人脸申请审批失败'

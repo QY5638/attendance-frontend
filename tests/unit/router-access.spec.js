@@ -16,7 +16,7 @@ describe('router access helpers', () => {
 
   it('maps default home by role', () => {
     expect(getDefaultHomePath('ADMIN')).toBe('/dashboard')
-    expect(getDefaultHomePath('EMPLOYEE')).toBe('/attendance')
+    expect(getDefaultHomePath('EMPLOYEE')).toBe('/attendance/checkin')
     expect(getDefaultHomePath('UNKNOWN')).toBe('/login')
   })
 
@@ -41,6 +41,18 @@ describe('router access helpers', () => {
           path: 'face',
           meta: { title: '人脸采集', menuGroup: '考勤业务', roles: ['EMPLOYEE'] },
         },
+        {
+          path: 'attendance/checkin',
+          meta: { title: '考勤打卡', menuGroup: '考勤业务', roles: ['EMPLOYEE'] },
+        },
+        {
+          path: 'attendance/repair',
+          meta: { title: '补卡申请', menuGroup: '考勤业务', roles: ['EMPLOYEE'] },
+        },
+        {
+          path: 'profile',
+          meta: { title: '个人中心', menuGroup: '个人服务', roles: ['EMPLOYEE'] },
+        },
       ],
       'EMPLOYEE',
     )
@@ -62,6 +74,26 @@ describe('router access helpers', () => {
           {
             path: '/face',
             title: '人脸采集',
+            moduleCode: undefined,
+          },
+          {
+            path: '/attendance/checkin',
+            title: '考勤打卡',
+            moduleCode: undefined,
+          },
+          {
+            path: '/attendance/repair',
+            title: '补卡申请',
+            moduleCode: undefined,
+          },
+        ],
+      },
+      {
+        name: '个人服务',
+        items: [
+          {
+            path: '/profile',
+            title: '个人中心',
             moduleCode: undefined,
           },
         ],

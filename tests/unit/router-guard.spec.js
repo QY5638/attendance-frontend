@@ -150,32 +150,32 @@ describe('router guard', () => {
 
   it('redirects authenticated users away from login page', () => {
     expect(
-      resolveGuardNavigation({
-        isAuthenticated: true,
-        canAccess: true,
-        defaultHomePath: '/attendance',
-        to: {
-          path: '/login',
-          fullPath: '/login',
-          meta: {},
-        },
-      }),
-    ).toEqual({ path: '/attendance' })
+        resolveGuardNavigation({
+          isAuthenticated: true,
+          canAccess: true,
+          defaultHomePath: '/attendance/checkin',
+          to: {
+            path: '/login',
+            fullPath: '/login',
+            meta: {},
+          },
+        }),
+    ).toEqual({ path: '/attendance/checkin' })
   })
 
   it('redirects root path to the role default home', () => {
     expect(
-      resolveGuardNavigation({
-        isAuthenticated: true,
-        canAccess: true,
-        defaultHomePath: '/attendance',
-        to: {
-          path: '/',
-          fullPath: '/',
-          meta: { requiresAuth: true },
-        },
-      }),
-    ).toEqual({ path: '/attendance' })
+        resolveGuardNavigation({
+          isAuthenticated: true,
+          canAccess: true,
+          defaultHomePath: '/attendance/checkin',
+          to: {
+            path: '/',
+            fullPath: '/',
+            meta: { requiresAuth: true },
+          },
+        }),
+    ).toEqual({ path: '/attendance/checkin' })
   })
 
   it('redirects forbidden route to 403', () => {
