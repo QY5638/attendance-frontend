@@ -21,6 +21,14 @@
           <select v-model="queryForm.type" data-testid="exception-filter-type">
             <option value="">全部</option>
             <option value="PROXY_CHECKIN">代打卡</option>
+            <option value="CONTINUOUS_LATE">连续迟到</option>
+            <option value="CONTINUOUS_EARLY_LEAVE">连续早退</option>
+            <option value="CONTINUOUS_MULTI_LOCATION_CONFLICT">连续多地点冲突</option>
+            <option value="CONTINUOUS_ILLEGAL_TIME">连续非法时间打卡</option>
+            <option value="CONTINUOUS_REPEAT_CHECK">连续重复打卡</option>
+            <option value="CONTINUOUS_PROXY_CHECKIN">连续代打卡</option>
+            <option value="CONTINUOUS_ATTENDANCE_RISK">连续综合考勤异常</option>
+            <option value="CONTINUOUS_MODEL_RISK">连续模型风险异常</option>
             <option value="LATE">迟到</option>
             <option value="EARLY_LEAVE">早退</option>
             <option value="ILLEGAL_TIME">非规定时间打卡</option>
@@ -339,6 +347,14 @@ import { formatReadableText } from '../../utils/readable-text'
 
 const EXCEPTION_TYPE_LABELS = {
   PROXY_CHECKIN: '代打卡',
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
   ILLEGAL_TIME: '非规定时间打卡',
@@ -510,7 +526,6 @@ function hasCheckContext() {
 function buildCheckPayload() {
   return {
     recordId: Number(exceptionDetail.value?.recordId),
-    userId: Number(exceptionDetail.value?.userId),
   }
 }
 

@@ -913,18 +913,25 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px;
+  overflow-y: auto;
   background: rgba(15, 23, 42, 0.42);
+  z-index: 80;
 }
 
 .panel-card__dialog {
   width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  margin: auto 0;
   padding: 24px;
   border-radius: 24px;
   background: #ffffff;
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .panel-card__dialog-form {
@@ -932,6 +939,9 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 20px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .panel-card__map-card {
@@ -966,6 +976,14 @@ onBeforeUnmount(() => {
 
 .panel-card__icon-btn {
   background: rgba(148, 163, 184, 0.16) !important;
+}
+
+.panel-card__dialog-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  padding-bottom: 4px;
+  background: #ffffff;
 }
 
 @media (max-width: 960px) {

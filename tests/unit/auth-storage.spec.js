@@ -10,12 +10,14 @@ describe('auth storage', () => {
   it('writes and reads token roleCode and realName', () => {
     writeAuthStorage({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'ADMIN',
       realName: '系统管理员',
     })
 
     expect(readAuthStorage()).toEqual({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'ADMIN',
       realName: '系统管理员',
     })
@@ -24,6 +26,7 @@ describe('auth storage', () => {
   it('clears all auth keys', () => {
     writeAuthStorage({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'ADMIN',
       realName: '系统管理员',
     })
@@ -32,6 +35,7 @@ describe('auth storage', () => {
 
     expect(readAuthStorage()).toEqual({
       token: '',
+      refreshToken: '',
       roleCode: '',
       realName: '',
     })

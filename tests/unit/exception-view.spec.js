@@ -411,7 +411,7 @@ describe('exception view', () => {
     await wrapper.get('[data-testid="exception-run-complex-check"]').trigger('click')
     await flushPromises()
 
-    expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: 2001, userId: 1001 })
+    expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: 2001 })
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('综合识别结果')
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('重新识别后仍为高风险')
   })

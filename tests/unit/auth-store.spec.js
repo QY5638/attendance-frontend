@@ -1,18 +1,20 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { createAuthError, loginRequest } = vi.hoisted(() => ({
+const { createAuthError, loginRequest, logoutRequest } = vi.hoisted(() => ({
   createAuthError: vi.fn((message, field = '') => ({
     type: 'auth',
     field,
     message,
   })),
   loginRequest: vi.fn(),
+  logoutRequest: vi.fn(),
 }))
 
 vi.mock('../../src/api/auth', () => ({
   createAuthError,
   loginRequest,
+  logoutRequest,
 }))
 
 import { useAuthStore } from '../../src/store/auth'
@@ -23,11 +25,13 @@ describe('auth store', () => {
     localStorage.clear()
     createAuthError.mockClear()
     loginRequest.mockReset()
+    logoutRequest.mockReset()
   })
 
   it('stores login payload when login succeeds', async () => {
     loginRequest.mockResolvedValue({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'ADMIN',
       realName: '系统管理员',
     })
@@ -40,11 +44,13 @@ describe('auth store', () => {
     expect(store.realName).toBe('系统管理员')
     expect(store.defaultHomePath).toBe('/dashboard')
     expect(localStorage.getItem('attendance_token')).toBe('token-value')
+    expect(localStorage.getItem('attendance_refresh_token')).toBe('refresh-token-value')
   })
 
   it('rejects login when selected role does not match returned role', async () => {
     loginRequest.mockResolvedValue({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'EMPLOYEE',
       realName: '张三',
     })
@@ -66,6 +72,7 @@ describe('auth store', () => {
   it('rejects unsupported role and clears state', async () => {
     loginRequest.mockResolvedValue({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'GUEST',
       realName: '游客',
     })
@@ -83,6 +90,7 @@ describe('auth store', () => {
 
   it('restores persisted auth state', () => {
     localStorage.setItem('attendance_token', 'restored-token')
+    localStorage.setItem('attendance_refresh_token', 'restored-refresh-token')
     localStorage.setItem('attendance_role_code', 'EMPLOYEE')
     localStorage.setItem('attendance_real_name', '张三')
 
@@ -97,6 +105,7 @@ describe('auth store', () => {
 
   it('clears persisted session when restored role is unsupported', () => {
     localStorage.setItem('attendance_token', 'dirty-token')
+    localStorage.setItem('attendance_refresh_token', 'dirty-refresh-token')
     localStorage.setItem('attendance_role_code', 'GUEST')
     localStorage.setItem('attendance_real_name', '脏数据用户')
 
@@ -108,6 +117,7 @@ describe('auth store', () => {
     expect(store.realName).toBe('')
     expect(store.isAuthenticated).toBe(false)
     expect(localStorage.getItem('attendance_token')).toBeNull()
+    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
     expect(localStorage.getItem('attendance_role_code')).toBeNull()
     expect(localStorage.getItem('attendance_real_name')).toBeNull()
   })
@@ -118,6 +128,7 @@ describe('auth store', () => {
     store.roleCode = 'ADMIN'
     store.realName = '系统管理员'
     localStorage.setItem('attendance_token', 'token-value')
+    localStorage.setItem('attendance_refresh_token', 'refresh-token-value')
     localStorage.setItem('attendance_role_code', 'ADMIN')
     localStorage.setItem('attendance_real_name', '系统管理员')
 
@@ -127,22 +138,27 @@ describe('auth store', () => {
     expect(store.roleCode).toBe('')
     expect(store.realName).toBe('')
     expect(localStorage.getItem('attendance_token')).toBeNull()
+    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
     expect(localStorage.getItem('attendance_role_code')).toBeNull()
     expect(localStorage.getItem('attendance_real_name')).toBeNull()
   })
 
-  it('clears state and storage on logout', () => {
+  it('calls logout api and clears state and storage on logout', async () => {
+    logoutRequest.mockResolvedValue(null)
     const store = useAuthStore()
     store.token = 'token-value'
     store.roleCode = 'ADMIN'
     store.realName = '系统管理员'
     localStorage.setItem('attendance_token', 'token-value')
+    localStorage.setItem('attendance_refresh_token', 'refresh-token-value')
 
-    store.logout()
+    await store.logout()
 
     expect(store.token).toBe('')
     expect(store.roleCode).toBe('')
     expect(store.realName).toBe('')
     expect(localStorage.getItem('attendance_token')).toBeNull()
+    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
+    expect(logoutRequest).toHaveBeenCalledWith('refresh-token-value')
   })
 })

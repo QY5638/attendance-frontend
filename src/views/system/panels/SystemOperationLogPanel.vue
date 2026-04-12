@@ -3,33 +3,48 @@
     <header class="panel-card__header">
       <div>
         <h2>业务记录</h2>
-        <p>用于查询关键业务办理记录，便于审计和问题追踪。</p>
+        <p>用于查询关键业务操作记录，便于审计和问题追踪。</p>
+      </div>
+      <div class="panel-card__actions">
+        <button type="button" class="panel-card__primary" :disabled="exporting" @click="handleExport">
+          {{ exporting ? '导出中...' : '导出当前记录' }}
+        </button>
       </div>
     </header>
 
     <section class="panel-card__hero-strip">
-      <article>
-        <span>内容分类</span>
-        <strong>办理记录</strong>
-      </article>
-      <article>
-        <span>覆盖范围</span>
-        <strong>登录 / 打卡 / 复核等关键业务</strong>
+      <article v-for="item in summaryCards" :key="item.key">
+        <span>{{ item.label }}</span>
+        <strong>{{ item.value }}</strong>
       </article>
     </section>
 
     <p class="panel-card__notice">
-      当前主要记录登录、打卡、补卡、预警和复核等关键办理动作，便于日常审计与问题追踪。
+      当前支持按事件分类查看认证、活体、人脸、打卡、复核和系统配置等关键记录，便于日常审计与问题追踪。
     </p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
-        <span>办理人</span>
-        <input v-model.number="filters.userId" type="number" min="1" placeholder="按办理人筛选" />
+        <span>操作人</span>
+        <input v-model.number="filters.userId" type="number" min="1" placeholder="按操作人筛选" />
       </label>
       <label>
-        <span>办理动作</span>
-        <input v-model="filters.type" type="text" placeholder="请输入办理动作关键字" />
+        <span>事件分类</span>
+        <select v-model="filters.scope">
+          <option value="ALL">全部事件</option>
+          <option v-for="option in scopeOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
+      <label>
+        <span>操作类型</span>
+        <select v-model="filters.type">
+          <option value="">全部动作</option>
+          <option v-for="option in actionOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
       </label>
       <label>
         <span>开始日期</span>
@@ -51,10 +66,10 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>办理人</th>
-            <th>办理动作</th>
-            <th>办理摘要</th>
-            <th>办理时间</th>
+            <th>操作人</th>
+            <th>操作类型</th>
+            <th>操作摘要</th>
+            <th>操作时间</th>
           </tr>
         </thead>
         <tbody>
@@ -85,18 +100,25 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
-import { fetchOperationLogList } from '../../../api/system'
+import { fetchOperationLogList, fetchOperationLogSummary } from '../../../api/system'
+import { exportStatisticsReport } from '../../../api/statistics'
 import { formatDateTimeDisplay } from '../../../utils/date-time'
 
 const loading = ref(false)
 const rows = ref([])
 const error = ref('')
+const exporting = ref(false)
+const summary = ref({
+  total: 0,
+  typeCounts: {},
+})
 
 const filters = reactive({
   userId: '',
   type: '',
+  scope: 'ALL',
   startDate: '',
   endDate: '',
 })
@@ -111,7 +133,11 @@ const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagin
 
 const OPERATION_TYPE_LABELS = {
   LOGIN: '登录',
+  LOGIN_FAILURE: '登录失败',
+  LOGIN_LOCKED: '登录锁定',
   LOGOUT: '退出登录',
+  TOKEN_REFRESH: '刷新令牌',
+  TOKEN_REFRESH_FAILURE: '刷新失败',
   CHECKIN: '上班打卡',
   CHECKOUT: '下班打卡',
   ATTENDANCE_APPLY: '补卡申请',
@@ -119,6 +145,68 @@ const OPERATION_TYPE_LABELS = {
   REVIEW_SUBMIT: '复核办理',
   REVIEW_FEEDBACK: '复核补充',
   SYSTEM_CONFIG: '系统配置',
+  FACE_LIVENESS_SESSION: '活体会话创建',
+  FACE_LIVENESS_PASS: '活体挑战通过',
+  FACE_LIVENESS_FAIL: '活体挑战失败',
+  FACE_LIVENESS_REJECT: '活体证明拒绝',
+  FACE_LIVENESS_CONSUME: '活体证明消费',
+}
+
+const SCOPE_OPTIONS = [
+  { value: 'AUTH', label: '认证事件', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
+  { value: 'LIVENESS', label: '活体事件', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
+  { value: 'ATTENDANCE', label: '打卡事件', types: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'] },
+  { value: 'REVIEW', label: '复核事件', types: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'] },
+  { value: 'SYSTEM', label: '系统事件', types: ['SYSTEM_CONFIG'] },
+]
+
+const ACTION_OPTIONS = Object.entries(OPERATION_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+
+const scopeOptions = SCOPE_OPTIONS.map(({ value, label }) => ({ value, label }))
+
+const actionOptions = computed(() => {
+  if (filters.scope === 'ALL') {
+    return ACTION_OPTIONS
+  }
+
+  const scope = SCOPE_OPTIONS.find((item) => item.value === filters.scope)
+  if (!scope) {
+    return ACTION_OPTIONS
+  }
+
+  return ACTION_OPTIONS.filter((option) => scope.types.includes(option.value))
+})
+
+const summaryCards = computed(() => {
+  const typeCounts = summary.value?.typeCounts || {}
+
+  return [
+    {
+      key: 'total',
+      label: '当前结果总数',
+      value: Number(summary.value?.total || 0),
+    },
+    {
+      key: 'auth',
+      label: '认证事件',
+      value: sumTypes(typeCounts, resolveScopeTypes('AUTH')),
+    },
+    {
+      key: 'liveness',
+      label: '活体事件',
+      value: sumTypes(typeCounts, resolveScopeTypes('LIVENESS')),
+    },
+    {
+      key: 'attendance',
+      label: '打卡事件',
+      value: sumTypes(typeCounts, resolveScopeTypes('ATTENDANCE')),
+    },
+  ]
+})
+
+function resolveScopeTypes(scope) {
+  const targetScope = SCOPE_OPTIONS.find((item) => item.value === scope)
+  return targetScope ? targetScope.types : []
 }
 
 function buildListParams() {
@@ -133,6 +221,8 @@ function buildListParams() {
 
   if (filters.type.trim()) {
     params.type = filters.type.trim()
+  } else if (filters.scope !== 'ALL') {
+    params.types = resolveScopeTypes(filters.scope)
   }
 
   if (filters.startDate) {
@@ -146,6 +236,24 @@ function buildListParams() {
   return params
 }
 
+function buildSummaryParams() {
+  const params = buildListParams()
+  delete params.pageNum
+  delete params.pageSize
+  return params
+}
+
+function buildExportParams() {
+  const params = buildSummaryParams()
+  if (Array.isArray(params.types)) {
+    params.types = params.types.join(',')
+  }
+  return {
+    exportType: 'AUDIT',
+    ...params,
+  }
+}
+
 function formatOperationType(type) {
   return OPERATION_TYPE_LABELS[String(type || '').toUpperCase()] || '其他操作'
 }
@@ -155,17 +263,19 @@ function formatDateTime(value) {
 }
 
 function resolveOperationActor(row = {}) {
-  const content = String(row.content || '').trim()
-  const markers = ['登录系统', '退出系统', '上班打卡', '下班打卡', '提交补卡申请', '重新评估预警', '复核异常记录', '提交复核反馈', '修改系统配置']
-
-  for (const marker of markers) {
-    const markerIndex = content.indexOf(marker)
-    if (markerIndex > 0) {
-      return content.slice(0, markerIndex)
-    }
+  if (row.realName) {
+    return row.username ? `${row.realName}（${row.username}）` : row.realName
   }
 
-  return '当前办理人'
+  if (row.username) {
+    return row.username
+  }
+
+  if (row.userId) {
+    return `用户 #${row.userId}`
+  }
+
+  return '系统事件'
 }
 
 function formatOperationSummary(row = {}) {
@@ -175,10 +285,44 @@ function formatOperationSummary(row = {}) {
   }
 
   const actor = resolveOperationActor(row)
-  const withoutActor = actor && actor !== '当前办理人' && content.startsWith(actor)
-    ? content.slice(actor.length)
+  const rawActor = row.realName || row.username || ''
+  const withoutActor = rawActor && content.startsWith(rawActor)
+    ? content.slice(rawActor.length)
     : content
   return withoutActor.replace(/\d+$/g, '') || withoutActor
+}
+
+function normalizeTypeFilter() {
+  if (!filters.type) {
+    return
+  }
+
+  if (filters.scope === 'ALL') {
+    return
+  }
+
+  const scopeTypes = resolveScopeTypes(filters.scope)
+  if (!scopeTypes.includes(filters.type)) {
+    filters.type = ''
+  }
+}
+
+function sumTypes(typeCounts, types) {
+  return types.reduce((total, type) => total + Number(typeCounts?.[type] || 0), 0)
+}
+
+function downloadBlob(blob, filename) {
+  if (!(blob instanceof Blob) || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    return false
+  }
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+  return true
 }
 
 async function loadList() {
@@ -186,15 +330,34 @@ async function loadList() {
   error.value = ''
 
   try {
-    const { total, items } = await fetchOperationLogList(buildListParams())
+    const [listResult, summaryResult] = await Promise.all([
+      fetchOperationLogList(buildListParams()),
+      fetchOperationLogSummary(buildSummaryParams()),
+    ])
+    const { total, items } = listResult
     rows.value = items
     pagination.total = total
+    summary.value = summaryResult || { total: 0, typeCounts: {} }
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
+    summary.value = { total: 0, typeCounts: {} }
     error.value = requestError?.message || '业务记录加载失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function handleExport() {
+  exporting.value = true
+
+  try {
+    const { blob, filename } = await exportStatisticsReport(buildExportParams())
+    downloadBlob(blob, filename || '业务记录报表.csv')
+  } catch (requestError) {
+    error.value = requestError?.message || '业务记录导出失败'
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -206,6 +369,7 @@ function handleSearch() {
 function handleReset() {
   filters.userId = ''
   filters.type = ''
+  filters.scope = 'ALL'
   filters.startDate = ''
   filters.endDate = ''
   pagination.pageNum = 1
@@ -226,6 +390,13 @@ function changePage(step) {
 onMounted(() => {
   void loadList()
 })
+
+watch(
+  () => filters.scope,
+  () => {
+    normalizeTypeFilter()
+  },
+)
 </script>
 
 <style scoped>
@@ -238,7 +409,7 @@ onMounted(() => {
 
 .panel-card__hero-strip {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -315,11 +486,13 @@ onMounted(() => {
 }
 
 .panel-card input,
+.panel-card select,
 .panel-card button {
   font: inherit;
 }
 
-.panel-card input {
+.panel-card input,
+.panel-card select {
   padding: 10px 12px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: 12px;
@@ -378,10 +551,20 @@ onMounted(() => {
 }
 
 @media (max-width: 960px) {
+  .panel-card__hero-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .panel-card__header,
   .panel-card__footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel-card__hero-strip {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

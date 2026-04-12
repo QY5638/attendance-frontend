@@ -105,6 +105,10 @@ function normalizePromptTemplatePayload(payload = {}) {
 }
 
 function normalizeListQuery(params = {}) {
+  const types = Array.isArray(params.types)
+    ? params.types.map((item) => trimString(item)).filter(Boolean).join(',')
+    : trimString(params.types)
+
   return compactPayload({
     pageNum: params.pageNum,
     pageSize: params.pageSize,
@@ -116,6 +120,7 @@ function normalizeListQuery(params = {}) {
     sceneType: trimString(params.sceneType),
     userId: params.userId,
     type: trimString(params.type),
+    types,
     startDate: trimString(params.startDate),
     endDate: trimString(params.endDate),
   })
@@ -223,4 +228,9 @@ export async function updateExceptionType(payload) {
 export async function fetchOperationLogList(params = {}) {
   const result = ensureSuccess(await request.get('/log/operation/list', { params: normalizeListQuery(params) }))
   return normalizeListData(result.data)
+}
+
+export async function fetchOperationLogSummary(params = {}) {
+  const result = ensureSuccess(await request.get('/log/operation/summary', { params: normalizeListQuery(params) }))
+  return result.data || { total: 0, typeCounts: {} }
 }

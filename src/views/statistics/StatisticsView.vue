@@ -57,6 +57,44 @@
         </div>
       </section>
 
+      <section data-testid="statistics-exception-types" class="statistics-section">
+        <div class="statistics-section__head">
+          <h3>异常类型分布</h3>
+          <span>高频异常概览</span>
+        </div>
+
+        <div v-if="exceptionTypeItems.length" class="statistics-type-grid">
+          <article v-for="item in exceptionTypeItems" :key="item.key" class="statistics-type-card">
+            <div class="statistics-type-card__head">
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.count }} 次</span>
+            </div>
+            <div class="statistics-type-card__bar">
+              <span :style="{ width: `${item.width}%` }"></span>
+            </div>
+          </article>
+        </div>
+        <el-empty v-else description="暂无异常类型分布" />
+
+        <div v-if="exceptionTypeTrendItems.length" class="statistics-type-trend-grid">
+          <article v-for="item in exceptionTypeTrendItems" :key="item.key" class="statistics-type-trend-card">
+            <div class="statistics-type-card__head">
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.totalCount }} 次</span>
+            </div>
+            <div class="statistics-type-trend-bars">
+              <span
+                v-for="(bar, index) in item.bars"
+                :key="`${item.key}-${index}`"
+                :style="{ height: `${bar.height}%` }"
+                :title="`${bar.label}：${bar.value}`"
+              ></span>
+            </div>
+            <p>{{ item.summary }}</p>
+          </article>
+        </div>
+      </section>
+
       <section data-testid="statistics-trend" class="statistics-section">
         <div class="statistics-section__head">
           <h3>异常趋势</h3>
@@ -133,6 +171,30 @@
         <el-empty v-else description="暂无趋势数据" />
       </section>
 
+      <section data-testid="statistics-continuous-patterns" class="statistics-section">
+        <div class="statistics-section__head">
+          <h3>连续行为异常</h3>
+          <span>持续性风险模式</span>
+        </div>
+
+        <div v-if="continuousPatternItems.length" class="statistics-pattern-grid">
+          <article v-for="item in continuousPatternItems" :key="item.key" class="statistics-pattern-card">
+            <div class="statistics-pattern-card__head">
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.count }} 次</span>
+            </div>
+            <div class="statistics-pattern-card__bar">
+              <span :style="{ width: `${item.width}%` }"></span>
+            </div>
+            <div v-if="item.trendBars.length" class="statistics-pattern-card__trend">
+              <span v-for="(bar, index) in item.trendBars" :key="`${item.key}-${index}`" :style="{ height: `${bar.height}%` }" :title="`${bar.label}：${bar.value}`"></span>
+            </div>
+            <p>{{ item.desc }}</p>
+          </article>
+        </div>
+        <el-empty v-else description="当前统计窗口内暂无连续行为异常" />
+      </section>
+
       <section data-testid="statistics-summary" class="statistics-section statistics-summary-card">
         <div class="statistics-section__head">
           <h3>分析概述</h3>
@@ -143,6 +205,27 @@
           <p>{{ formatReadableText(summaryData.summary, '暂无概述信息') }}</p>
           <p><strong>重点关注：</strong>{{ formatReadableText(summaryData.highlightRisks, '暂无重点关注内容') }}</p>
           <p><strong>处理建议：</strong>{{ formatReadableText(summaryData.manageSuggestion, '暂无处理建议') }}</p>
+        </div>
+      </section>
+
+      <section data-testid="statistics-runtime-events" class="statistics-section">
+        <div class="statistics-section__head">
+          <h3>运行事件概况</h3>
+          <span>认证与活体</span>
+        </div>
+
+        <div class="statistics-runtime-grid">
+          <el-card v-for="item in runtimeEventCards" :key="item.key" class="statistics-runtime-card" shadow="hover">
+            <p class="statistics-runtime-card__label">{{ item.label }}</p>
+            <strong class="statistics-runtime-card__value">{{ item.value }}</strong>
+            <p class="statistics-runtime-card__desc">{{ item.desc }}</p>
+          </el-card>
+        </div>
+
+        <div class="statistics-runtime-tags">
+          <span v-for="item in runtimeEventTags" :key="item.key" class="statistics-runtime-tag">
+            {{ item.label }}：{{ item.value }}
+          </span>
         </div>
       </section>
 
@@ -178,8 +261,10 @@ import {
   fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchExceptionTrend,
+  fetchExceptionTypeTrend,
   fetchStatisticsSummary,
 } from '../../api/statistics'
+import { fetchOperationLogSummary } from '../../api/system'
 import { formatReadableText } from '../../utils/readable-text'
 
 const loading = ref(true)
@@ -188,9 +273,19 @@ const errorMessage = ref('')
 const DEFAULT_EXPORT_TYPE = 'DEPARTMENT'
 const DEFAULT_EXPORT_CSV_FILENAME = '统计报表.csv'
 const DEFAULT_EXPORT_XLSX_FILENAME = '部门统计报表.xlsx'
+const departmentStatsData = ref({})
+const exceptionTypeTrendData = ref({
+  periodType: 'DAY',
+  labels: [],
+  items: [],
+})
 const overviewCards = ref([])
 const trendPoints = ref([])
 const riskItems = ref([])
+const runtimeEventSummary = ref({
+  total: 0,
+  typeCounts: {},
+})
 const activeTrendIndex = ref(0)
 const summaryData = ref({
   summary: '',
@@ -228,7 +323,155 @@ const spotlightCards = computed(() => [
     value: `${riskItems.value.length} 个`,
     desc: '展示全部部门的风险概况和管理建议',
   },
+  {
+    key: 'runtime',
+    label: '运行事件',
+    value: `${Number(runtimeEventSummary.value?.total || 0)} 条`,
+    desc: '汇总登录、活体和打卡等关键系统事件',
+  },
 ])
+
+const RUNTIME_EVENT_TYPE_GROUPS = {
+  auth: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'],
+  liveness: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'],
+  attendance: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'],
+  review: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'],
+}
+
+const runtimeEventCards = computed(() => {
+  const typeCounts = runtimeEventSummary.value?.typeCounts || {}
+
+  return [
+    {
+      key: 'total',
+      label: '总事件数',
+      value: Number(runtimeEventSummary.value?.total || 0),
+      desc: '统计窗口内记录到的全部关键系统事件',
+    },
+    {
+      key: 'auth',
+      label: '认证事件',
+      value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.auth),
+      desc: '登录、刷新、退出和锁定等认证活动',
+    },
+    {
+      key: 'liveness',
+      label: '活体事件',
+      value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.liveness),
+      desc: '摄像头活体挑战、拒绝与消费证明记录',
+    },
+    {
+      key: 'attendance',
+      label: '打卡事件',
+      value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.attendance),
+      desc: '上班、下班和补卡申请等考勤操作记录',
+    },
+  ]
+})
+
+const CONTINUOUS_PATTERN_LABELS = {
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
+}
+
+const EXCEPTION_TYPE_LABELS = {
+  PROXY_CHECKIN: '代打卡',
+  MULTI_LOCATION_CONFLICT: '多地点异常',
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非法时间打卡',
+  REPEAT_CHECK: '重复打卡',
+}
+
+const exceptionTypeItems = computed(() => {
+  const distribution = departmentStatsData.value?.exceptionTypeDistribution || {}
+  const entries = Object.entries(distribution)
+    .map(([key, value]) => ({
+      key,
+      label: EXCEPTION_TYPE_LABELS[key] || key,
+      count: Number(value || 0),
+    }))
+    .filter((item) => item.count > 0)
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 6)
+
+  const maxValue = entries.reduce((max, item) => Math.max(max, item.count), 0)
+
+  return entries.map((item) => ({
+    ...item,
+    width: maxValue > 0 ? Math.max((item.count / maxValue) * 100, 16) : 0,
+  }))
+})
+
+const exceptionTypeTrendItems = computed(() => {
+  const labels = Array.isArray(exceptionTypeTrendData.value?.labels) ? exceptionTypeTrendData.value.labels : []
+  const items = Array.isArray(exceptionTypeTrendData.value?.items) ? exceptionTypeTrendData.value.items : []
+
+  return items.map((item) => {
+    const values = Array.isArray(item.values) ? item.values.map((value) => Number(value || 0)) : []
+    const maxValue = values.reduce((max, value) => Math.max(max, value), 0)
+
+    return {
+      key: item.type,
+      label: EXCEPTION_TYPE_LABELS[item.type] || item.type,
+      totalCount: Number(item.totalCount || 0),
+      bars: values.map((value, index) => ({
+        value,
+        label: labels[index] || `第${index + 1}期`,
+        height: maxValue > 0 ? Math.max((value / maxValue) * 100, value > 0 ? 20 : 8) : 8,
+      })),
+      summary: labels.length ? `最近 ${labels.length} 个周期内持续出现该类异常。` : '当前暂无趋势说明。',
+    }
+  })
+})
+
+const continuousPatternItems = computed(() => {
+  const distribution = departmentStatsData.value?.exceptionTypeDistribution || {}
+  const trendMap = new Map(
+    (Array.isArray(exceptionTypeTrendData.value?.items) ? exceptionTypeTrendData.value.items : []).map((item) => [item.type, item]),
+  )
+  const entries = Object.entries(CONTINUOUS_PATTERN_LABELS)
+    .map(([key, label]) => ({
+      key,
+      label,
+      count: Number(distribution[key] || 0),
+    }))
+    .filter((item) => item.count > 0)
+
+  const maxValue = entries.reduce((max, item) => Math.max(max, item.count), 0)
+
+  return entries.map((item) => ({
+    ...item,
+    width: maxValue > 0 ? Math.max((item.count / maxValue) * 100, 16) : 0,
+    trendBars: buildExceptionTypeTrendBars(exceptionTypeTrendData.value?.labels || [], trendMap.get(item.key)?.values || []),
+    desc: `当前统计窗口内共识别 ${item.count} 次${item.label}模式异常。`,
+  }))
+})
+
+const runtimeEventTags = computed(() => {
+  const typeCounts = runtimeEventSummary.value?.typeCounts || {}
+
+  return [
+    { key: 'livenessPass', label: '活体通过', value: Number(typeCounts.FACE_LIVENESS_PASS || 0) },
+    { key: 'livenessReject', label: '活体拒绝', value: Number(typeCounts.FACE_LIVENESS_REJECT || 0) },
+    { key: 'loginFailure', label: '登录失败', value: Number(typeCounts.LOGIN_FAILURE || 0) },
+    { key: 'refresh', label: '令牌刷新', value: Number(typeCounts.TOKEN_REFRESH || 0) },
+  ]
+})
 
 const METRIC_LABELS = {
   attendanceCount: '出勤次数',
@@ -464,6 +707,17 @@ function normalizeTrendPoints(payload) {
   })
 }
 
+function buildExceptionTypeTrendBars(labels = [], values = []) {
+  const safeValues = Array.isArray(values) ? values.map((item) => Number(item || 0)) : []
+  const maxValue = safeValues.reduce((max, item) => Math.max(max, item), 0)
+
+  return safeValues.map((value, index) => ({
+    value,
+    label: labels[index] || `第${index + 1}期`,
+    height: maxValue > 0 ? Math.max((value / maxValue) * 100, value > 0 ? 20 : 8) : 8,
+  }))
+}
+
 function normalizeList(payload) {
   if (Array.isArray(payload)) {
     return payload
@@ -508,6 +762,10 @@ function formatRiskScore(value) {
   }
 
   return `${score} 分`
+}
+
+function sumRuntimeTypes(typeCounts = {}, types = []) {
+  return types.reduce((total, type) => total + Number(typeCounts?.[type] || 0), 0)
 }
 
 function downloadBlob(blob, filename) {
@@ -620,18 +878,23 @@ async function loadStatistics() {
   errorMessage.value = ''
 
   try {
-    const [departmentData, trendData, summary] = await Promise.all([
+    const [departmentData, trendData, exceptionTypeTrend, summary, runtimeSummary] = await Promise.all([
       fetchDepartmentStatistics(),
       fetchExceptionTrend(),
+      fetchExceptionTypeTrend().catch(() => null),
       fetchStatisticsSummary(),
+      fetchOperationLogSummary().catch(() => null),
     ])
     const risks = await fetchDepartmentRiskOverview().catch(() => null)
 
+    departmentStatsData.value = departmentData || {}
+    exceptionTypeTrendData.value = exceptionTypeTrend || { periodType: 'DAY', labels: [], items: [] }
     overviewCards.value = buildOverviewCards(departmentData)
     trendPoints.value = normalizeTrendPoints(trendData)
     activeTrendIndex.value = Math.max(trendPoints.value.length - 1, 0)
     summaryData.value = summary || {}
     riskItems.value = normalizeRiskItems(risks)
+    runtimeEventSummary.value = runtimeSummary || { total: 0, typeCounts: {} }
   } catch (error) {
     errorMessage.value = error?.message || '页面加载失败，请稍后重试'
   } finally {
@@ -741,10 +1004,147 @@ onMounted(() => {
 }
 
 .statistics-metric-grid,
-.statistics-risk-grid {
+.statistics-risk-grid,
+.statistics-runtime-grid,
+.statistics-pattern-grid,
+.statistics-type-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
+}
+
+.statistics-type-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.statistics-type-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.statistics-type-card__head strong {
+  color: #0f172a;
+}
+
+.statistics-type-card__head span {
+  font-size: 13px;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.statistics-type-card__bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.statistics-type-card__bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+}
+
+.statistics-type-trend-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: 16px;
+}
+
+.statistics-type-trend-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.statistics-type-trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 52px;
+}
+
+.statistics-type-trend-bars span {
+  width: 14px;
+  border-radius: 999px 999px 4px 4px;
+  background: linear-gradient(180deg, #38bdf8 0%, #2563eb 100%);
+}
+
+.statistics-type-trend-card p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.statistics-pattern-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(14, 116, 144, 0.12);
+  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 100%);
+}
+
+.statistics-pattern-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.statistics-pattern-card__head strong {
+  color: #0f172a;
+}
+
+.statistics-pattern-card__head span {
+  font-size: 13px;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.statistics-pattern-card__bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  overflow: hidden;
+}
+
+.statistics-pattern-card__bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f766e 0%, #22c55e 100%);
+}
+
+.statistics-pattern-card__trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 48px;
+}
+
+.statistics-pattern-card__trend span {
+  width: 12px;
+  border-radius: 999px 999px 4px 4px;
+  background: linear-gradient(180deg, #34d399 0%, #0f766e 100%);
+}
+
+.statistics-pattern-card p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
 }
 
 .statistics-metric-card__label {
@@ -758,9 +1158,42 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.statistics-runtime-card__label {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.statistics-runtime-card__value {
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.statistics-runtime-card__desc {
+  margin: 10px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
 .statistics-metric-card :deep(.el-card__body),
-.statistics-risk-card :deep(.el-card__body) {
+.statistics-risk-card :deep(.el-card__body),
+.statistics-runtime-card :deep(.el-card__body) {
   padding: 18px;
+}
+
+.statistics-runtime-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.statistics-runtime-tag {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  color: #0f766e;
+  font-size: 13px;
 }
 
 .statistics-trend-chart {

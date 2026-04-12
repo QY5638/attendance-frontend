@@ -40,7 +40,8 @@ describe('attendance api', () => {
     await submitAttendanceCheckinRequest({
       checkType: 'IN',
       deviceId: 'LOC-A',
-      deviceInfo: 'Windows 11 · Google Chrome · 1920x1080',
+      deviceInfo: '系统 Windows 11 / 浏览器 Google Chrome / 分辨率 1920x1080',
+      terminalId: 'terminal-fixed-id',
       imageData: 'base64-image',
       userId: 1001,
       location: 'front-desk',
@@ -49,7 +50,8 @@ describe('attendance api', () => {
     expect(post).toHaveBeenCalledWith('/attendance/checkin', {
       checkType: 'IN',
       deviceId: 'LOC-A',
-      deviceInfo: 'Windows 11 · Google Chrome · 1920x1080',
+      deviceInfo: '系统 Windows 11 / 浏览器 Google Chrome / 分辨率 1920x1080',
+      terminalId: 'terminal-fixed-id',
       imageData: 'base64-image',
     })
   })
@@ -149,6 +151,22 @@ describe('attendance api', () => {
 
     expect(post).toHaveBeenCalledWith('/face/verify', {
       imageData: 'base64-image',
+    })
+  })
+
+  it('passes through non-consuming liveness verify payload for preview checks', async () => {
+    post.mockResolvedValue({ matched: true })
+
+    await verifyFaceRequest({
+      imageData: 'base64-image',
+      livenessToken: 'liveness-token',
+      consumeLiveness: false,
+    })
+
+    expect(post).toHaveBeenCalledWith('/face/verify', {
+      imageData: 'base64-image',
+      livenessToken: 'liveness-token',
+      consumeLiveness: false,
     })
   })
 })

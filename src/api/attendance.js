@@ -1,24 +1,41 @@
 import request from '../utils/request'
 
 function createCheckinPayload(payload = {}) {
-  const { checkType, deviceId, deviceInfo, clientLongitude, clientLatitude, imageData } = payload
+  const { checkType, deviceId, deviceInfo, terminalId, clientLongitude, clientLatitude, imageData, livenessToken } = payload
 
-  return {
+  const nextPayload = {
     checkType,
     deviceId,
     deviceInfo,
+    terminalId,
     clientLongitude,
     clientLatitude,
     imageData,
   }
+
+  if (livenessToken) {
+    nextPayload.livenessToken = livenessToken
+  }
+
+  return nextPayload
 }
 
 function createFaceVerifyPayload(payload = {}) {
-  const { imageData } = payload
+  const { imageData, livenessToken, consumeLiveness } = payload
 
-  return {
+  const nextPayload = {
     imageData,
   }
+
+  if (livenessToken) {
+    nextPayload.livenessToken = livenessToken
+  }
+
+  if (consumeLiveness !== undefined) {
+    nextPayload.consumeLiveness = consumeLiveness
+  }
+
+  return nextPayload
 }
 
 function createRepairPayload(payload = {}) {

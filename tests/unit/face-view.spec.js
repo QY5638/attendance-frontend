@@ -1,15 +1,25 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { registerFace, verifyFace, getUserMedia } = vi.hoisted(() => ({
+const { registerFace, verifyFace, createFaceLivenessSession, completeFaceLiveness, runFaceLivenessChallenge, getUserMedia } = vi.hoisted(() => ({
   registerFace: vi.fn(),
   verifyFace: vi.fn(),
+  createFaceLivenessSession: vi.fn(),
+  completeFaceLiveness: vi.fn(),
+  runFaceLivenessChallenge: vi.fn(),
   getUserMedia: vi.fn(),
 }))
 
 vi.mock('../../src/api/face', () => ({
+  completeFaceLiveness,
+  createFaceLivenessSession,
   registerFace,
   verifyFace,
+}))
+
+vi.mock('../../src/utils/face-liveness', () => ({
+  describeLivenessAction: (action) => action,
+  runFaceLivenessChallenge,
 }))
 
 vi.mock('../../src/store/auth', () => ({
@@ -54,6 +64,9 @@ describe('face capture view', () => {
   beforeEach(() => {
     registerFace.mockReset()
     verifyFace.mockReset()
+    createFaceLivenessSession.mockReset()
+    completeFaceLiveness.mockReset()
+    runFaceLivenessChallenge.mockReset()
     getUserMedia.mockReset()
     vi.restoreAllMocks()
     vi.stubGlobal('FileReader', MockFileReader)
@@ -104,7 +117,7 @@ describe('face capture view', () => {
     await wrapper.get('[data-testid="face-verify-button"]').trigger('click')
     await flushPromises()
 
-    expect(verifyFace).toHaveBeenCalledWith('data:image/png;base64,uploaded-face.png')
+    expect(verifyFace).toHaveBeenCalledWith('data:image/png;base64,uploaded-face.png', '')
     expect(wrapper.get('[data-testid="face-result-message"]').text()).toBe('人脸验证通过')
     expect(wrapper.get('[data-testid="face-result-user-id"]').text()).toContain('当前账号：张三')
   })
@@ -112,6 +125,34 @@ describe('face capture view', () => {
   it('starts camera, captures image, submits register request, and stops stream on unmount', async () => {
     const { stream, stop } = createStream()
     getUserMedia.mockResolvedValue(stream)
+    createFaceLivenessSession.mockResolvedValue({
+      code: 200,
+      data: {
+        sessionId: 'liveness-session-1',
+        actions: ['BLINK', 'MOUTH_OPEN'],
+      },
+    })
+    runFaceLivenessChallenge.mockResolvedValue({
+      imageData: 'data:image/png;base64,liveness-face',
+      startedAt: 1,
+      completedAt: 2,
+      sampleCount: 20,
+      stableFaceFrames: 18,
+      completedActions: ['BLINK', 'MOUTH_OPEN'],
+      actionScores: {
+        BLINK: 0.9,
+        MOUTH_OPEN: 0.92,
+      },
+    })
+    completeFaceLiveness.mockResolvedValue({
+      code: 200,
+      data: {
+        livenessToken: 'liveness-token',
+        expiresAt: Date.now() + 60000,
+        livenessScore: 91.5,
+        message: '活体挑战通过',
+      },
+    })
     registerFace.mockResolvedValue({
       userId: 1001,
       registered: true,
@@ -133,7 +174,7 @@ describe('face capture view', () => {
     await wrapper.get('[data-testid="face-register-button"]').trigger('click')
     await flushPromises()
 
-    expect(registerFace).toHaveBeenCalledWith('data:image/png;base64,captured-face')
+    expect(registerFace).toHaveBeenCalledWith('data:image/png;base64,liveness-face', 'liveness-token')
     expect(wrapper.get('[data-testid="face-result-message"]').text()).toBe('人脸录入成功')
 
     wrapper.unmount()

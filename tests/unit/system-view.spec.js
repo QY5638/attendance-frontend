@@ -5,10 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   addDevice,
   addPromptTemplate,
+  exportStatisticsReport,
   fetchDeviceList,
   fetchExceptionTypeList,
   fetchModelLogList,
   fetchOperationLogList,
+  fetchOperationLogSummary,
   fetchPromptTemplateList,
   fetchRiskLevelList,
   fetchRuleList,
@@ -19,10 +21,12 @@ const {
 } = vi.hoisted(() => ({
   addDevice: vi.fn(),
   addPromptTemplate: vi.fn(),
+  exportStatisticsReport: vi.fn(),
   fetchDeviceList: vi.fn(),
   fetchExceptionTypeList: vi.fn(),
   fetchModelLogList: vi.fn(),
   fetchOperationLogList: vi.fn(),
+  fetchOperationLogSummary: vi.fn(),
   fetchPromptTemplateList: vi.fn(),
   fetchRiskLevelList: vi.fn(),
   fetchRuleList: vi.fn(),
@@ -41,6 +45,7 @@ vi.mock('../../src/api/system', () => ({
   fetchExceptionTypeList,
   fetchModelLogList,
   fetchOperationLogList,
+  fetchOperationLogSummary,
   fetchPromptTemplateList,
   fetchRiskLevelList,
   fetchRuleList,
@@ -52,6 +57,10 @@ vi.mock('../../src/api/system', () => ({
   updateRiskLevel: vi.fn(),
   updateRule: vi.fn(),
   updateRuleStatus: vi.fn(),
+}))
+
+vi.mock('../../src/api/statistics', () => ({
+  exportStatisticsReport,
 }))
 
 vi.mock('../../src/utils/amap', () => ({
@@ -101,10 +110,12 @@ describe('system view', () => {
   beforeEach(() => {
     addDevice.mockReset()
     addPromptTemplate.mockReset()
+    exportStatisticsReport.mockReset()
     fetchDeviceList.mockReset()
     fetchExceptionTypeList.mockReset()
     fetchModelLogList.mockReset()
     fetchOperationLogList.mockReset()
+    fetchOperationLogSummary.mockReset()
     fetchPromptTemplateList.mockReset()
     fetchRiskLevelList.mockReset()
     fetchRuleList.mockReset()
@@ -131,7 +142,15 @@ describe('system view', () => {
     })
     fetchOperationLogList.mockResolvedValue({
       total: 1,
-      items: [{ id: 202604050099, userId: 20261001, type: 'LOGIN', content: '管理员登录系统', operationTime: '2026-04-04 09:00:00' }],
+      items: [{ id: 202604050099, userId: 20261001, username: 'admin', realName: '系统管理员', type: 'LOGIN', content: '系统管理员登录系统，账号=admin，IP=127.0.0.1', operationTime: '2026-04-04 09:00:00' }],
+    })
+    fetchOperationLogSummary.mockResolvedValue({
+      total: 3,
+      typeCounts: {
+        LOGIN: 1,
+        FACE_LIVENESS_PASS: 1,
+        CHECKIN: 1,
+      },
     })
     fetchModelLogList.mockResolvedValue({
       total: 1,
@@ -168,6 +187,11 @@ describe('system view', () => {
     })
     addDevice.mockResolvedValue(null)
     addPromptTemplate.mockResolvedValue(null)
+    exportStatisticsReport.mockResolvedValue({
+      blob: new Blob(['id,type\n1,LOGIN'], { type: 'text/csv' }),
+      filename: '业务记录报表.csv',
+      contentType: 'text/csv',
+    })
     updatePromptTemplate.mockResolvedValue(null)
     updatePromptTemplateStatus.mockResolvedValue(null)
     loadAmapSdk.mockResolvedValue({
@@ -249,9 +273,79 @@ describe('system view', () => {
       pageNum: 1,
       pageSize: 10,
     })
-    expect(wrapper.text()).toContain('管理员')
+    expect(fetchOperationLogSummary).toHaveBeenCalledWith({})
+    expect(wrapper.text()).toContain('系统管理员（admin）')
     expect(wrapper.text()).toContain('登录系统')
     expect(wrapper.text()).toContain('登录')
+    expect(wrapper.text()).toContain('活体事件')
+    expect(wrapper.text()).toContain('认证事件')
+  })
+
+  it('filters operation log panel by liveness scope', async () => {
+    const wrapper = await mountPanel(SystemOperationLogPanel)
+
+    await wrapper.get('select').setValue('LIVENESS')
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(fetchOperationLogList).toHaveBeenLastCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+      types: [
+        'FACE_LIVENESS_SESSION',
+        'FACE_LIVENESS_PASS',
+        'FACE_LIVENESS_FAIL',
+        'FACE_LIVENESS_REJECT',
+        'FACE_LIVENESS_CONSUME',
+      ],
+    })
+    expect(fetchOperationLogSummary).toHaveBeenLastCalledWith({
+      types: [
+        'FACE_LIVENESS_SESSION',
+        'FACE_LIVENESS_PASS',
+        'FACE_LIVENESS_FAIL',
+        'FACE_LIVENESS_REJECT',
+        'FACE_LIVENESS_CONSUME',
+      ],
+    })
+  })
+
+  it('exports current operation log filters through statistics export api', async () => {
+    globalThis.URL.createObjectURL = vi.fn(() => 'blob:system-log-export')
+    globalThis.URL.revokeObjectURL = vi.fn()
+
+    const click = vi.fn()
+    const originalCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
+      if (tagName === 'a') {
+        return {
+          click,
+          set href(value) {
+            this._href = value
+          },
+          get href() {
+            return this._href
+          },
+          set download(value) {
+            this._download = value
+          },
+          get download() {
+            return this._download
+          },
+        }
+      }
+
+      return originalCreateElement(tagName)
+    })
+
+    const wrapper = await mountPanel(SystemOperationLogPanel)
+    await wrapper.findAll('button').find((button) => button.text() === '导出当前记录').trigger('click')
+    await flushPromises()
+
+    expect(exportStatisticsReport).toHaveBeenCalledWith({ exportType: 'AUDIT' })
+    expect(click).toHaveBeenCalledTimes(1)
+
+    createElementSpy.mockRestore()
   })
 
   it('shows maintained notice on risk level panel', async () => {

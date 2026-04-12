@@ -2,7 +2,7 @@
   <section class="system-view">
     <ConsoleHero
       title="系统配置"
-      description="集中维护基础配置、分析方案和业务记录，便于统一管理系统设置。"
+      description="统一维护基础配置、分析方案和运行记录，便于集中核查系统状态。"
       theme="violet"
       :cards="heroCards"
     />
@@ -54,8 +54,8 @@ const navItems = [
   { key: 'prompt', label: '分析方案', desc: '方案维护、编辑与启停管理', component: SystemPromptPanel },
   { key: 'risk-level', label: '风险等级', desc: '风险名称、说明与状态', component: SystemRiskLevelPanel },
   { key: 'exception-type', label: '异常类型', desc: '异常类别说明与状态', component: SystemExceptionTypePanel },
-  { key: 'model-log', label: '处理记录', desc: '分析处理记录查询与办理状态查看', component: SystemModelLogPanel },
-  { key: 'operation-log', label: '业务记录', desc: '关键业务办理记录查询', component: SystemOperationLogPanel },
+  { key: 'model-log', label: '处理记录', desc: '查看分析过程、结果与耗时', component: SystemModelLogPanel },
+  { key: 'operation-log', label: '业务记录', desc: '关键业务操作记录查询', component: SystemOperationLogPanel },
 ]
 
 const validKeys = navItems.map((item) => item.key)
@@ -93,13 +93,13 @@ const overviewItems = computed(() => [
     key: 'scope',
     label: '配置范围',
     value: '7 个配置域',
-    desc: '覆盖打卡地点、规则、方案、风险分级与业务记录。',
+    desc: '覆盖打卡地点、规则、方案、风险分级、分析记录与业务日志。',
   },
   {
     key: 'suggestion',
     label: '使用建议',
     value: '先配置后核查',
-    desc: '建议先维护基础配置，再通过处理记录和业务记录进行核查。',
+    desc: '建议先完成基础配置，再结合分析记录和业务日志进行核查。',
   },
 ])
 
