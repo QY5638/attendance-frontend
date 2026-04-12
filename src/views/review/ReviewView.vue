@@ -26,9 +26,9 @@ const REVIEW_RESULT_OPTIONS = [
 ]
 
 const FEEDBACK_TAG_OPTIONS = [
-  { value: 'TRUE_POSITIVE', label: '识别有效' },
-  { value: 'FALSE_POSITIVE', label: '识别偏差' },
-  { value: 'NEEDS_TUNING', label: '需继续优化' },
+  { value: 'TRUE_POSITIVE', label: '本次判断准确' },
+  { value: 'FALSE_POSITIVE', label: '本次判断有偏差' },
+  { value: 'NEEDS_TUNING', label: '建议继续优化规则' },
 ]
 
 const REVIEW_RESULT_LABELS = {
@@ -37,15 +37,15 @@ const REVIEW_RESULT_LABELS = {
 }
 
 const FEEDBACK_TAG_LABELS = {
-  TRUE_POSITIVE: '识别有效',
-  FALSE_POSITIVE: '识别偏差',
-  NEEDS_TUNING: '需继续优化',
+  TRUE_POSITIVE: '本次判断准确',
+  FALSE_POSITIVE: '本次判断有偏差',
+  NEEDS_TUNING: '建议继续优化规则',
 }
 
 const SOURCE_TYPE_LABELS = {
-  MODEL: '综合识别',
-  RULE: '规则校验',
-  MODEL_FALLBACK: '自动识别',
+  MODEL: '系统综合判断',
+  RULE: '规则核验',
+  MODEL_FALLBACK: '系统辅助判定',
 }
 
 const PROCESS_STATUS_LABELS = {

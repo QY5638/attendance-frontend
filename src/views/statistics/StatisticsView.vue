@@ -210,8 +210,8 @@
 
       <section data-testid="statistics-runtime-events" class="statistics-section">
         <div class="statistics-section__head">
-          <h3>运行事件概况</h3>
-          <span>认证与活体</span>
+          <h3>登录与验证概况</h3>
+          <span>登录与活体验证</span>
         </div>
 
         <div class="statistics-runtime-grid">
@@ -345,21 +345,21 @@ const runtimeEventCards = computed(() => {
   return [
     {
       key: 'total',
-      label: '总事件数',
+      label: '关键事件总数',
       value: Number(runtimeEventSummary.value?.total || 0),
-      desc: '统计窗口内记录到的全部关键系统事件',
+      desc: '统计周期内记录到的全部关键操作',
     },
     {
       key: 'auth',
-      label: '认证事件',
+      label: '登录与身份事件',
       value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.auth),
-      desc: '登录、刷新、退出和锁定等认证活动',
+      desc: '登录、登录续期、退出和账号限制等身份相关记录',
     },
     {
       key: 'liveness',
-      label: '活体事件',
+      label: '活体验证事件',
       value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.liveness),
-      desc: '摄像头活体挑战、拒绝与消费证明记录',
+      desc: '活体验证开始、通过、失败和拒绝等记录',
     },
     {
       key: 'attendance',
@@ -442,7 +442,7 @@ const runtimeEventTags = computed(() => {
     { key: 'livenessPass', label: '活体通过', value: Number(typeCounts.FACE_LIVENESS_PASS || 0) },
     { key: 'livenessReject', label: '活体拒绝', value: Number(typeCounts.FACE_LIVENESS_REJECT || 0) },
     { key: 'loginFailure', label: '登录失败', value: Number(typeCounts.LOGIN_FAILURE || 0) },
-    { key: 'refresh', label: '令牌刷新', value: Number(typeCounts.TOKEN_REFRESH || 0) },
+    { key: 'refresh', label: '登录续期', value: Number(typeCounts.TOKEN_REFRESH || 0) },
   ]
 })
 

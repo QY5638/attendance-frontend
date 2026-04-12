@@ -2,8 +2,8 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>业务记录</h2>
-        <p>用于查询关键业务操作记录，便于审计和问题追踪。</p>
+        <h2>操作记录</h2>
+        <p>用于查询关键操作记录，便于核对经过和追踪问题。</p>
       </div>
       <div class="panel-card__actions">
         <button type="button" class="panel-card__primary" :disabled="exporting" @click="handleExport">
@@ -20,7 +20,7 @@
     </section>
 
     <p class="panel-card__notice">
-      当前支持按事件分类查看认证、活体、人脸、打卡、复核和系统配置等关键记录，便于日常审计与问题追踪。
+      当前支持按分类查看登录与身份、活体验证、人脸申请、打卡、复核和系统设置等关键记录，便于日常核对与问题追踪。
     </p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
@@ -134,34 +134,34 @@ const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagin
 const OPERATION_TYPE_LABELS = {
   LOGIN: '登录',
   LOGIN_FAILURE: '登录失败',
-  LOGIN_LOCKED: '登录锁定',
+  LOGIN_LOCKED: '登录受限',
   LOGOUT: '退出登录',
-  TOKEN_REFRESH: '刷新令牌',
-  TOKEN_REFRESH_FAILURE: '刷新失败',
+  TOKEN_REFRESH: '登录续期',
+  TOKEN_REFRESH_FAILURE: '续期失败',
   CHECKIN: '上班打卡',
   CHECKOUT: '下班打卡',
   ATTENDANCE_APPLY: '补卡申请',
   FACE_REGISTER_APPLY: '人脸重录申请',
-  FACE_REGISTER_APPROVE: '人脸重录通过',
-  FACE_REGISTER_REJECT: '人脸重录驳回',
-  WARNING_REEVALUATE: '预警处理',
-  REVIEW_SUBMIT: '复核办理',
-  REVIEW_FEEDBACK: '复核补充',
-  SYSTEM_CONFIG: '系统配置',
-  FACE_LIVENESS_SESSION: '活体会话创建',
-  FACE_LIVENESS_PASS: '活体挑战通过',
-  FACE_LIVENESS_FAIL: '活体挑战失败',
-  FACE_LIVENESS_REJECT: '活体证明拒绝',
-  FACE_LIVENESS_CONSUME: '活体证明消费',
+  FACE_REGISTER_APPROVE: '人脸重录已通过',
+  FACE_REGISTER_REJECT: '人脸重录已驳回',
+  WARNING_REEVALUATE: '预警重新判断',
+  REVIEW_SUBMIT: '提交复核',
+  REVIEW_FEEDBACK: '补充复核说明',
+  SYSTEM_CONFIG: '系统设置调整',
+  FACE_LIVENESS_SESSION: '开始活体验证',
+  FACE_LIVENESS_PASS: '活体验证通过',
+  FACE_LIVENESS_FAIL: '活体验证失败',
+  FACE_LIVENESS_REJECT: '活体验证被拒绝',
+  FACE_LIVENESS_CONSUME: '活体验证已使用',
 }
 
 const SCOPE_OPTIONS = [
-  { value: 'AUTH', label: '认证事件', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
-  { value: 'LIVENESS', label: '活体事件', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
+  { value: 'AUTH', label: '登录与身份事件', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
+  { value: 'LIVENESS', label: '活体验证事件', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
   { value: 'ATTENDANCE', label: '打卡事件', types: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'] },
   { value: 'FACE', label: '人脸申请', types: ['FACE_REGISTER_APPLY', 'FACE_REGISTER_APPROVE', 'FACE_REGISTER_REJECT'] },
   { value: 'REVIEW', label: '复核事件', types: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'] },
-  { value: 'SYSTEM', label: '系统事件', types: ['SYSTEM_CONFIG'] },
+  { value: 'SYSTEM', label: '系统设置事件', types: ['SYSTEM_CONFIG'] },
 ]
 
 const ACTION_OPTIONS = Object.entries(OPERATION_TYPE_LABELS).map(([value, label]) => ({ value, label }))
@@ -192,12 +192,12 @@ const summaryCards = computed(() => {
     },
     {
       key: 'auth',
-      label: '认证事件',
+      label: '登录与身份事件',
       value: sumTypes(typeCounts, resolveScopeTypes('AUTH')),
     },
     {
       key: 'liveness',
-      label: '活体事件',
+      label: '活体验证事件',
       value: sumTypes(typeCounts, resolveScopeTypes('LIVENESS')),
     },
     {
@@ -279,7 +279,7 @@ function resolveOperationActor(row = {}) {
     return `用户 #${row.userId}`
   }
 
-  return '系统事件'
+  return '系统自动记录'
 }
 
 function formatOperationSummary(row = {}) {
@@ -346,7 +346,7 @@ async function loadList() {
     rows.value = []
     pagination.total = 0
     summary.value = { total: 0, typeCounts: {} }
-    error.value = requestError?.message || '业务记录加载失败'
+    error.value = requestError?.message || '操作记录加载失败'
   } finally {
     loading.value = false
   }
@@ -357,9 +357,9 @@ async function handleExport() {
 
   try {
     const { blob, filename } = await exportStatisticsReport(buildExportParams())
-    downloadBlob(blob, filename || '业务记录报表.csv')
+    downloadBlob(blob, filename || '操作记录报表.csv')
   } catch (requestError) {
-    error.value = requestError?.message || '业务记录导出失败'
+    error.value = requestError?.message || '操作记录导出失败'
   } finally {
     exporting.value = false
   }

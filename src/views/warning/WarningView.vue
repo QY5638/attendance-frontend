@@ -745,8 +745,8 @@ const PORTRAIT_RISK_TIER_LABELS = {
 }
 
 const DECISION_SOURCE_LABELS = {
-  MODEL_FUSION: '综合识别',
-  RULE: '规则校验',
+  MODEL_FUSION: '系统综合判断',
+  RULE: '规则核验',
 }
 
 const CHECK_TYPE_LABELS = {
@@ -755,9 +755,9 @@ const CHECK_TYPE_LABELS = {
 }
 
 const EXCEPTION_SOURCE_LABELS = {
-  RULE: '规则检测',
-  MODEL: '模型检测',
-  MODEL_FALLBACK: '模型降级判定',
+  RULE: '规则核验',
+  MODEL: '系统综合判断',
+  MODEL_FALLBACK: '系统辅助判定',
 }
 
 const EXCEPTION_PROCESS_STATUS_LABELS = {
@@ -1037,10 +1037,10 @@ const portraitSuggestions = computed(() => {
       suggestions.push('连续综合考勤异常已出现，建议优先查看该人员完整风险档案并完成复核闭环。')
       break
     case 'COMPLEX_ATTENDANCE_RISK':
-      suggestions.push('综合识别异常已触发，建议结合分析摘要、原始打卡信息和人工复核意见综合判断。')
+      suggestions.push('系统综合判断已提示异常，建议结合分析摘要、原始打卡信息和人工复核意见综合判断。')
       break
     case 'CONTINUOUS_MODEL_RISK':
-      suggestions.push('连续模型风险异常已出现，建议优先核查模型结论、相似案例摘要与人工复核记录。')
+      suggestions.push('连续模型风险异常已出现，建议优先核查系统判断依据、相似案例摘要与人工复核记录。')
       break
     case 'PROXY_CHECKIN':
       suggestions.push('当前最新异常涉及代打卡风险，建议优先复核证据链并结合模型结论人工确认。')

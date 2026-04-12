@@ -341,9 +341,9 @@ import {
 import { formatReadableText } from '../../utils/readable-text'
 
 const SOURCE_TYPE_LABELS = {
-  MODEL: '综合识别',
-  RULE: '规则校验',
-  MODEL_FALLBACK: '自动识别',
+  MODEL: '系统综合判断',
+  RULE: '规则核验',
+  MODEL_FALLBACK: '系统辅助判定',
 }
 
 const PROCESS_STATUS_LABELS = {

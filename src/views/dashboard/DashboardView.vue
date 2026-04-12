@@ -477,45 +477,45 @@ function buildWarningMeta(item = {}) {
 
 function buildExceptionFocusDescription(type, count) {
   if (type === 'PROXY_CHECKIN') {
-    return `当前统计窗口内共识别 ${count} 次可疑代打卡，建议优先查看证据链。`
+    return `最近统计周期内发现 ${count} 次可疑代打卡，建议优先查看证据链。`
   }
   if (type === 'MULTI_LOCATION_CONFLICT') {
-    return `当前统计窗口内共识别 ${count} 次多地点冲突，建议重点核对地点与设备信息。`
+    return `最近统计周期内发现 ${count} 次多地点冲突，建议重点核对地点与设备信息。`
   }
   if (type === 'CONTINUOUS_LATE') {
-    return `当前统计窗口内共识别 ${count} 次连续迟到模式异常，建议重点关注持续性出勤风险。`
+    return `最近统计周期内发现 ${count} 次连续迟到异常，建议重点关注持续性出勤风险。`
   }
   if (type === 'CONTINUOUS_EARLY_LEAVE') {
-    return `当前统计窗口内共识别 ${count} 次连续早退模式异常，建议重点关注持续性离岗风险。`
+    return `最近统计周期内发现 ${count} 次连续早退异常，建议重点关注持续性离岗风险。`
   }
   if (type === 'CONTINUOUS_MULTI_LOCATION_CONFLICT') {
-    return `当前统计窗口内共识别 ${count} 次连续多地点冲突模式异常，建议优先排查位置异常与代打卡风险。`
+    return `最近统计周期内发现 ${count} 次连续多地点冲突异常，建议优先排查位置异常与代打卡风险。`
   }
   if (type === 'CONTINUOUS_ILLEGAL_TIME') {
-    return `当前统计窗口内共识别 ${count} 次连续非法时间打卡模式异常，建议重点核查异常时段行为。`
+    return `最近统计周期内发现 ${count} 次连续异常时段打卡，建议重点核查异常时段行为。`
   }
   if (type === 'CONTINUOUS_REPEAT_CHECK') {
-    return `当前统计窗口内共识别 ${count} 次连续重复打卡模式异常，建议重点排查反复提交或规避行为。`
+    return `最近统计周期内发现 ${count} 次连续重复打卡异常，建议重点排查反复提交或规避行为。`
   }
   if (type === 'CONTINUOUS_PROXY_CHECKIN') {
-    return `当前统计窗口内共识别 ${count} 次连续代打卡模式异常，建议优先核查人脸、设备和地点证据。`
+    return `最近统计周期内发现 ${count} 次连续代打卡异常，建议优先核查人脸、设备和地点证据。`
   }
   if (type === 'CONTINUOUS_ATTENDANCE_RISK') {
-    return `当前统计窗口内共识别 ${count} 次连续综合考勤异常，建议优先查看该人员完整风险档案。`
+    return `最近统计周期内发现 ${count} 次连续综合考勤异常，建议优先查看该人员完整风险档案。`
   }
   if (type === 'COMPLEX_ATTENDANCE_RISK') {
-    return `当前统计窗口内共识别 ${count} 次综合识别异常，建议优先查看分析摘要、原始记录和复核意见。`
+    return `最近统计周期内发现 ${count} 次综合识别异常，建议优先查看分析摘要、原始记录和复核意见。`
   }
   if (type === 'CONTINUOUS_MODEL_RISK') {
-    return `当前统计窗口内共识别 ${count} 次连续模型风险异常，建议优先查看模型证据链与人工复核记录。`
+    return `最近统计周期内发现 ${count} 次连续模型风险异常，建议优先查看系统判断依据与人工复核记录。`
   }
   if (type === 'ILLEGAL_TIME') {
-    return `当前统计窗口内共识别 ${count} 次非规定时间打卡，建议结合班次规则复核。`
+    return `最近统计周期内发现 ${count} 次非规定时间打卡，建议结合班次规则复核。`
   }
   if (type === 'REPEAT_CHECK') {
-    return `当前统计窗口内共识别 ${count} 次重复打卡，建议排查终端或重复提交行为。`
+    return `最近统计周期内发现 ${count} 次重复打卡，建议排查终端或重复提交行为。`
   }
-  return `当前统计窗口内共识别 ${count} 次${WARNING_EXCEPTION_LABELS[type] || '异常'}相关异常。`
+  return `最近统计周期内发现 ${count} 次${WARNING_EXCEPTION_LABELS[type] || '异常'}相关异常。`
 }
 
 async function loadDashboard() {
