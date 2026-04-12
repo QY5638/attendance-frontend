@@ -23,6 +23,7 @@ describe('auth store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    sessionStorage.clear()
     createAuthError.mockClear()
     loginRequest.mockReset()
     logoutRequest.mockReset()
@@ -43,8 +44,9 @@ describe('auth store', () => {
     expect(store.roleCode).toBe('ADMIN')
     expect(store.realName).toBe('系统管理员')
     expect(store.defaultHomePath).toBe('/dashboard')
-    expect(localStorage.getItem('attendance_token')).toBe('token-value')
-    expect(localStorage.getItem('attendance_refresh_token')).toBe('refresh-token-value')
+    expect(sessionStorage.getItem('attendance_token')).toBe('token-value')
+    expect(sessionStorage.getItem('attendance_refresh_token')).toBe('refresh-token-value')
+    expect(localStorage.getItem('attendance_token')).toBeNull()
   })
 
   it('rejects login when selected role does not match returned role', async () => {
@@ -89,10 +91,10 @@ describe('auth store', () => {
   })
 
   it('restores persisted auth state', () => {
-    localStorage.setItem('attendance_token', 'restored-token')
-    localStorage.setItem('attendance_refresh_token', 'restored-refresh-token')
-    localStorage.setItem('attendance_role_code', 'EMPLOYEE')
-    localStorage.setItem('attendance_real_name', '张三')
+    sessionStorage.setItem('attendance_token', 'restored-token')
+    sessionStorage.setItem('attendance_refresh_token', 'restored-refresh-token')
+    sessionStorage.setItem('attendance_role_code', 'EMPLOYEE')
+    sessionStorage.setItem('attendance_real_name', '张三')
 
     const store = useAuthStore()
     store.restore()
@@ -103,11 +105,25 @@ describe('auth store', () => {
     expect(store.defaultHomePath).toBe('/attendance')
   })
 
+  it('migrates legacy auth state from local storage on restore', () => {
+    localStorage.setItem('attendance_token', 'legacy-token')
+    localStorage.setItem('attendance_refresh_token', 'legacy-refresh-token')
+    localStorage.setItem('attendance_role_code', 'ADMIN')
+    localStorage.setItem('attendance_real_name', '系统管理员')
+
+    const store = useAuthStore()
+    store.restore()
+
+    expect(store.token).toBe('legacy-token')
+    expect(sessionStorage.getItem('attendance_token')).toBe('legacy-token')
+    expect(localStorage.getItem('attendance_token')).toBeNull()
+  })
+
   it('clears persisted session when restored role is unsupported', () => {
-    localStorage.setItem('attendance_token', 'dirty-token')
-    localStorage.setItem('attendance_refresh_token', 'dirty-refresh-token')
-    localStorage.setItem('attendance_role_code', 'GUEST')
-    localStorage.setItem('attendance_real_name', '脏数据用户')
+    sessionStorage.setItem('attendance_token', 'dirty-token')
+    sessionStorage.setItem('attendance_refresh_token', 'dirty-refresh-token')
+    sessionStorage.setItem('attendance_role_code', 'GUEST')
+    sessionStorage.setItem('attendance_real_name', '脏数据用户')
 
     const store = useAuthStore()
     store.restore()
@@ -116,10 +132,10 @@ describe('auth store', () => {
     expect(store.roleCode).toBe('')
     expect(store.realName).toBe('')
     expect(store.isAuthenticated).toBe(false)
-    expect(localStorage.getItem('attendance_token')).toBeNull()
-    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
-    expect(localStorage.getItem('attendance_role_code')).toBeNull()
-    expect(localStorage.getItem('attendance_real_name')).toBeNull()
+    expect(sessionStorage.getItem('attendance_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_refresh_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_role_code')).toBeNull()
+    expect(sessionStorage.getItem('attendance_real_name')).toBeNull()
   })
 
   it('clears session through clearSession action', () => {
@@ -127,20 +143,20 @@ describe('auth store', () => {
     store.token = 'token-value'
     store.roleCode = 'ADMIN'
     store.realName = '系统管理员'
-    localStorage.setItem('attendance_token', 'token-value')
-    localStorage.setItem('attendance_refresh_token', 'refresh-token-value')
-    localStorage.setItem('attendance_role_code', 'ADMIN')
-    localStorage.setItem('attendance_real_name', '系统管理员')
+    sessionStorage.setItem('attendance_token', 'token-value')
+    sessionStorage.setItem('attendance_refresh_token', 'refresh-token-value')
+    sessionStorage.setItem('attendance_role_code', 'ADMIN')
+    sessionStorage.setItem('attendance_real_name', '系统管理员')
 
     store.clearSession()
 
     expect(store.token).toBe('')
     expect(store.roleCode).toBe('')
     expect(store.realName).toBe('')
-    expect(localStorage.getItem('attendance_token')).toBeNull()
-    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
-    expect(localStorage.getItem('attendance_role_code')).toBeNull()
-    expect(localStorage.getItem('attendance_real_name')).toBeNull()
+    expect(sessionStorage.getItem('attendance_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_refresh_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_role_code')).toBeNull()
+    expect(sessionStorage.getItem('attendance_real_name')).toBeNull()
   })
 
   it('calls logout api and clears state and storage on logout', async () => {
@@ -149,16 +165,16 @@ describe('auth store', () => {
     store.token = 'token-value'
     store.roleCode = 'ADMIN'
     store.realName = '系统管理员'
-    localStorage.setItem('attendance_token', 'token-value')
-    localStorage.setItem('attendance_refresh_token', 'refresh-token-value')
+    sessionStorage.setItem('attendance_token', 'token-value')
+    sessionStorage.setItem('attendance_refresh_token', 'refresh-token-value')
 
     await store.logout()
 
     expect(store.token).toBe('')
     expect(store.roleCode).toBe('')
     expect(store.realName).toBe('')
-    expect(localStorage.getItem('attendance_token')).toBeNull()
-    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_refresh_token')).toBeNull()
     expect(logoutRequest).toHaveBeenCalledWith('refresh-token-value')
   })
 })

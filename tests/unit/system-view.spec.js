@@ -7,6 +7,7 @@ const {
   addPromptTemplate,
   exportStatisticsReport,
   fetchDeviceList,
+  fetchFaceRegisterApprovalList,
   fetchExceptionTypeList,
   fetchModelLogList,
   fetchOperationLogList,
@@ -16,6 +17,7 @@ const {
   fetchRuleList,
   loadAmapPlugins,
   loadAmapSdk,
+  reviewFaceRegisterApproval,
   updatePromptTemplate,
   updatePromptTemplateStatus,
 } = vi.hoisted(() => ({
@@ -23,6 +25,7 @@ const {
   addPromptTemplate: vi.fn(),
   exportStatisticsReport: vi.fn(),
   fetchDeviceList: vi.fn(),
+  fetchFaceRegisterApprovalList: vi.fn(),
   fetchExceptionTypeList: vi.fn(),
   fetchModelLogList: vi.fn(),
   fetchOperationLogList: vi.fn(),
@@ -32,6 +35,7 @@ const {
   fetchRuleList: vi.fn(),
   loadAmapPlugins: vi.fn(),
   loadAmapSdk: vi.fn(),
+  reviewFaceRegisterApproval: vi.fn(),
   updatePromptTemplate: vi.fn(),
   updatePromptTemplateStatus: vi.fn(),
 }))
@@ -42,6 +46,7 @@ vi.mock('../../src/api/system', () => ({
   addRule: vi.fn(),
   deleteDevice: vi.fn(),
   fetchDeviceList,
+  fetchFaceRegisterApprovalList,
   fetchExceptionTypeList,
   fetchModelLogList,
   fetchOperationLogList,
@@ -49,6 +54,7 @@ vi.mock('../../src/api/system', () => ({
   fetchPromptTemplateList,
   fetchRiskLevelList,
   fetchRuleList,
+  reviewFaceRegisterApproval,
   updateDevice: vi.fn(),
   updateDeviceStatus: vi.fn(),
   updateExceptionType: vi.fn(),
@@ -70,6 +76,7 @@ vi.mock('../../src/utils/amap', () => ({
 
 import SystemView from '../../src/views/system/SystemView.vue'
 import SystemDevicePanel from '../../src/views/system/panels/SystemDevicePanel.vue'
+import SystemFaceRegisterApprovalPanel from '../../src/views/system/panels/SystemFaceRegisterApprovalPanel.vue'
 import SystemOperationLogPanel from '../../src/views/system/panels/SystemOperationLogPanel.vue'
 import SystemPromptPanel from '../../src/views/system/panels/SystemPromptPanel.vue'
 import SystemModelLogPanel from '../../src/views/system/panels/SystemModelLogPanel.vue'
@@ -112,6 +119,7 @@ describe('system view', () => {
     addPromptTemplate.mockReset()
     exportStatisticsReport.mockReset()
     fetchDeviceList.mockReset()
+    fetchFaceRegisterApprovalList.mockReset()
     fetchExceptionTypeList.mockReset()
     fetchModelLogList.mockReset()
     fetchOperationLogList.mockReset()
@@ -121,6 +129,7 @@ describe('system view', () => {
     fetchRuleList.mockReset()
     loadAmapPlugins.mockReset()
     loadAmapSdk.mockReset()
+    reviewFaceRegisterApproval.mockReset()
     updatePromptTemplate.mockReset()
     updatePromptTemplateStatus.mockReset()
 
@@ -139,6 +148,10 @@ describe('system view', () => {
     fetchExceptionTypeList.mockResolvedValue({
       total: 1,
       items: [{ code: 'LATE', name: '迟到', description: '超过阈值', status: 1 }],
+    })
+    fetchFaceRegisterApprovalList.mockResolvedValue({
+      total: 1,
+      items: [{ id: 1, userId: 1001, userName: '张三', departmentName: '技术部', reason: '需要重新采集照片', status: 'PENDING', reviewComment: '', createTime: '2026-04-05T09:00:00' }],
     })
     fetchOperationLogList.mockResolvedValue({
       total: 1,
@@ -192,6 +205,7 @@ describe('system view', () => {
       filename: '业务记录报表.csv',
       contentType: 'text/csv',
     })
+    reviewFaceRegisterApproval.mockResolvedValue(null)
     updatePromptTemplate.mockResolvedValue(null)
     updatePromptTemplateStatus.mockResolvedValue(null)
     loadAmapSdk.mockResolvedValue({
@@ -264,6 +278,19 @@ describe('system view', () => {
     expect(wrapper.text()).toContain('已关联专项方案')
     expect(wrapper.text()).toContain('识别出连续晚到风险')
     expect(wrapper.text()).toContain('处理记录')
+  })
+
+  it('loads face register approval panel with pending request', async () => {
+    const wrapper = await mountPanel(SystemFaceRegisterApprovalPanel)
+
+    expect(fetchFaceRegisterApprovalList).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+      status: 'PENDING',
+    })
+    expect(wrapper.text()).toContain('人脸申请')
+    expect(wrapper.text()).toContain('张三')
+    expect(wrapper.text()).toContain('需要重新采集照片')
   })
 
   it('loads operation log panel with readable actor and summary', async () => {

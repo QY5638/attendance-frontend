@@ -1,11 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { registerFace, verifyFace, createFaceLivenessSession, completeFaceLiveness, runFaceLivenessChallenge, getUserMedia } = vi.hoisted(() => ({
+const { registerFace, verifyFace, createFaceLivenessSession, completeFaceLiveness, fetchFaceRegisterStatus, submitFaceRegisterApply, runFaceLivenessChallenge, getUserMedia } = vi.hoisted(() => ({
   registerFace: vi.fn(),
   verifyFace: vi.fn(),
   createFaceLivenessSession: vi.fn(),
   completeFaceLiveness: vi.fn(),
+  fetchFaceRegisterStatus: vi.fn(),
+  submitFaceRegisterApply: vi.fn(),
   runFaceLivenessChallenge: vi.fn(),
   getUserMedia: vi.fn(),
 }))
@@ -13,7 +15,9 @@ const { registerFace, verifyFace, createFaceLivenessSession, completeFaceLivenes
 vi.mock('../../src/api/face', () => ({
   completeFaceLiveness,
   createFaceLivenessSession,
+  fetchFaceRegisterStatus,
   registerFace,
+  submitFaceRegisterApply,
   verifyFace,
 }))
 
@@ -66,7 +70,9 @@ describe('face capture view', () => {
     verifyFace.mockReset()
     createFaceLivenessSession.mockReset()
     completeFaceLiveness.mockReset()
+    fetchFaceRegisterStatus.mockReset()
     runFaceLivenessChallenge.mockReset()
+    submitFaceRegisterApply.mockReset()
     getUserMedia.mockReset()
     vi.restoreAllMocks()
     vi.stubGlobal('FileReader', MockFileReader)
@@ -80,6 +86,15 @@ describe('face capture view', () => {
       drawImage: vi.fn(),
     })
     vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,captured-face')
+    fetchFaceRegisterStatus.mockResolvedValue({
+      userId: 1001,
+      registered: false,
+      requiresApproval: false,
+      canRegister: true,
+      canApply: false,
+      status: 'NONE',
+      message: '当前账号尚未录入人脸，可直接进行人脸采集',
+    })
   })
 
   afterEach(() => {
@@ -231,5 +246,42 @@ describe('face capture view', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="face-result-message"]').text()).toBe('人脸验证未通过')
+  })
+
+  it('requires approval request before re-register when face is already recorded', async () => {
+    fetchFaceRegisterStatus.mockResolvedValueOnce({
+      userId: 1001,
+      registered: true,
+      requiresApproval: true,
+      canRegister: false,
+      canApply: true,
+      status: 'USED',
+      message: '当前账号已录入人脸，如需重新采集，请先提交申请并等待管理员审批',
+    })
+    submitFaceRegisterApply.mockResolvedValue({
+      userId: 1001,
+      registered: true,
+      requiresApproval: true,
+      canRegister: false,
+      canApply: false,
+      status: 'PENDING',
+      message: '已提交人脸重录申请，请等待管理员审批',
+      reason: '照片更新',
+    })
+
+    const wrapper = mountFaceView()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="face-register-approval-status"]').text()).toContain('已使用')
+    expect(wrapper.text()).toContain('当前账号已录入人脸')
+    expect(wrapper.get('[data-testid="face-register-button"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('[data-testid="face-register-apply-reason"]').setValue('照片更新')
+    await wrapper.get('[data-testid="face-register-apply-button"]').trigger('click')
+    await flushPromises()
+
+    expect(submitFaceRegisterApply).toHaveBeenCalledWith('照片更新')
+    expect(wrapper.get('[data-testid="face-register-approval-status"]').text()).toContain('待审批')
+    expect(wrapper.text()).toContain('人脸重录申请已提交，请等待管理员审批')
   })
 })

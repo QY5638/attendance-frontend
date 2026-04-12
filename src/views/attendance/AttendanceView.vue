@@ -360,15 +360,11 @@ function resolveFaceCameraAccessMessage(error) {
   if (errorName.includes('notreadable') || errorName.includes('trackstart')) {
     return '摄像头当前被其他应用占用，请关闭占用程序后重试'
   }
-  return '无法访问摄像头，请改用本地图片上传'
+  return '无法访问摄像头，请确认当前电脑已启用摄像头后重试'
 }
 
 function formatFaceSubmitError(error) {
-  const message = error?.message || '请求失败，请稍后重试'
-  if (faceInputSource.value === 'upload' && message.includes('活体')) {
-    return `${message}，请切换到摄像头模式完成挑战`
-  }
-  return message
+  return error?.message || '请求失败，请稍后重试'
 }
 
 async function loadComputerDeviceInfo() {
@@ -643,10 +639,6 @@ async function startFaceLivenessChallenge() {
 }
 
 async function ensureFaceLivenessToken() {
-  if (faceInputSource.value !== 'camera') {
-    return ''
-  }
-
   if (hasValidFaceLivenessProof.value) {
     return faceLivenessState.token
   }
@@ -729,7 +721,7 @@ function captureFaceFrame() {
 
   const context = canvas.getContext('2d')
   if (!context) {
-    faceCameraError.value = '当前环境暂不支持拍照，请改用本地图片上传'
+    faceCameraError.value = '当前环境暂不支持拍照，请确认浏览器支持摄像头采集'
     return
   }
 
@@ -1192,30 +1184,11 @@ onBeforeUnmount(() => {
           <div>
             <p class="attendance-card__eyebrow">人脸采集</p>
             <h2>采集人脸图像</h2>
-          </div>
-          <div class="attendance-face-source-switch">
-            <button
-              type="button"
-              class="attendance-face-source-switch__button"
-              :class="{ 'attendance-face-source-switch__button--active': faceInputSource === 'camera' }"
-              data-testid="attendance-face-source-camera"
-              @click="switchFaceSource('camera')"
-            >
-              摄像头拍照
-            </button>
-            <button
-              type="button"
-              class="attendance-face-source-switch__button"
-              :class="{ 'attendance-face-source-switch__button--active': faceInputSource === 'upload' }"
-              data-testid="attendance-face-source-upload"
-              @click="switchFaceSource('upload')"
-            >
-              本地图片上传
-            </button>
+            <p class="attendance-hint">打卡必须通过摄像头完成人脸活体检测，本地图片上传不可用于正式打卡。</p>
           </div>
         </div>
 
-        <div v-if="faceInputSource === 'camera'" class="attendance-face-capture">
+        <div class="attendance-face-capture">
           <video ref="faceVideoRef" class="attendance-face-camera" autoplay muted playsinline></video>
           <div class="attendance-face-actions">
             <button
@@ -1248,36 +1221,12 @@ onBeforeUnmount(() => {
           </p>
         </div>
 
-        <div v-else class="attendance-face-capture">
-          <label class="attendance-face-upload" for="attendance-face-upload-input">选择本地图片</label>
-          <input
-            id="attendance-face-upload-input"
-            data-testid="attendance-face-upload-input"
-            type="file"
-            accept="image/*"
-            @change="handleFaceUploadChange"
-          />
-          <button
-            type="button"
-            data-testid="attendance-face-reset"
-            :disabled="!checkinForm.imageData"
-            @click="resetFaceImage"
-          >
-            清空图像
-          </button>
-          <p class="attendance-hint">支持本地图片上传；若当前环境启用了活体挑战，请改用摄像头完成实时校验。</p>
-          <p v-if="checkinForm.imageData" class="attendance-hint attendance-hint--accent">当前已选本地图片；若预检或打卡时提示需要活体，请切换到摄像头模式。</p>
-          <p v-if="faceUploadError" data-testid="attendance-face-upload-error" class="attendance-error">
-            {{ faceUploadError }}
-          </p>
-        </div>
-
         <div v-if="checkinForm.imageData" class="attendance-face-preview">
           <img :src="checkinForm.imageData" alt="打卡人脸预览" data-testid="attendance-face-preview" />
         </div>
-        <p v-else data-testid="attendance-image-input" class="attendance-hint">请先拍照或上传图片</p>
+        <p v-else data-testid="attendance-image-input" class="attendance-hint">请先开启摄像头拍照，再完成活体挑战</p>
 
-        <div v-if="faceInputSource === 'camera'" class="attendance-face-liveness">
+        <div class="attendance-face-liveness">
           <div class="attendance-face-liveness__header">
             <strong>活体挑战</strong>
             <button
@@ -1290,7 +1239,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
           <p class="attendance-hint">
-            {{ faceLivenessState.message || '建议先完成随机活体挑战，再进行人脸预检或正式打卡。' }}
+            {{ faceLivenessState.message || '打卡前必须先完成随机活体挑战，再进行人脸预检或正式提交。' }}
           </p>
           <p v-if="faceLivenessState.score !== null" class="attendance-hint attendance-hint--accent">
             活体分值：{{ Number(faceLivenessState.score).toFixed(2) }}
@@ -1336,8 +1285,8 @@ onBeforeUnmount(() => {
         </p>
 
         <div class="attendance-face-card__tips">
-          <span>建议先完成活体挑战和人脸预检，再正式提交打卡。</span>
-          <span>若当前环境启用了活体挑战，请优先使用摄像头完成校验。</span>
+          <span>打卡前必须完成活体挑战，人脸预检通过后再正式提交。</span>
+          <span>当前打卡仅支持摄像头采集，不支持本地图片上传。</span>
         </div>
 
         <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
