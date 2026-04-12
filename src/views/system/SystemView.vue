@@ -42,6 +42,7 @@ const SystemRulePanel = defineAsyncComponent(() => import('./panels/SystemRulePa
 const SystemPromptPanel = defineAsyncComponent(() => import('./panels/SystemPromptPanel.vue'))
 const SystemRiskLevelPanel = defineAsyncComponent(() => import('./panels/SystemRiskLevelPanel.vue'))
 const SystemExceptionTypePanel = defineAsyncComponent(() => import('./panels/SystemExceptionTypePanel.vue'))
+const SystemFaceRegisterApprovalPanel = defineAsyncComponent(() => import('./panels/SystemFaceRegisterApprovalPanel.vue'))
 const SystemModelLogPanel = defineAsyncComponent(() => import('./panels/SystemModelLogPanel.vue'))
 const SystemOperationLogPanel = defineAsyncComponent(() => import('./panels/SystemOperationLogPanel.vue'))
 
@@ -54,6 +55,7 @@ const navItems = [
   { key: 'prompt', label: '分析方案', desc: '方案维护、编辑与启停管理', component: SystemPromptPanel },
   { key: 'risk-level', label: '风险等级', desc: '风险名称、说明与状态', component: SystemRiskLevelPanel },
   { key: 'exception-type', label: '异常类型', desc: '异常类别说明与状态', component: SystemExceptionTypePanel },
+  { key: 'face-approval', label: '人脸申请', desc: '员工重录申请与审批处理', component: SystemFaceRegisterApprovalPanel },
   { key: 'model-log', label: '处理记录', desc: '查看分析过程、结果与耗时', component: SystemModelLogPanel },
   { key: 'operation-log', label: '业务记录', desc: '关键业务操作记录查询', component: SystemOperationLogPanel },
 ]

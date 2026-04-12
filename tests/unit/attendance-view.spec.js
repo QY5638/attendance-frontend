@@ -105,8 +105,13 @@ async function setFaceImage(wrapper, imageData = 'base64-image') {
   await wrapper.vm.$nextTick()
 }
 
-async function switchToUploadSource(wrapper) {
-  await wrapper.get('[data-testid="attendance-face-source-upload"]').trigger('click')
+async function setFaceLivenessProof(wrapper, imageData = 'base64-image', livenessToken = 'liveness-token') {
+  await setFaceImage(wrapper, imageData)
+
+  wrapper.vm.faceLivenessState.token = livenessToken
+  wrapper.vm.faceLivenessState.imageData = imageData
+  wrapper.vm.faceLivenessState.expiresAt = Date.now() + 60000
+  wrapper.vm.faceLivenessState.score = 91.5
   await wrapper.vm.$nextTick()
 }
 
@@ -310,8 +315,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
-    await switchToUploadSource(wrapper)
-    await setFaceImage(wrapper)
+    await setFaceLivenessProof(wrapper)
 
     expect(wrapper.get('[data-testid="attendance-device-select"]').text()).toContain('办公区A')
     expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('办公区A（允许半径 30 米）')
@@ -326,7 +330,7 @@ describe('attendance view', () => {
 
     expect(verifyFaceRequest).toHaveBeenCalledWith({
       imageData: 'base64-image',
-      livenessToken: '',
+      livenessToken: 'liveness-token',
       consumeLiveness: false,
     })
     expect(wrapper.get('[data-testid="attendance-face-verify-result"]').text()).toContain('通过')
@@ -375,8 +379,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
-    await switchToUploadSource(wrapper)
-    await setFaceImage(wrapper)
+    await setFaceLivenessProof(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 
@@ -385,6 +388,7 @@ describe('attendance view', () => {
       checkType: 'IN',
       deviceId: 'LOC-A',
       imageData: 'base64-image',
+      livenessToken: 'liveness-token',
       deviceInfo: expect.any(String),
       terminalId: 'terminal-fixed-id',
       clientLongitude: 116.397128,
@@ -411,8 +415,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
-    await switchToUploadSource(wrapper)
-    await setFaceImage(wrapper)
+    await setFaceLivenessProof(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 
@@ -654,8 +657,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
-    await switchToUploadSource(wrapper)
-    await setFaceImage(wrapper)
+    await setFaceLivenessProof(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
 

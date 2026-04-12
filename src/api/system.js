@@ -91,6 +91,14 @@ function normalizeConfigPayload(payload = {}) {
   })
 }
 
+function normalizeApprovalReviewPayload(payload = {}) {
+  return compactPayload({
+    id: payload.id,
+    status: trimString(payload.status),
+    reviewComment: trimString(payload.reviewComment),
+  })
+}
+
 function normalizePromptTemplatePayload(payload = {}) {
   return compactPayload({
     id: payload.id,
@@ -218,6 +226,16 @@ export async function updateRiskLevel(payload) {
 export async function fetchExceptionTypeList(params = {}) {
   const result = ensureSuccess(await request.get('/system/exception-type/list', { params: normalizeListQuery(params) }))
   return normalizeListData(result.data)
+}
+
+export async function fetchFaceRegisterApprovalList(params = {}) {
+  const result = ensureSuccess(await request.get('/face/register-approval/list', { params: normalizeListQuery(params) }))
+  return normalizeListData(result.data)
+}
+
+export async function reviewFaceRegisterApproval(payload) {
+  const result = ensureSuccess(await request.put('/face/register-approval/review', normalizeApprovalReviewPayload(payload)))
+  return result.data ?? null
 }
 
 export async function updateExceptionType(payload) {

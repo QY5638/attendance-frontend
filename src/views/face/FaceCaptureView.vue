@@ -82,6 +82,45 @@
         </div>
         <div v-else class="face-preview face-preview--empty">请先拍照或上传图片</div>
 
+        <div class="face-approval">
+          <div class="face-approval__header">
+            <strong>采集权限</strong>
+            <span
+              :class="['face-approval__status', `face-approval__status--${resolveRegisterStatusClass(registerPermission.status)}`]"
+              data-testid="face-register-approval-status"
+            >
+              {{ formatRegisterStatus(registerPermission.status) }}
+            </span>
+          </div>
+          <p v-if="registerStatusLoading" class="face-card__hint">正在加载采集权限...</p>
+          <template v-else>
+            <p class="face-card__hint">{{ registerPermission.message || '当前可直接进行人脸采集。' }}</p>
+            <p v-if="registerStatusNotice" class="face-card__hint face-card__hint--accent">{{ registerStatusNotice }}</p>
+            <p v-if="registerStatusError" class="face-card__error">{{ registerStatusError }}</p>
+            <p v-if="registerPermission.reason" class="face-card__hint">最近申请说明：{{ registerPermission.reason }}</p>
+            <p v-if="registerPermission.reviewComment" class="face-card__hint">审批备注：{{ registerPermission.reviewComment }}</p>
+            <label v-if="registerPermission.canApply" class="face-approval__form">
+              <span>申请说明</span>
+              <textarea
+                v-model="registerApplyReason"
+                data-testid="face-register-apply-reason"
+                rows="3"
+                placeholder="请说明本次需要重新采集人脸的原因"
+              ></textarea>
+            </label>
+            <button
+              v-if="registerPermission.canApply"
+              type="button"
+              class="face-card__button face-card__button--secondary"
+              data-testid="face-register-apply-button"
+              :disabled="!canSubmitRegisterApply"
+              @click="handleSubmitRegisterApply"
+            >
+              {{ registerStatusSubmitting ? '提交中...' : '提交人脸重录申请' }}
+            </button>
+          </template>
+        </div>
+
         <div v-if="source === 'camera'" class="face-liveness">
           <div class="face-liveness__header">
             <strong>活体挑战</strong>
@@ -123,7 +162,7 @@
             type="button"
             class="face-card__button"
             data-testid="face-register-button"
-            :disabled="!canSubmit"
+            :disabled="!canSubmitRegister"
             @click="submitRegister"
           >
             {{ submittingAction === 'register' ? '录入中...' : '提交录入' }}
@@ -175,10 +214,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
-import { completeFaceLiveness, createFaceLivenessSession, registerFace, verifyFace } from '../../api/face'
+import { completeFaceLiveness, createFaceLivenessSession, fetchFaceRegisterStatus, registerFace, submitFaceRegisterApply, verifyFace } from '../../api/face'
 import { useAuthStore } from '../../store/auth'
 import { formatDateTimeDisplay } from '../../utils/date-time'
 import { describeLivenessAction, runFaceLivenessChallenge } from '../../utils/face-liveness'
@@ -191,6 +230,11 @@ const uploadError = ref('')
 const cameraError = ref('')
 const cameraStarting = ref(false)
 const submittingAction = ref('')
+const registerStatusLoading = ref(false)
+const registerStatusSubmitting = ref(false)
+const registerStatusError = ref('')
+const registerStatusNotice = ref('')
+const registerApplyReason = ref('')
 const videoRef = ref(null)
 const streamRef = ref(null)
 const authStore = useAuthStore()
@@ -205,9 +249,27 @@ const livenessState = reactive({
   score: null,
   imageData: '',
 })
+const registerPermission = reactive({
+  registered: false,
+  requiresApproval: false,
+  canRegister: true,
+  canApply: false,
+  status: 'NONE',
+  message: '',
+  reason: '',
+  reviewComment: '',
+  createTime: '',
+  reviewTime: '',
+})
 
 const hasLiveCamera = computed(() => Boolean(streamRef.value))
 const canSubmit = computed(() => Boolean(imageData.value) && !submittingAction.value && !livenessState.running)
+const canSubmitRegister = computed(() => {
+  return Boolean(canSubmit.value && (!registerPermission.registered || registerPermission.canRegister) && !registerStatusLoading.value && !registerStatusSubmitting.value)
+})
+const canSubmitRegisterApply = computed(() => {
+  return Boolean(registerPermission.canApply && !registerStatusSubmitting.value && registerApplyReason.value.trim())
+})
 const hasValidLivenessProof = computed(() => {
   return Boolean(
     livenessState.token &&
@@ -265,6 +327,43 @@ function formatProvider(provider) {
   return provider || '--'
 }
 
+function formatRegisterStatus(status) {
+  const normalized = String(status || '').toUpperCase()
+  if (normalized === 'PENDING') {
+    return '待审批'
+  }
+  if (normalized === 'APPROVED') {
+    return '已通过'
+  }
+  if (normalized === 'REJECTED') {
+    return '已驳回'
+  }
+  if (normalized === 'USED') {
+    return '已使用'
+  }
+  if (normalized === 'NONE' && registerPermission.registered) {
+    return '需申请'
+  }
+  return '可采集'
+}
+
+function resolveRegisterStatusClass(status) {
+  const normalized = String(status || '').toUpperCase()
+  if (normalized === 'PENDING') {
+    return 'pending'
+  }
+  if (normalized === 'APPROVED') {
+    return 'approved'
+  }
+  if (normalized === 'REJECTED') {
+    return 'rejected'
+  }
+  if (normalized === 'USED') {
+    return 'used'
+  }
+  return registerPermission.registered ? 'locked' : 'ready'
+}
+
 function resolveCameraAccessMessage(error) {
   const errorName = String(error?.name || '').toLowerCase()
   if (errorName.includes('notallowed') || errorName.includes('security')) {
@@ -290,6 +389,54 @@ function formatSubmitError(error) {
 function clearResultState() {
   result.value = null
   submitError.value = ''
+}
+
+function syncRegisterPermission(data = {}) {
+  registerPermission.registered = Boolean(data.registered)
+  registerPermission.requiresApproval = Boolean(data.requiresApproval)
+  registerPermission.canRegister = Boolean(data.canRegister)
+  registerPermission.canApply = Boolean(data.canApply)
+  registerPermission.status = data.status || 'NONE'
+  registerPermission.message = data.message || ''
+  registerPermission.reason = data.reason || ''
+  registerPermission.reviewComment = data.reviewComment || ''
+  registerPermission.createTime = data.createTime || ''
+  registerPermission.reviewTime = data.reviewTime || ''
+}
+
+async function loadRegisterStatus() {
+  registerStatusLoading.value = true
+  registerStatusError.value = ''
+
+  try {
+    const data = await fetchFaceRegisterStatus()
+    syncRegisterPermission(data)
+  } catch (error) {
+    registerStatusError.value = error?.message || '人脸采集状态加载失败，请稍后重试'
+  } finally {
+    registerStatusLoading.value = false
+  }
+}
+
+async function handleSubmitRegisterApply() {
+  if (!canSubmitRegisterApply.value) {
+    return
+  }
+
+  registerStatusSubmitting.value = true
+  registerStatusError.value = ''
+  registerStatusNotice.value = ''
+
+  try {
+    const data = await submitFaceRegisterApply(registerApplyReason.value)
+    syncRegisterPermission(data)
+    registerApplyReason.value = ''
+    registerStatusNotice.value = '人脸重录申请已提交，请等待管理员审批'
+  } catch (error) {
+    registerStatusError.value = error?.message || '人脸重录申请提交失败，请稍后重试'
+  } finally {
+    registerStatusSubmitting.value = false
+  }
 }
 
 function resetLivenessState() {
@@ -519,6 +666,10 @@ async function submit(action, request) {
       ...data,
       type: action,
     }
+    if (action === 'register') {
+      registerStatusNotice.value = ''
+      await loadRegisterStatus()
+    }
   } catch (error) {
     result.value = null
     submitError.value = formatSubmitError(error)
@@ -537,6 +688,10 @@ function submitVerify() {
 
 onBeforeUnmount(() => {
   stopCamera()
+})
+
+onMounted(() => {
+  void loadRegisterStatus()
 })
 </script>
 
@@ -637,6 +792,68 @@ onBeforeUnmount(() => {
 
 .face-panel__actions--compact {
   margin-top: 20px;
+}
+
+.face-approval {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.face-approval__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.face-approval__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.face-approval__status--ready,
+.face-approval__status--approved {
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+}
+
+.face-approval__status--pending {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.face-approval__status--rejected,
+.face-approval__status--locked {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.face-approval__status--used {
+  background: rgba(148, 163, 184, 0.16);
+  color: #475569;
+}
+
+.face-approval__form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  color: #475569;
+}
+
+.face-approval__form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 14px;
+  resize: vertical;
+  background: #ffffff;
+  color: #0f172a;
 }
 
 .face-card__button {

@@ -141,6 +141,9 @@ const OPERATION_TYPE_LABELS = {
   CHECKIN: '上班打卡',
   CHECKOUT: '下班打卡',
   ATTENDANCE_APPLY: '补卡申请',
+  FACE_REGISTER_APPLY: '人脸重录申请',
+  FACE_REGISTER_APPROVE: '人脸重录通过',
+  FACE_REGISTER_REJECT: '人脸重录驳回',
   WARNING_REEVALUATE: '预警处理',
   REVIEW_SUBMIT: '复核办理',
   REVIEW_FEEDBACK: '复核补充',
@@ -156,6 +159,7 @@ const SCOPE_OPTIONS = [
   { value: 'AUTH', label: '认证事件', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
   { value: 'LIVENESS', label: '活体事件', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
   { value: 'ATTENDANCE', label: '打卡事件', types: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'] },
+  { value: 'FACE', label: '人脸申请', types: ['FACE_REGISTER_APPLY', 'FACE_REGISTER_APPROVE', 'FACE_REGISTER_REJECT'] },
   { value: 'REVIEW', label: '复核事件', types: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'] },
   { value: 'SYSTEM', label: '系统事件', types: ['SYSTEM_CONFIG'] },
 ]

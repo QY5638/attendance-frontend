@@ -5,6 +5,7 @@ import * as requestModule from '../../src/utils/request'
 describe('request error normalization', () => {
   beforeEach(() => {
     localStorage.clear()
+    sessionStorage.clear()
     requestModule.setUnauthorizedHandler(null)
   })
 
@@ -65,10 +66,10 @@ describe('request error normalization', () => {
   it('clears auth storage and calls unauthorized handler on 401', () => {
     const handler = vi.fn()
     requestModule.setUnauthorizedHandler(handler)
-    localStorage.setItem('attendance_token', 'expired-token')
-    localStorage.setItem('attendance_refresh_token', 'expired-refresh-token')
-    localStorage.setItem('attendance_role_code', 'ADMIN')
-    localStorage.setItem('attendance_real_name', '系统管理员')
+    sessionStorage.setItem('attendance_token', 'expired-token')
+    sessionStorage.setItem('attendance_refresh_token', 'expired-refresh-token')
+    sessionStorage.setItem('attendance_role_code', 'ADMIN')
+    sessionStorage.setItem('attendance_real_name', '系统管理员')
 
     const normalized = requestModule.handleRequestError?.({ response: { status: 401 } })
 
@@ -77,10 +78,10 @@ describe('request error normalization', () => {
       message: '登录状态已失效，请重新登录',
       field: '',
     })
-    expect(localStorage.getItem('attendance_token')).toBeNull()
-    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
-    expect(localStorage.getItem('attendance_role_code')).toBeNull()
-    expect(localStorage.getItem('attendance_real_name')).toBeNull()
+    expect(sessionStorage.getItem('attendance_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_refresh_token')).toBeNull()
+    expect(sessionStorage.getItem('attendance_role_code')).toBeNull()
+    expect(sessionStorage.getItem('attendance_real_name')).toBeNull()
     expect(handler).toHaveBeenCalledWith(normalized)
   })
 
