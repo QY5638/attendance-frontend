@@ -20,21 +20,7 @@
           <span>异常类型</span>
           <select v-model="queryForm.type" data-testid="exception-filter-type">
             <option value="">全部</option>
-            <option value="PROXY_CHECKIN">代打卡</option>
-            <option value="CONTINUOUS_LATE">连续迟到</option>
-            <option value="CONTINUOUS_EARLY_LEAVE">连续早退</option>
-            <option value="CONTINUOUS_MULTI_LOCATION_CONFLICT">连续多地点冲突</option>
-            <option value="CONTINUOUS_ILLEGAL_TIME">连续非法时间打卡</option>
-            <option value="CONTINUOUS_REPEAT_CHECK">连续重复打卡</option>
-            <option value="CONTINUOUS_PROXY_CHECKIN">连续代打卡</option>
-            <option value="CONTINUOUS_ATTENDANCE_RISK">连续综合考勤异常</option>
-            <option value="COMPLEX_ATTENDANCE_RISK">综合识别异常</option>
-            <option value="CONTINUOUS_MODEL_RISK">连续模型风险异常</option>
-            <option value="LATE">迟到</option>
-            <option value="EARLY_LEAVE">早退</option>
-            <option value="ILLEGAL_TIME">非规定时间打卡</option>
-            <option value="REPEAT_CHECK">重复打卡</option>
-            <option value="MULTI_LOCATION_CONFLICT">多地点异常</option>
+            <option v-for="option in EXCEPTION_TYPE_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
           </select>
         </label>
 
@@ -344,31 +330,15 @@ import {
   fetchExceptionRuleCheck,
 } from '../../api/exception'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import {
+  buildExceptionTitle,
+  EXCEPTION_TYPE_LABELS,
+  EXCEPTION_TYPE_OPTIONS,
+  formatExceptionType,
+  getExceptionTypeLabel,
+  RISK_LEVEL_LABELS,
+} from '../../utils/exception-display'
 import { formatReadableText } from '../../utils/readable-text'
-
-const EXCEPTION_TYPE_LABELS = {
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
-  REPEAT_CHECK: '重复打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
-}
-
-const RISK_LEVEL_LABELS = {
-  HIGH: '高风险',
-  MEDIUM: '中风险',
-  LOW: '低风险',
-}
 
 const SOURCE_TYPE_LABELS = {
   MODEL: '综合识别',
@@ -464,23 +434,6 @@ function formatDisplayValue(value, labelMap) {
   return label || '未识别'
 }
 
-function formatExceptionType(item = {}) {
-  const label = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
-  if (label) {
-    return label
-  }
-
-  if (item.sourceType === 'MODEL' || item.sourceType === 'MODEL_FALLBACK') {
-    return '综合识别异常'
-  }
-
-  if (item.sourceType === 'RULE') {
-    return '规则校验异常'
-  }
-
-  return '待核查异常'
-}
-
 function formatDecisionLabel(value, fallback = '--') {
   if (!value) {
     return fallback
@@ -491,7 +444,7 @@ function formatDecisionLabel(value, fallback = '--') {
     return fallback
   }
 
-  return EXCEPTION_TYPE_LABELS[normalizedValue] || normalizedValue
+  return getExceptionTypeLabel(normalizedValue, normalizedValue)
 }
 
 function normalizeInterfaceMessage(message, fallbackMessage) {
@@ -508,17 +461,6 @@ function formatDateTime(value) {
 
 function resolveLabel(value, labelMap) {
   return value ? labelMap[value] || '' : ''
-}
-
-function buildExceptionTitle(item = {}) {
-  const riskLabel = resolveLabel(item.riskLevel, RISK_LEVEL_LABELS)
-  const typeLabel = formatExceptionType(item)
-
-  if (typeLabel) {
-    return `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
-  }
-
-  return riskLabel ? `${riskLabel}待核查异常` : '待核查异常'
 }
 
 function formatSelectedExceptionTitle() {

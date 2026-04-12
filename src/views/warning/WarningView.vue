@@ -340,7 +340,7 @@
               </div>
               <div>
                 <dt>异常类型</dt>
-                <dd>{{ formatDisplayValue(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS) }}</dd>
+                <dd>{{ formatExceptionType({ type: item.exceptionType, sourceType: item.exceptionSourceType }) }}</dd>
               </div>
               <div>
                 <dt>预警类型</dt>
@@ -711,6 +711,12 @@ import { fetchFe06WarningAdvice, fetchFe06WarningDashboard, fetchFe06WarningList
 import { submitReview } from '../../api/review'
 import { exportStatisticsReport } from '../../api/statistics'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import {
+  buildExceptionRelation,
+  EXCEPTION_TYPE_LABELS,
+  formatExceptionType,
+  getExceptionTypeLabel,
+} from '../../utils/exception-display'
 import { formatReadableText } from '../../utils/readable-text'
 
 const WARNING_TYPE_LABELS = {
@@ -718,23 +724,7 @@ const WARNING_TYPE_LABELS = {
   ATTENDANCE_WARNING: '考勤预警',
 }
 
-const WARNING_EXCEPTION_TYPE_LABELS = {
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
-  REPEAT_CHECK: '重复打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
-}
+const WARNING_EXCEPTION_TYPE_LABELS = EXCEPTION_TYPE_LABELS
 
 const WARNING_LEVEL_LABELS = {
   HIGH: '高风险',
@@ -959,10 +949,10 @@ const continuousTrendItems = computed(() => {
       const totalCount = Number(trendItem?.totalCount || 0)
       return {
         key,
-        label: WARNING_EXCEPTION_TYPE_LABELS[key],
+        label: getExceptionTypeLabel(key, key),
         totalCount,
         bars: buildTrendBars(values),
-        summary: totalCount > 0 ? `近 ${dashboardData.value?.recentDays || 7} 天内共识别 ${totalCount} 次${WARNING_EXCEPTION_TYPE_LABELS[key]}。` : '',
+        summary: totalCount > 0 ? `近 ${dashboardData.value?.recentDays || 7} 天内共识别 ${totalCount} 次${getExceptionTypeLabel(key, '异常')}。` : '',
       }
     })
     .filter((item) => item.totalCount > 0)
@@ -1219,7 +1209,13 @@ function getWarningById(warningId) {
 
 function buildWarningTitle(item = {}) {
   const levelLabel = resolveLabel(item.level, WARNING_LEVEL_LABELS)
-  const exceptionLabel = resolveLabel(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS)
+  const exceptionLabel = formatExceptionType({
+    type: item.exceptionType,
+    sourceType: item.exceptionSourceType,
+  }, {
+    fallback: '',
+    unknownFallback: '',
+  })
   const typeLabel = resolveLabel(item.type, WARNING_TYPE_LABELS)
 
   if (exceptionLabel) {
@@ -1238,8 +1234,10 @@ function buildWarningTitle(item = {}) {
 }
 
 function buildWarningRelation(item = {}) {
-  const exceptionLabel = resolveLabel(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS)
-  return exceptionLabel ? `${exceptionLabel}异常` : '关联异常记录'
+  return buildExceptionRelation({
+    type: item.exceptionType,
+    sourceType: item.exceptionSourceType,
+  })
 }
 
 function buildSelectedWarningTitle(warningId) {
@@ -1249,7 +1247,10 @@ function buildSelectedWarningTitle(warningId) {
 
 function buildQuickReviewDefaultComment(item = {}) {
   const warningTitle = buildWarningTitle(item)
-  const exceptionLabel = formatDisplayValue(item.exceptionType, WARNING_EXCEPTION_TYPE_LABELS)
+  const exceptionLabel = formatExceptionType({
+    type: item.exceptionType,
+    sourceType: item.exceptionSourceType,
+  })
   if (warningTitle && exceptionLabel && warningTitle !== '预警记录') {
     return `已核对${warningTitle}证据链，当前判定为${exceptionLabel}相关风险。`
   }

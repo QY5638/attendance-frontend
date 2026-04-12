@@ -167,6 +167,7 @@ import {
 import { fetchOperationLogSummary } from '../../api/system'
 import { fetchWarningList } from '../../api/warning'
 import { useAuthStore } from '../../store/auth'
+import { EXCEPTION_TYPE_LABELS, formatExceptionType } from '../../utils/exception-display'
 import { formatReadableText } from '../../utils/readable-text'
 
 const authStore = useAuthStore()
@@ -201,23 +202,7 @@ const WARNING_STATUS_LABELS = {
   UNPROCESSED: '待处理',
   PROCESSED: '已处理',
 }
-const WARNING_EXCEPTION_LABELS = {
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
-  REPEAT_CHECK: '重复打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
-}
+const WARNING_EXCEPTION_LABELS = EXCEPTION_TYPE_LABELS
 const dashboardTitle = computed(() => (isAdmin.value ? '异常与预警驾驶舱' : '概览工作台'))
 const dashboardDescription = computed(() => (
   isAdmin.value
@@ -466,7 +451,7 @@ function resolveWarningLabel(value, labelMap) {
 
 function buildWarningTitle(item = {}) {
   const levelLabel = resolveWarningLabel(item.level, WARNING_LEVEL_LABELS)
-  const exceptionLabel = resolveWarningLabel(item.exceptionType, WARNING_EXCEPTION_LABELS)
+  const exceptionLabel = formatExceptionType({ type: item.exceptionType }, { fallback: '', unknownFallback: '' })
   const typeLabel = resolveWarningLabel(item.type, WARNING_TYPE_LABELS)
 
   if (exceptionLabel) {
@@ -518,6 +503,9 @@ function buildExceptionFocusDescription(type, count) {
   if (type === 'CONTINUOUS_ATTENDANCE_RISK') {
     return `当前统计窗口内共识别 ${count} 次连续综合考勤异常，建议优先查看该人员完整风险档案。`
   }
+  if (type === 'COMPLEX_ATTENDANCE_RISK') {
+    return `当前统计窗口内共识别 ${count} 次综合识别异常，建议优先查看分析摘要、原始记录和复核意见。`
+  }
   if (type === 'CONTINUOUS_MODEL_RISK') {
     return `当前统计窗口内共识别 ${count} 次连续模型风险异常，建议优先查看模型证据链与人工复核记录。`
   }
@@ -527,7 +515,7 @@ function buildExceptionFocusDescription(type, count) {
   if (type === 'REPEAT_CHECK') {
     return `当前统计窗口内共识别 ${count} 次重复打卡，建议排查终端或重复提交行为。`
   }
-  return `当前统计窗口内共识别 ${count} 次${WARNING_EXCEPTION_LABELS[type] || type}相关异常。`
+  return `当前统计窗口内共识别 ${count} 次${WARNING_EXCEPTION_LABELS[type] || '异常'}相关异常。`
 }
 
 async function loadDashboard() {

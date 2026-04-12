@@ -36,8 +36,8 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>异常类别</th>
-            <th>显示名称</th>
+            <th>系统编码</th>
+            <th>客户显示名称</th>
             <th>说明</th>
             <th>状态</th>
             <th>操作</th>
@@ -51,8 +51,8 @@
             <td colspan="5">暂无异常类型配置</td>
           </tr>
           <tr v-for="row in rows" :key="row.code">
-            <td>{{ formatExceptionCode(row.code) }}</td>
-            <td>{{ row.name || '-' }}</td>
+            <td><code>{{ row.code || '-' }}</code></td>
+            <td>{{ row.name || formatExceptionName(row.code) }}</td>
             <td>{{ row.description || '-' }}</td>
             <td>
               <span :class="['panel-card__status', row.status === 1 ? 'is-active' : 'is-inactive']">
@@ -87,8 +87,12 @@
 
         <form class="panel-card__dialog-form" @submit.prevent="handleSubmit">
           <label>
-            <span>异常类别</span>
-            <input :value="formatExceptionCode(form.code)" type="text" disabled />
+            <span>系统编码</span>
+            <input :value="form.code || '-'" type="text" disabled />
+          </label>
+          <label>
+            <span>默认中文名称</span>
+            <input :value="formatExceptionName(form.code)" type="text" disabled />
           </label>
           <label>
             <span>状态</span>
@@ -122,6 +126,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
 import { fetchExceptionTypeList, updateExceptionType } from '../../../api/system'
+import { getExceptionTypeLabel } from '../../../utils/exception-display'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -129,24 +134,6 @@ const dialogVisible = ref(false)
 const rows = ref([])
 const error = ref('')
 const notice = ref('')
-
-const EXCEPTION_CODE_LABELS = {
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
-  REPEAT_CHECK: '重复打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
-}
 
 const filters = reactive({
   status: '',
@@ -218,8 +205,8 @@ function openEditDialog(row) {
   dialogVisible.value = true
 }
 
-function formatExceptionCode(code) {
-  return EXCEPTION_CODE_LABELS[code] || '未识别'
+function formatExceptionName(code) {
+  return getExceptionTypeLabel(code, '待核查异常')
 }
 
 async function handleSubmit() {

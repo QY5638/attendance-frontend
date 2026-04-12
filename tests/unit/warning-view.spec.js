@@ -244,6 +244,22 @@ describe('warning view', () => {
     expect(wrapper.get('[data-testid="warning-continuous-trend"]').text()).toContain('连续代打卡')
   })
 
+  it('keeps related exception text readable for complex exception type', async () => {
+    fetchFe06WarningList.mockResolvedValueOnce(createListPayload([
+      createWarningRecord({
+        exceptionType: 'COMPLEX_ATTENDANCE_RISK',
+        aiSummary: '综合识别触发了中风险提醒',
+      }),
+    ]))
+
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    const listText = wrapper.get('[data-testid="warning-list"]').text()
+    expect(listText).toContain('高风险综合识别异常预警')
+    expect(listText).not.toContain('高风险综合识别异常异常预警')
+  })
+
   it('opens portrait dialog and loads warning archive by user id', async () => {
     const wrapper = mount(WarningView)
     await flushPromises()

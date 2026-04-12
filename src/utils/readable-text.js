@@ -1,3 +1,8 @@
+import { EXCEPTION_TYPE_LABELS, RISK_LEVEL_LABELS } from './exception-display'
+
+const EXCEPTION_TYPE_TEXT_REPLACEMENTS = Object.entries(EXCEPTION_TYPE_LABELS)
+const RISK_LEVEL_TEXT_REPLACEMENTS = Object.entries(RISK_LEVEL_LABELS)
+
 const TEXT_REPLACEMENTS = [
   ['recordId=', '记录编号：'],
   ['recordId', '记录编号'],
@@ -35,24 +40,8 @@ const TEXT_REPLACEMENTS = [
   ['=false', '：否'],
   ['=null', '：未提供'],
   ['null', '未提供'],
-  ['PROXY_CHECKIN', '代打卡'],
-  ['CONTINUOUS_LATE', '连续迟到'],
-  ['CONTINUOUS_EARLY_LEAVE', '连续早退'],
-  ['CONTINUOUS_MULTI_LOCATION_CONFLICT', '连续多地点冲突'],
-  ['CONTINUOUS_ILLEGAL_TIME', '连续非法时间打卡'],
-  ['CONTINUOUS_REPEAT_CHECK', '连续重复打卡'],
-  ['CONTINUOUS_PROXY_CHECKIN', '连续代打卡'],
-  ['CONTINUOUS_ATTENDANCE_RISK', '连续综合考勤异常'],
-  ['COMPLEX_ATTENDANCE_RISK', '综合识别异常'],
-  ['CONTINUOUS_MODEL_RISK', '连续模型风险异常'],
-  ['MULTI_LOCATION_CONFLICT', '多地点异常'],
-  ['EARLY_LEAVE', '早退'],
-  ['ILLEGAL_TIME', '非规定时间打卡'],
-  ['REPEAT_CHECK', '重复打卡'],
-  ['LATE', '迟到'],
-  ['HIGH', '高风险'],
-  ['MEDIUM', '中风险'],
-  ['LOW', '低风险'],
+  ...EXCEPTION_TYPE_TEXT_REPLACEMENTS,
+  ...RISK_LEVEL_TEXT_REPLACEMENTS,
 ]
 
 const REGEX_TEXT_REPLACEMENTS = [

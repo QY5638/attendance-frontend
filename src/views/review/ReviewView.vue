@@ -12,6 +12,12 @@ import {
   submitReviewFeedback,
 } from '../../api/review'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import {
+  buildExceptionTitle,
+  EXCEPTION_TYPE_LABELS,
+  formatExceptionType,
+  RISK_LEVEL_LABELS,
+} from '../../utils/exception-display'
 import { formatReadableText } from '../../utils/readable-text'
 
 const REVIEW_RESULT_OPTIONS = [
@@ -36,12 +42,6 @@ const FEEDBACK_TAG_LABELS = {
   NEEDS_TUNING: '需继续优化',
 }
 
-const RISK_LEVEL_LABELS = {
-  HIGH: '高风险',
-  MEDIUM: '中风险',
-  LOW: '低风险',
-}
-
 const SOURCE_TYPE_LABELS = {
   MODEL: '综合识别',
   RULE: '规则校验',
@@ -51,24 +51,6 @@ const SOURCE_TYPE_LABELS = {
 const PROCESS_STATUS_LABELS = {
   PENDING: '待处理',
   REVIEWED: '已复核',
-}
-
-const EXCEPTION_TYPE_LABELS = {
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
-  REPEAT_CHECK: '重复打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
 }
 
 const route = useRoute()
@@ -180,40 +162,12 @@ function formatDisplayValue(value, labelMap) {
   return label || '未识别'
 }
 
-function formatExceptionType(item = {}) {
-  const label = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
-  if (label) {
-    return label
-  }
-
-  if (item.sourceType === 'MODEL' || item.sourceType === 'MODEL_FALLBACK') {
-    return '综合识别异常'
-  }
-
-  if (item.sourceType === 'RULE') {
-    return '规则校验异常'
-  }
-
-  return '待核查异常'
-}
-
 function formatText(value) {
   return formatReadableText(value, '--')
 }
 
 function resolveLabel(value, labelMap) {
   return value ? labelMap[value] || '' : ''
-}
-
-function buildExceptionTitle(item = {}) {
-  const riskLabel = resolveLabel(item.riskLevel, RISK_LEVEL_LABELS)
-  const typeLabel = formatExceptionType(item)
-
-  if (typeLabel) {
-    return `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
-  }
-
-  return riskLabel ? `${riskLabel}待核查异常` : '待核查异常'
 }
 
 function buildCurrentExceptionTitle() {
@@ -570,17 +524,17 @@ watch(
         </p>
         <dl v-else class="review-detail-grid">
           <div>
-                <dt>参考建议</dt>
+            <dt>参考建议</dt>
             <dd>{{ formatText(assistant?.aiReviewSuggestion) }}</dd>
           </div>
           <div>
-              <dt>关联案例</dt>
-              <dd>{{ formatText(assistant?.similarCaseSummary) }}</dd>
-            </div>
-            <div>
-              <dt>判定依据</dt>
-              <dd>{{ formatText(assistant?.decisionReason) }}</dd>
-            </div>
+            <dt>关联案例</dt>
+            <dd>{{ formatText(assistant?.similarCaseSummary) }}</dd>
+          </div>
+          <div>
+            <dt>判定依据</dt>
+            <dd>{{ formatText(assistant?.decisionReason) }}</dd>
+          </div>
             <div>
               <dt>可信度</dt>
               <dd>{{ formatScore(assistant?.confidenceScore) }}</dd>

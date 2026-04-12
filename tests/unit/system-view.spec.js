@@ -76,6 +76,7 @@ vi.mock('../../src/utils/amap', () => ({
 
 import SystemView from '../../src/views/system/SystemView.vue'
 import SystemDevicePanel from '../../src/views/system/panels/SystemDevicePanel.vue'
+import SystemExceptionTypePanel from '../../src/views/system/panels/SystemExceptionTypePanel.vue'
 import SystemFaceRegisterApprovalPanel from '../../src/views/system/panels/SystemFaceRegisterApprovalPanel.vue'
 import SystemOperationLogPanel from '../../src/views/system/panels/SystemOperationLogPanel.vue'
 import SystemPromptPanel from '../../src/views/system/panels/SystemPromptPanel.vue'
@@ -384,6 +385,24 @@ describe('system view', () => {
       pageNum: 1,
       pageSize: 10,
     })
+  })
+
+  it('shows exception type panel with system code and customer display name', async () => {
+    fetchExceptionTypeList.mockResolvedValueOnce({
+      total: 1,
+      items: [{ code: 'COMPLEX_ATTENDANCE_RISK', name: '综合识别异常', description: '模型识别出的综合异常', status: 1 }],
+    })
+
+    const wrapper = await mountPanel(SystemExceptionTypePanel)
+
+    expect(fetchExceptionTypeList).toHaveBeenCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+    })
+    expect(wrapper.text()).toContain('系统编码')
+    expect(wrapper.text()).toContain('客户显示名称')
+    expect(wrapper.text()).toContain('COMPLEX_ATTENDANCE_RISK')
+    expect(wrapper.text()).toContain('综合识别异常')
   })
 
   it('opens location dialog, searches by map name and submits radius payload', async () => {

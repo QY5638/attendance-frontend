@@ -15,6 +15,7 @@ import {
 import { fetchDepartmentList } from '../../api/department'
 import { loadAmapPlugins, loadAmapSdk } from '../../utils/amap'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import { getExceptionTypeLabel } from '../../utils/exception-display'
 import { describeLivenessAction, runFaceLivenessChallenge } from '../../utils/face-liveness'
 import { getTerminalId } from '../../utils/terminal-id'
 
@@ -290,24 +291,6 @@ const RECORD_STATUS_LABELS = {
 }
 
 const REPAIRABLE_RECORD_STATUSES = new Set(['ABNORMAL', 'ABSENT', 'LATE', 'EARLY_LEAVE'])
-
-const EXCEPTION_TYPE_LABELS = {
-  MULTI_LOCATION_CONFLICT: '多地点异常',
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
-  REPEAT_CHECK: '重复打卡',
-}
 
 function detectBrowserName() {
   if (typeof navigator === 'undefined') {
@@ -948,10 +931,10 @@ function changePage(nextPageNum) {
 
 function formatExceptionType(exceptionType) {
   if (!exceptionType) {
-    return '-'
+    return '待核查异常'
   }
 
-  return EXCEPTION_TYPE_LABELS[exceptionType] || '其他异常'
+  return getExceptionTypeLabel(exceptionType, '待核查异常')
 }
 
 function formatCheckType(checkType) {

@@ -1,0 +1,128 @@
+export const RISK_LEVEL_LABELS = Object.freeze({
+  HIGH: '高风险',
+  MEDIUM: '中风险',
+  LOW: '低风险',
+})
+
+export const EXCEPTION_TYPE_LABELS = Object.freeze({
+  PROXY_CHECKIN: '代打卡',
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
+  LATE: '迟到',
+  EARLY_LEAVE: '早退',
+  ILLEGAL_TIME: '非规定时间打卡',
+  REPEAT_CHECK: '重复打卡',
+  MULTI_LOCATION_CONFLICT: '多地点异常',
+})
+
+export const EXCEPTION_TYPE_OPTIONS = Object.freeze([
+  'PROXY_CHECKIN',
+  'CONTINUOUS_LATE',
+  'CONTINUOUS_EARLY_LEAVE',
+  'CONTINUOUS_MULTI_LOCATION_CONFLICT',
+  'CONTINUOUS_ILLEGAL_TIME',
+  'CONTINUOUS_REPEAT_CHECK',
+  'CONTINUOUS_PROXY_CHECKIN',
+  'CONTINUOUS_ATTENDANCE_RISK',
+  'COMPLEX_ATTENDANCE_RISK',
+  'CONTINUOUS_MODEL_RISK',
+  'LATE',
+  'EARLY_LEAVE',
+  'ILLEGAL_TIME',
+  'REPEAT_CHECK',
+  'MULTI_LOCATION_CONFLICT',
+].map((value) => ({
+  value,
+  label: EXCEPTION_TYPE_LABELS[value],
+})))
+
+export const CONTINUOUS_EXCEPTION_TYPES = Object.freeze([
+  'CONTINUOUS_LATE',
+  'CONTINUOUS_EARLY_LEAVE',
+  'CONTINUOUS_MULTI_LOCATION_CONFLICT',
+  'CONTINUOUS_ILLEGAL_TIME',
+  'CONTINUOUS_REPEAT_CHECK',
+  'CONTINUOUS_PROXY_CHECKIN',
+  'CONTINUOUS_ATTENDANCE_RISK',
+  'CONTINUOUS_MODEL_RISK',
+])
+
+function normalizeExceptionTarget(target) {
+  if (typeof target === 'string') {
+    return {
+      type: target,
+      sourceType: '',
+      riskLevel: '',
+    }
+  }
+
+  return {
+    type: target?.type || target?.exceptionType || '',
+    sourceType: target?.sourceType || target?.exceptionSourceType || '',
+    riskLevel: target?.riskLevel || '',
+  }
+}
+
+export function getExceptionTypeLabel(type, fallback = '') {
+  if (!type) {
+    return fallback
+  }
+
+  return EXCEPTION_TYPE_LABELS[type] || fallback
+}
+
+export function formatExceptionType(target, options = {}) {
+  const { fallback = '待核查异常', unknownFallback = fallback } = options
+  const normalizedTarget = normalizeExceptionTarget(target)
+  const label = getExceptionTypeLabel(normalizedTarget.type)
+
+  if (label) {
+    return label
+  }
+
+  if (normalizedTarget.sourceType === 'MODEL' || normalizedTarget.sourceType === 'MODEL_FALLBACK') {
+    return '综合识别异常'
+  }
+
+  if (normalizedTarget.sourceType === 'RULE') {
+    return '规则校验异常'
+  }
+
+  return unknownFallback
+}
+
+export function buildExceptionTitle(target, options = {}) {
+  const { fallback = '待核查异常' } = options
+  const normalizedTarget = normalizeExceptionTarget(target)
+  const riskLabel = normalizedTarget.riskLevel ? RISK_LEVEL_LABELS[normalizedTarget.riskLevel] || '' : ''
+  const typeLabel = formatExceptionType(normalizedTarget, {
+    fallback,
+    unknownFallback: fallback,
+  })
+
+  if (typeLabel) {
+    return `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
+  }
+
+  return riskLabel ? `${riskLabel}${fallback}` : fallback
+}
+
+export function buildExceptionRelation(target, fallback = '关联异常记录') {
+  const typeLabel = formatExceptionType(target, {
+    fallback: '',
+    unknownFallback: '',
+  })
+
+  if (!typeLabel) {
+    return fallback
+  }
+
+  return typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`
+}

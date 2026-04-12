@@ -265,6 +265,7 @@ import {
   fetchStatisticsSummary,
 } from '../../api/statistics'
 import { fetchOperationLogSummary } from '../../api/system'
+import { CONTINUOUS_EXCEPTION_TYPES, EXCEPTION_TYPE_LABELS, getExceptionTypeLabel } from '../../utils/exception-display'
 import { formatReadableText } from '../../utils/readable-text'
 
 const loading = ref(true)
@@ -369,42 +370,12 @@ const runtimeEventCards = computed(() => {
   ]
 })
 
-const CONTINUOUS_PATTERN_LABELS = {
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-}
-
-const EXCEPTION_TYPE_LABELS = {
-  PROXY_CHECKIN: '代打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
-  LATE: '迟到',
-  EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非法时间打卡',
-  REPEAT_CHECK: '重复打卡',
-}
-
 const exceptionTypeItems = computed(() => {
   const distribution = departmentStatsData.value?.exceptionTypeDistribution || {}
   const entries = Object.entries(distribution)
     .map(([key, value]) => ({
       key,
-      label: EXCEPTION_TYPE_LABELS[key] || key,
+      label: getExceptionTypeLabel(key, key),
       count: Number(value || 0),
     }))
     .filter((item) => item.count > 0)
@@ -429,7 +400,7 @@ const exceptionTypeTrendItems = computed(() => {
 
     return {
       key: item.type,
-      label: EXCEPTION_TYPE_LABELS[item.type] || item.type,
+      label: getExceptionTypeLabel(item.type, item.type),
       totalCount: Number(item.totalCount || 0),
       bars: values.map((value, index) => ({
         value,
@@ -446,10 +417,10 @@ const continuousPatternItems = computed(() => {
   const trendMap = new Map(
     (Array.isArray(exceptionTypeTrendData.value?.items) ? exceptionTypeTrendData.value.items : []).map((item) => [item.type, item]),
   )
-  const entries = Object.entries(CONTINUOUS_PATTERN_LABELS)
-    .map(([key, label]) => ({
+  const entries = CONTINUOUS_EXCEPTION_TYPES
+    .map((key) => ({
       key,
-      label,
+      label: getExceptionTypeLabel(key, key),
       count: Number(distribution[key] || 0),
     }))
     .filter((item) => item.count > 0)
