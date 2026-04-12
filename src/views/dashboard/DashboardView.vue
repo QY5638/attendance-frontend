@@ -55,7 +55,7 @@
       <section data-testid="dashboard-summary" class="dashboard-section dashboard-summary-card">
         <div class="dashboard-section__head">
           <h3>综合摘要</h3>
-          <span>系统汇总</span>
+          <span>整体概况</span>
         </div>
 
         <div class="dashboard-summary-card__content">
@@ -242,7 +242,7 @@ const spotlightCards = computed(() => {
       {
         label: '运行事件',
         value: `${Number(runtimeSummaryData.value?.total || 0)} 条`,
-        desc: '包含活体拒绝、登录失败与刷新令牌等关键事件',
+      desc: '包含活体拒绝、登录失败与登录续期等关键记录',
       },
     ]
   }
@@ -477,45 +477,45 @@ function buildWarningMeta(item = {}) {
 
 function buildExceptionFocusDescription(type, count) {
   if (type === 'PROXY_CHECKIN') {
-    return `最近统计周期内发现 ${count} 次可疑代打卡，建议优先查看证据链。`
+    return `最近一段时间发现 ${count} 次可疑代打卡，建议优先查看证据链。`
   }
   if (type === 'MULTI_LOCATION_CONFLICT') {
-    return `最近统计周期内发现 ${count} 次多地点冲突，建议重点核对地点与设备信息。`
+    return `最近一段时间发现 ${count} 次多地点冲突，建议重点核对地点与设备信息。`
   }
   if (type === 'CONTINUOUS_LATE') {
-    return `最近统计周期内发现 ${count} 次连续迟到异常，建议重点关注持续性出勤风险。`
+    return `最近一段时间发现 ${count} 次连续迟到异常，建议重点关注持续性出勤风险。`
   }
   if (type === 'CONTINUOUS_EARLY_LEAVE') {
-    return `最近统计周期内发现 ${count} 次连续早退异常，建议重点关注持续性离岗风险。`
+    return `最近一段时间发现 ${count} 次连续早退异常，建议重点关注持续性离岗风险。`
   }
   if (type === 'CONTINUOUS_MULTI_LOCATION_CONFLICT') {
-    return `最近统计周期内发现 ${count} 次连续多地点冲突异常，建议优先排查位置异常与代打卡风险。`
+    return `最近一段时间发现 ${count} 次连续多地点冲突异常，建议优先排查位置异常与代打卡风险。`
   }
   if (type === 'CONTINUOUS_ILLEGAL_TIME') {
-    return `最近统计周期内发现 ${count} 次连续异常时段打卡，建议重点核查异常时段行为。`
+    return `最近一段时间发现 ${count} 次连续异常时段打卡，建议重点核查异常时段行为。`
   }
   if (type === 'CONTINUOUS_REPEAT_CHECK') {
-    return `最近统计周期内发现 ${count} 次连续重复打卡异常，建议重点排查反复提交或规避行为。`
+    return `最近一段时间发现 ${count} 次连续重复打卡异常，建议重点排查反复提交或规避行为。`
   }
   if (type === 'CONTINUOUS_PROXY_CHECKIN') {
-    return `最近统计周期内发现 ${count} 次连续代打卡异常，建议优先核查人脸、设备和地点证据。`
+    return `最近一段时间发现 ${count} 次连续代打卡异常，建议优先核查人脸、设备和地点证据。`
   }
   if (type === 'CONTINUOUS_ATTENDANCE_RISK') {
-    return `最近统计周期内发现 ${count} 次连续综合考勤异常，建议优先查看该人员完整风险档案。`
+    return `最近一段时间发现 ${count} 次连续综合考勤异常，建议优先查看该人员完整风险档案。`
   }
   if (type === 'COMPLEX_ATTENDANCE_RISK') {
-    return `最近统计周期内发现 ${count} 次综合识别异常，建议优先查看分析摘要、原始记录和复核意见。`
+    return `最近一段时间发现 ${count} 次综合识别异常，建议优先查看分析摘要、原始记录和复核意见。`
   }
   if (type === 'CONTINUOUS_MODEL_RISK') {
-    return `最近统计周期内发现 ${count} 次连续模型风险异常，建议优先查看系统判断依据与人工复核记录。`
+    return `最近一段时间发现 ${count} 次连续模型风险异常，建议优先查看判断依据与人工复核记录。`
   }
   if (type === 'ILLEGAL_TIME') {
-    return `最近统计周期内发现 ${count} 次非规定时间打卡，建议结合班次规则复核。`
+    return `最近一段时间发现 ${count} 次非规定时间打卡，建议结合班次规则复核。`
   }
   if (type === 'REPEAT_CHECK') {
-    return `最近统计周期内发现 ${count} 次重复打卡，建议排查终端或重复提交行为。`
+    return `最近一段时间发现 ${count} 次重复打卡，建议排查终端或重复提交行为。`
   }
-  return `最近统计周期内发现 ${count} 次${WARNING_EXCEPTION_LABELS[type] || '异常'}相关异常。`
+  return `最近一段时间发现 ${count} 次${WARNING_EXCEPTION_LABELS[type] || '异常'}相关异常。`
 }
 
 async function loadDashboard() {

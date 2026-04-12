@@ -129,7 +129,7 @@ describe('review view', () => {
     expect(fetchLatestReview).toHaveBeenCalledWith('3001')
     expect(fetchReviewAssistant).toHaveBeenCalledWith('3001')
     expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('疑似代打卡')
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('系统综合判断')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('系统判断')
     expect(wrapper.get('[data-testid="review-assistant-card"]').text()).toContain('设备与地点异常共同提升风险')
     expect(wrapper.get('[data-testid="review-latest-card"]').text()).toContain('最新复核意见')
     expect(wrapper.text()).toContain('本次判断准确')

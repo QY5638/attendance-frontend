@@ -3,7 +3,7 @@
     <header class="panel-card__header">
       <div>
         <h2>操作记录</h2>
-        <p>用于查询关键操作记录，便于核对经过和追踪问题。</p>
+        <p>用于查询关键操作记录，方便核对经过和追踪问题。</p>
       </div>
       <div class="panel-card__actions">
         <button type="button" class="panel-card__primary" :disabled="exporting" @click="handleExport">
@@ -20,7 +20,7 @@
     </section>
 
     <p class="panel-card__notice">
-      当前支持按分类查看登录与身份、活体验证、人脸申请、打卡、复核和系统设置等关键记录，便于日常核对与问题追踪。
+      当前支持按分类查看登录、活体、人脸申请、打卡、复核和系统设置等记录，方便日常核对与问题追踪。
     </p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
@@ -156,12 +156,12 @@ const OPERATION_TYPE_LABELS = {
 }
 
 const SCOPE_OPTIONS = [
-  { value: 'AUTH', label: '登录与身份事件', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
-  { value: 'LIVENESS', label: '活体验证事件', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
+  { value: 'AUTH', label: '登录相关记录', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
+  { value: 'LIVENESS', label: '活体相关记录', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
   { value: 'ATTENDANCE', label: '打卡事件', types: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'] },
   { value: 'FACE', label: '人脸申请', types: ['FACE_REGISTER_APPLY', 'FACE_REGISTER_APPROVE', 'FACE_REGISTER_REJECT'] },
   { value: 'REVIEW', label: '复核事件', types: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'] },
-  { value: 'SYSTEM', label: '系统设置事件', types: ['SYSTEM_CONFIG'] },
+  { value: 'SYSTEM', label: '系统设置记录', types: ['SYSTEM_CONFIG'] },
 ]
 
 const ACTION_OPTIONS = Object.entries(OPERATION_TYPE_LABELS).map(([value, label]) => ({ value, label }))
@@ -192,12 +192,12 @@ const summaryCards = computed(() => {
     },
     {
       key: 'auth',
-      label: '登录与身份事件',
+      label: '登录相关记录',
       value: sumTypes(typeCounts, resolveScopeTypes('AUTH')),
     },
     {
       key: 'liveness',
-      label: '活体验证事件',
+      label: '活体相关记录',
       value: sumTypes(typeCounts, resolveScopeTypes('LIVENESS')),
     },
     {
@@ -279,7 +279,7 @@ function resolveOperationActor(row = {}) {
     return `用户 #${row.userId}`
   }
 
-  return '系统自动记录'
+  return '系统自动生成'
 }
 
 function formatOperationSummary(row = {}) {

@@ -276,9 +276,9 @@ describe('system view', () => {
     })
     expect(wrapper.text()).toContain('考勤分析')
     expect(wrapper.text()).toContain('考勤分析记录：近 7 日打卡摘要')
-    expect(wrapper.text()).toContain('已关联分析方案')
+    expect(wrapper.text()).toContain('已使用指定方案')
     expect(wrapper.text()).toContain('识别出连续晚到风险')
-    expect(wrapper.text()).toContain('系统分析记录')
+    expect(wrapper.text()).toContain('分析记录')
   })
 
   it('loads face register approval panel with pending request', async () => {
@@ -305,8 +305,8 @@ describe('system view', () => {
     expect(wrapper.text()).toContain('系统管理员（admin）')
     expect(wrapper.text()).toContain('登录系统')
     expect(wrapper.text()).toContain('登录')
-    expect(wrapper.text()).toContain('活体验证事件')
-    expect(wrapper.text()).toContain('登录与身份事件')
+    expect(wrapper.text()).toContain('活体相关记录')
+    expect(wrapper.text()).toContain('登录相关记录')
   })
 
   it('filters operation log panel by liveness scope', async () => {

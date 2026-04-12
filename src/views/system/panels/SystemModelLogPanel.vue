@@ -2,8 +2,8 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>系统分析记录</h2>
-        <p>用于查看系统分析过程、所用分析方案、执行耗时与结果说明。</p>
+        <h2>分析记录</h2>
+        <p>用于查看分析过程、所用方案、执行耗时与结果说明。</p>
       </div>
       <span class="panel-card__summary">共 {{ pagination.total }} 条</span>
     </header>
@@ -11,7 +11,7 @@
     <section class="panel-card__hero-strip">
       <article>
         <span>记录类型</span>
-        <strong>系统分析记录</strong>
+        <strong>分析记录</strong>
       </article>
       <article>
         <span>主要用途</span>
@@ -29,8 +29,8 @@
         <input v-model="filters.businessId" type="text" placeholder="按关联记录编号筛选" />
       </label>
       <label>
-        <span>分析方案编号</span>
-        <input v-model="filters.promptTemplateId" type="text" placeholder="按分析方案编号筛选" />
+            <span>方案编号</span>
+            <input v-model="filters.promptTemplateId" type="text" placeholder="按方案编号筛选" />
       </label>
       <label>
         <span>执行状态</span>
@@ -75,7 +75,7 @@
             <td colspan="8">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="8">暂无系统分析记录</td>
+            <td colspan="8">暂无分析记录</td>
           </tr>
           <tr v-for="row in rows" :key="row.id">
             <td>
@@ -200,7 +200,7 @@ function formatBusinessReference(row = {}) {
 }
 
 function formatPromptReference(row = {}) {
-  return row.promptTemplateId ? '已关联分析方案' : '使用系统默认方案'
+  return row.promptTemplateId ? '已使用指定方案' : '使用默认方案'
 }
 
 function resolveResultText(row) {
@@ -296,7 +296,7 @@ async function loadList() {
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
-    error.value = requestError?.message || '系统分析记录加载失败'
+    error.value = requestError?.message || '分析记录加载失败'
   } finally {
     loading.value = false
   }

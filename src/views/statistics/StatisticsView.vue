@@ -198,7 +198,7 @@
       <section data-testid="statistics-summary" class="statistics-section statistics-summary-card">
         <div class="statistics-section__head">
           <h3>分析概述</h3>
-          <span>系统汇总</span>
+          <span>整体概况</span>
         </div>
 
         <div class="statistics-summary-card__content">
@@ -210,8 +210,8 @@
 
       <section data-testid="statistics-runtime-events" class="statistics-section">
         <div class="statistics-section__head">
-          <h3>登录与验证概况</h3>
-          <span>登录与活体验证</span>
+          <h3>登录与验证情况</h3>
+          <span>登录与活体</span>
         </div>
 
         <div class="statistics-runtime-grid">
@@ -328,7 +328,7 @@ const spotlightCards = computed(() => [
     key: 'runtime',
     label: '运行事件',
     value: `${Number(runtimeEventSummary.value?.total || 0)} 条`,
-    desc: '汇总登录、活体和打卡等关键系统事件',
+      desc: '汇总登录、活体和打卡等关键记录',
   },
 ])
 
@@ -345,19 +345,19 @@ const runtimeEventCards = computed(() => {
   return [
     {
       key: 'total',
-      label: '关键事件总数',
+      label: '关键记录总数',
       value: Number(runtimeEventSummary.value?.total || 0),
       desc: '统计周期内记录到的全部关键操作',
     },
     {
       key: 'auth',
-      label: '登录与身份事件',
+      label: '登录相关记录',
       value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.auth),
-      desc: '登录、登录续期、退出和账号限制等身份相关记录',
+      desc: '登录、登录续期、退出和账号限制等相关记录',
     },
     {
       key: 'liveness',
-      label: '活体验证事件',
+      label: '活体验证记录',
       value: sumRuntimeTypes(typeCounts, RUNTIME_EVENT_TYPE_GROUPS.liveness),
       desc: '活体验证开始、通过、失败和拒绝等记录',
     },

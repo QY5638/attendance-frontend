@@ -395,7 +395,7 @@ describe('warning view', () => {
 
     expect(fetchFe06WarningAdvice).toHaveBeenCalledWith(5001)
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('设备与地点异常共同提升风险')
-    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('系统综合判断')
+    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('系统判断')
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('张三（zhangsan）')
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('办公区A')
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('疑似代打卡风险较高')

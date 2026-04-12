@@ -43,9 +43,9 @@ const FEEDBACK_TAG_LABELS = {
 }
 
 const SOURCE_TYPE_LABELS = {
-  MODEL: '系统综合判断',
-  RULE: '规则核验',
-  MODEL_FALLBACK: '系统辅助判定',
+  MODEL: '系统判断',
+  RULE: '规则检查',
+  MODEL_FALLBACK: '系统辅助判断',
 }
 
 const PROCESS_STATUS_LABELS = {
