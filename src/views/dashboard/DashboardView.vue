@@ -8,7 +8,6 @@
     >
       <template #actions>
         <div class="dashboard-page__actions">
-          <el-tag effect="dark" class="dashboard-page__role-tag">{{ roleLabel }}</el-tag>
           <el-button type="primary" plain @click="loadDashboard">刷新</el-button>
         </div>
       </template>
@@ -173,7 +172,6 @@ import { formatReadableText } from '../../utils/readable-text'
 const authStore = useAuthStore()
 
 const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
-const roleLabel = computed(() => (isAdmin.value ? '管理员' : '员工'))
 const loading = ref(true)
 const errorMessage = ref('')
 const overviewCards = ref([])
@@ -572,11 +570,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.dashboard-page__role-tag {
-  border: none;
-  background: rgba(15, 23, 42, 0.24);
 }
 
 .dashboard-page__alert {

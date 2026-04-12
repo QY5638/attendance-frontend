@@ -42,9 +42,9 @@
         <div class="layout-header__actions">
           <div class="layout-header__identity">
             <span class="layout-header__identity-label">当前登录</span>
-            <strong class="layout-header__name">{{ authStore.realName || '未登录用户' }}</strong>
+            <strong class="layout-header__name">{{ currentLoginName }}</strong>
           </div>
-          <el-tag effect="dark" class="layout-header__role-tag">{{ roleLabel }}</el-tag>
+          <el-tag v-if="showRoleTag" effect="dark" class="layout-header__role-tag">{{ roleLabel }}</el-tag>
           <el-button type="primary" plain @click="handleLogout">退出登录</el-button>
         </div>
       </el-header>
@@ -76,6 +76,17 @@ const menuRoutes = computed(() => {
 
 const menuGroups = computed(() => getMenuGroups(menuRoutes.value, authStore.roleCode))
 const activePath = computed(() => route.path)
+const currentLoginName = computed(() => {
+  if (authStore.realName) {
+    return authStore.realName
+  }
+
+  if (authStore.token) {
+    return '当前用户'
+  }
+
+  return '未登录用户'
+})
 const currentTitle = computed(() => route.meta?.title || '管理首页')
 const currentDescription = computed(() => {
     const descriptions = {
@@ -107,6 +118,9 @@ const roleLabel = computed(() => {
   }
 
   return '其他角色'
+})
+const showRoleTag = computed(() => {
+  return Boolean(authStore.token) && Boolean(roleLabel.value) && currentLoginName.value !== roleLabel.value
 })
 
 const MENU_ICONS = {
