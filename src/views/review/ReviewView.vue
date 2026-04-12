@@ -449,7 +449,7 @@ watch(
   <section class="review-page">
     <ConsoleHero
       title="人工复核"
-      description="查看异常详情、处置参考和最近复核记录，并完成复核确认与补充说明。"
+      description="查看异常详情、处理建议和最近记录，并完成复核确认与补充说明。"
       theme="violet"
       :cards="heroCards"
     />
@@ -512,8 +512,8 @@ watch(
       <section data-testid="review-assistant-card" class="review-panel review-panel--assistant">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">处置参考</p>
-            <h2>处置参考</h2>
+            <p class="review-panel__eyebrow">参考信息</p>
+            <h2>处理建议</h2>
           </div>
           <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">暂缺</span>
         </div>
@@ -545,8 +545,8 @@ watch(
       <section class="review-panel review-panel--history">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">最近复核记录</p>
-            <h2>查看最近一次复核结果</h2>
+            <p class="review-panel__eyebrow">最近记录</p>
+            <h2>最近一次复核</h2>
           </div>
         </div>
 
@@ -583,11 +583,11 @@ watch(
               <dd>{{ formatText(latestReview.reviewComment) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
-              <dt>参考建议记录</dt>
+              <dt>系统建议</dt>
               <dd>{{ formatText(latestReview.aiReviewSuggestion) }}</dd>
             </div>
             <div class="review-detail-grid__wide">
-              <dt>案例记录</dt>
+              <dt>相似案例</dt>
               <dd>{{ formatText(latestReview.similarCaseSummary) }}</dd>
             </div>
           </dl>
@@ -598,8 +598,8 @@ watch(
       <section class="review-panel review-panel--decision">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">复核办理</p>
-            <h2>提交复核结果</h2>
+            <p class="review-panel__eyebrow">复核提交</p>
+            <h2>提交结果</h2>
           </div>
           <span v-if="assistantMissing" class="review-panel__status review-panel__status--warning">暂不可提交</span>
         </div>
@@ -685,8 +685,8 @@ watch(
       <section class="review-panel review-panel--feedback-panel">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">反馈补充</p>
-            <h2>补充最近一次处理信息</h2>
+            <p class="review-panel__eyebrow">后续补充</p>
+            <h2>补充说明</h2>
           </div>
         </div>
 

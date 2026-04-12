@@ -19,7 +19,7 @@
 
     <section data-testid="warning-dashboard" class="warning-dashboard-card">
       <div class="warning-list-card__head">
-        <h3>预警看板</h3>
+        <h3>预警总览</h3>
         <span>近 {{ dashboardData.recentDays || 7 }} 天</span>
       </div>
 
@@ -40,8 +40,8 @@
 
       <section class="warning-secondary-card warning-secondary-card--sla">
         <div class="warning-trend-card__head">
-          <h4>处置 SLA 统计</h4>
-          <span>{{ dashboardData.slaTargetHours || 24 }} 小时目标</span>
+          <h4>处理进度</h4>
+          <span>{{ dashboardData.slaTargetHours || 24 }} 小时内处理</span>
         </div>
 
         <div class="warning-sla-grid">
@@ -55,8 +55,8 @@
 
       <div class="warning-trend-card">
         <div class="warning-trend-card__head">
-          <h4>预警趋势与处置效率</h4>
-          <span>按日汇总</span>
+          <h4>预警趋势</h4>
+          <span>每日变化</span>
         </div>
 
         <div v-if="dashboardTrend.length" class="warning-trend-list">
@@ -82,8 +82,8 @@
       <div class="warning-dashboard-secondary-grid">
         <section class="warning-secondary-card warning-secondary-card--portrait">
           <div class="warning-trend-card__head">
-            <h4>异常人员画像</h4>
-            <span>重点关注对象</span>
+            <h4>重点人员</h4>
+            <span>需要关注</span>
           </div>
 
           <div v-if="userPortraits.length" class="warning-portrait-list">
@@ -108,12 +108,12 @@
               <button type="button" class="warning-portrait-item__action">查看风险档案</button>
             </article>
           </div>
-          <p v-else class="warning-feedback">暂无异常人员画像</p>
+          <p v-else class="warning-feedback">暂无重点人员</p>
         </section>
 
         <section class="warning-secondary-card">
           <div class="warning-trend-card__head">
-            <h4>高风险人员排行</h4>
+            <h4>高风险人员</h4>
             <span>近 {{ dashboardData.recentDays || 7 }} 天</span>
           </div>
 
@@ -126,13 +126,13 @@
               <span>{{ item.count }} 条预警</span>
             </article>
           </div>
-          <p v-else class="warning-feedback">暂无高风险人员排行</p>
+          <p v-else class="warning-feedback">暂无高风险人员数据</p>
         </section>
 
         <section class="warning-secondary-card">
           <div class="warning-trend-card__head">
-            <h4>异常类型排行</h4>
-            <span>高频风险类型</span>
+            <h4>高频异常</h4>
+            <span>出现较多</span>
           </div>
 
           <div v-if="topExceptionTypes.length" class="warning-ranking-list">
@@ -147,13 +147,13 @@
               <span>{{ item.count }} 次</span>
             </article>
           </div>
-          <p v-else class="warning-feedback">暂无异常类型排行</p>
+          <p v-else class="warning-feedback">暂无高频异常</p>
         </section>
       </div>
 
       <section class="warning-secondary-card warning-secondary-card--overdue">
         <div class="warning-trend-card__head">
-          <h4>处置超时提醒</h4>
+          <h4>超时提醒</h4>
           <span>超过 24 小时未处理</span>
         </div>
 
@@ -182,7 +182,7 @@
       <div class="warning-portrait-dialog__panel">
         <header class="warning-portrait-dialog__header">
           <div>
-            <p class="warning-page__eyebrow">风险人员档案</p>
+            <p class="warning-page__eyebrow">人员档案</p>
             <h3>{{ selectedPortrait?.displayName || '当前人员' }}</h3>
           </div>
           <button type="button" class="warning-portrait-dialog__close" @click="closePortrait">关闭</button>
@@ -199,8 +199,8 @@
 
         <section v-if="portraitSuggestions.length" class="warning-portrait-dialog__suggestions">
           <div class="warning-trend-card__head">
-            <h4>自动处置建议</h4>
-            <span>基于当前画像生成</span>
+            <h4>处理建议</h4>
+            <span>根据当前情况生成</span>
           </div>
 
           <div class="warning-portrait-suggestion-list">
@@ -213,7 +213,7 @@
 
         <section v-if="portraitTimelineItems.length" class="warning-portrait-dialog__timeline">
           <div class="warning-trend-card__head">
-            <h4>处置时间线</h4>
+            <h4>近期记录</h4>
             <span>最近 {{ portraitTimelineItems.length }} 条预警</span>
           </div>
 
@@ -253,8 +253,8 @@
 
     <section data-testid="warning-continuous-trend" class="warning-dashboard-card warning-dashboard-card--compact">
       <div class="warning-list-card__head">
-        <h3>连续行为异常趋势</h3>
-        <span>高风险持续模式</span>
+        <h3>连续异常</h3>
+        <span>持续风险</span>
       </div>
 
       <div v-if="continuousTrendItems.length" class="warning-continuous-trend-grid">
@@ -269,7 +269,7 @@
           <p>{{ item.summary }}</p>
         </article>
       </div>
-      <p v-else class="warning-feedback">当前暂无连续行为异常趋势数据</p>
+      <p v-else class="warning-feedback">暂无连续异常趋势数据</p>
     </section>
 
     <section class="warning-filter-card">

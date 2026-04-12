@@ -30,7 +30,7 @@
           <p class="dashboard-spotlight__eyebrow">{{ isAdmin ? '今日重点' : '今日事项' }}</p>
           <h3>{{ isAdmin ? '优先处理高风险预警与异常证据链' : '先完成打卡，再核对个人记录' }}</h3>
           <p>
-            {{ isAdmin ? '首页第一屏聚焦异常检测、预警积压、活体拒绝和登录失败等高风险信号，便于管理人员快速进入当天重点处置任务。' : '员工侧保留常用业务入口，进入系统后可直接完成打卡、查看记录并处理个人异常。' }}
+            {{ isAdmin ? '首页第一屏聚焦异常、预警积压、活体拒绝和登录失败，帮助管理人员快速进入当天重点任务。' : '员工侧保留常用业务入口，进入系统后可直接完成打卡、查看记录并处理个人异常。' }}
           </p>
         </div>
 
@@ -54,8 +54,8 @@
 
       <section data-testid="dashboard-summary" class="dashboard-section dashboard-summary-card">
         <div class="dashboard-section__head">
-          <h3>综合摘要</h3>
-          <span>整体概况</span>
+          <h3>整体情况</h3>
+          <span>重点提醒</span>
         </div>
 
         <div class="dashboard-summary-card__content">
@@ -71,8 +71,8 @@
         class="dashboard-section"
       >
         <div class="dashboard-section__head">
-          <h3>异常处置驾驶舱</h3>
-          <span>实时高风险信号</span>
+          <h3>重点提醒</h3>
+          <span>当前信号</span>
         </div>
 
         <div class="dashboard-metric-grid">
@@ -91,7 +91,7 @@
       >
         <div class="dashboard-section__head">
           <h3>重点异常类型</h3>
-          <span>当前统计窗口</span>
+          <span>近期情况</span>
         </div>
 
         <div v-if="exceptionFocusItems.length" class="dashboard-list">
@@ -112,8 +112,8 @@
         class="dashboard-section"
       >
         <div class="dashboard-section__head">
-          <h3>预警概况</h3>
-          <span>最近 5 条记录</span>
+          <h3>最近预警</h3>
+          <span>最近 5 条</span>
         </div>
 
         <div v-if="warningItems.length" class="dashboard-list">
@@ -134,7 +134,7 @@
         class="dashboard-section"
       >
         <div class="dashboard-section__head">
-          <h3>部门风险概况</h3>
+          <h3>部门风险</h3>
           <span>全部部门</span>
         </div>
 
@@ -211,11 +211,6 @@ const dashboardDescription = computed(() => (
 ))
 const heroCards = computed(() => [
   {
-    key: 'role',
-    label: '当前身份',
-    value: roleLabel.value,
-  },
-  {
     key: 'workspace',
     label: '工作场景',
     value: isAdmin.value ? '管理处置工作区' : '员工业务工作区',
@@ -230,19 +225,19 @@ const spotlightCards = computed(() => {
   if (isAdmin.value) {
     return [
       {
-        label: '预警概况',
+        label: '最近预警',
         value: `${warningItems.value.length} 条`,
         desc: '首页聚焦最近 5 条优先处置的预警记录',
       },
       {
-        label: '风险概况',
+        label: '部门风险',
         value: `${riskItems.value.length} 个`,
         desc: '展示全部部门的风险概况和处理建议',
       },
       {
         label: '运行事件',
         value: `${Number(runtimeSummaryData.value?.total || 0)} 条`,
-      desc: '包含活体拒绝、登录失败与登录续期等关键记录',
+        desc: '包含活体拒绝、登录失败与登录续期等关键记录',
       },
     ]
   }
@@ -259,7 +254,7 @@ const spotlightCards = computed(() => {
       desc: '用于查看近期出勤、异常和缺勤情况',
     },
     {
-      label: '综合摘要',
+      label: '整体提醒',
       value: summaryData.value.summary ? '已生成' : '待生成',
       desc: '给出近期考勤变化和注意事项',
     },

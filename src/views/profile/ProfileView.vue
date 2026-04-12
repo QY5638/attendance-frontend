@@ -75,7 +75,7 @@
           <div class="profile-page__card-header">
             <div>
               <strong>账号概览</strong>
-              <p>以下信息由系统或管理员维护，用于识别当前员工的组织归属和账号状态。</p>
+              <p>以下信息由系统或管理员维护，用于说明当前员工的组织归属和账号情况。</p>
             </div>
           </div>
         </template>
@@ -84,10 +84,6 @@
           <article>
             <span>所属部门</span>
             <strong>{{ profile.deptName || '-' }}</strong>
-          </article>
-          <article>
-            <span>系统角色</span>
-            <strong>{{ profile.roleName || '-' }}</strong>
           </article>
           <article>
             <span>创建时间</span>
@@ -147,11 +143,6 @@ const heroCards = computed(() => [
     key: 'department',
     label: '所属部门',
     value: profile.deptName || '-',
-  },
-  {
-    key: 'role',
-    label: '系统角色',
-    value: profile.roleName || '-',
   },
 ])
 

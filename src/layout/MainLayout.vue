@@ -30,10 +30,6 @@
         </section>
       </div>
 
-      <div class="layout-sidebar__footer">
-        <span>当前角色</span>
-        <strong>{{ roleLabel }}</strong>
-      </div>
     </el-aside>
 
     <el-container class="layout-content-shell">
@@ -84,7 +80,7 @@ const currentTitle = computed(() => route.meta?.title || '管理首页')
 const currentDescription = computed(() => {
     const descriptions = {
       概览工作台: '集中查看运行概况、重点提醒和常用入口。',
-      统计分析: '查看部门指标、趋势变化和综合分析结果。',
+      统计分析: '查看部门指标、趋势变化和统计结果。',
       用户管理: '维护人员资料、所属部门和角色信息。',
       部门管理: '维护组织部门资料，便于统一归口管理。',
       角色管理: '维护岗位角色资料和页面访问范围。',
@@ -96,7 +92,7 @@ const currentDescription = computed(() => {
       异常中心: '集中处理异常记录、查看原因并进入复核。',
       预警列表: '查看预警信息、处置建议和相关异常。',
       人工复核: '结合辅助意见完成复核处理和反馈。',
-    系统配置: '维护基础配置、分析模板和运行记录。',
+    系统配置: '维护基础配置、方案设置和运行记录。',
   }
 
   return descriptions[route.meta?.title] || '集中展示当前页面的主要信息和常用操作。'
@@ -248,24 +244,6 @@ async function handleLogout() {
   display: inline-grid;
   place-items: center;
   color: rgba(191, 219, 254, 0.9);
-}
-
-.layout-sidebar__footer {
-  margin: 0 16px 18px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.layout-sidebar__footer span {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: rgba(191, 219, 254, 0.72);
-}
-
-.layout-sidebar__footer strong {
-  color: #f8fafc;
 }
 
 .layout-header {

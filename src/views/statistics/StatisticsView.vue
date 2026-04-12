@@ -33,7 +33,7 @@
     <template v-else>
       <section class="statistics-spotlight">
         <div class="statistics-spotlight__lead">
-          <p class="statistics-spotlight__eyebrow">分析概览</p>
+          <p class="statistics-spotlight__eyebrow">总览</p>
           <h3>先看总体指标，再结合趋势变化判断当日重点</h3>
           <p>统计页用于承接管理层的汇总分析、风险研判和报表输出，并与首页工作台保持一致的信息结构。</p>
         </div>
@@ -45,7 +45,7 @@
 
       <section data-testid="statistics-overview" class="statistics-section">
         <div class="statistics-section__head">
-          <h3>部门统计总览</h3>
+          <h3>部门统计</h3>
           <span>核心指标</span>
         </div>
 
@@ -60,7 +60,7 @@
       <section data-testid="statistics-exception-types" class="statistics-section">
         <div class="statistics-section__head">
           <h3>异常类型分布</h3>
-          <span>高频异常概览</span>
+          <span>高频异常</span>
         </div>
 
         <div v-if="exceptionTypeItems.length" class="statistics-type-grid">
@@ -98,7 +98,7 @@
       <section data-testid="statistics-trend" class="statistics-section">
         <div class="statistics-section__head">
           <h3>异常趋势</h3>
-          <span>近阶段趋势</span>
+          <span>近期变化</span>
         </div>
 
         <div v-if="trendChartPoints.length" class="statistics-trend-chart">
@@ -173,8 +173,8 @@
 
       <section data-testid="statistics-continuous-patterns" class="statistics-section">
         <div class="statistics-section__head">
-          <h3>连续行为异常</h3>
-          <span>持续性风险模式</span>
+          <h3>连续异常</h3>
+          <span>持续风险</span>
         </div>
 
         <div v-if="continuousPatternItems.length" class="statistics-pattern-grid">
@@ -192,13 +192,13 @@
             <p>{{ item.desc }}</p>
           </article>
         </div>
-        <el-empty v-else description="当前统计窗口内暂无连续行为异常" />
+        <el-empty v-else description="暂无连续异常" />
       </section>
 
       <section data-testid="statistics-summary" class="statistics-section statistics-summary-card">
         <div class="statistics-section__head">
-          <h3>分析概述</h3>
-          <span>整体概况</span>
+          <h3>综合结论</h3>
+          <span>总体情况</span>
         </div>
 
         <div class="statistics-summary-card__content">
@@ -211,7 +211,7 @@
       <section data-testid="statistics-runtime-events" class="statistics-section">
         <div class="statistics-section__head">
           <h3>登录与验证情况</h3>
-          <span>登录与活体</span>
+          <span>关键记录</span>
         </div>
 
         <div class="statistics-runtime-grid">
@@ -231,7 +231,7 @@
 
       <section data-testid="statistics-risk" class="statistics-section">
         <div class="statistics-section__head">
-          <h3>部门风险概况</h3>
+          <h3>部门风险</h3>
           <span>全部部门</span>
         </div>
 

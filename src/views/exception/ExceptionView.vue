@@ -193,11 +193,11 @@
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
-              <h4>重新识别</h4>
-              <span>{{ hasCheckContext() ? '基于当前打卡记录重新识别' : '缺少记录信息' }}</span>
+              <h4>重新判断</h4>
+              <span>{{ hasCheckContext() ? '基于当前打卡记录重新判断' : '缺少记录信息' }}</span>
             </div>
 
-            <p class="exception-feedback">可基于当前考勤记录重新执行规则校验或综合识别，用于辅助核查当前异常。</p>
+            <p class="exception-feedback">可基于当前考勤记录重新执行规则检查或系统判断，辅助核查当前异常。</p>
             <p v-if="manualCheckError" data-testid="exception-manual-check-error" class="exception-feedback exception-feedback--error">
               {{ manualCheckError }}
             </p>
@@ -210,7 +210,7 @@
                 :disabled="!hasCheckContext() || ruleCheckLoading"
                 @click="runRuleCheck"
               >
-                {{ ruleCheckLoading ? '校验中...' : '规则校验' }}
+                {{ ruleCheckLoading ? '检查中...' : '规则检查' }}
               </button>
               <button
                 data-testid="exception-run-complex-check"
@@ -219,14 +219,14 @@
                 :disabled="!hasCheckContext() || complexCheckLoading"
                 @click="runComplexCheck"
               >
-                {{ complexCheckLoading ? '识别中...' : '综合识别' }}
+                {{ complexCheckLoading ? '判断中...' : '系统判断' }}
               </button>
             </div>
 
             <div v-if="ruleCheckResult || complexCheckResult" class="exception-manual-check__grid">
               <article v-if="ruleCheckResult" data-testid="exception-rule-check-card" class="exception-manual-check__card">
                 <div class="exception-manual-check__card-head">
-                  <strong>规则校验结果</strong>
+                  <strong>规则检查结果</strong>
                   <span :class="['exception-tag', getSourceTagClass(ruleCheckResult.sourceType)]">
                     {{ formatDisplayValue(ruleCheckResult.sourceType, SOURCE_TYPE_LABELS) }}
                   </span>
@@ -239,7 +239,7 @@
 
               <article v-if="complexCheckResult" data-testid="exception-complex-check-card" class="exception-manual-check__card">
                 <div class="exception-manual-check__card-head">
-                  <strong>综合识别结果</strong>
+                  <strong>系统判断结果</strong>
                   <span :class="['exception-tag', getSourceTagClass(complexCheckResult.sourceType)]">
                     {{ formatDisplayValue(complexCheckResult.sourceType, SOURCE_TYPE_LABELS) }}
                   </span>
@@ -256,7 +256,7 @@
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
-              <h4>分析摘要</h4>
+              <h4>系统摘要</h4>
               <span>{{ analysisBrief?.promptVersion ? `分析版本 ${analysisBrief.promptVersion}` : '未记录版本' }}</span>
             </div>
 
@@ -290,7 +290,7 @@
 
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
-              <h4>处理依据</h4>
+              <h4>判断依据</h4>
               <span>{{ decisionTraceList.length }} 条</span>
             </div>
 
@@ -302,8 +302,8 @@
                   <strong>{{ formatDecisionLabel(item.finalDecision, '未生成最终结论') }}</strong>
                   <span>{{ formatScore(item.confidenceScore) }}</span>
                 </div>
-                <p><strong>规则校验：</strong>{{ formatReadableText(item.ruleResult) }}</p>
-                <p><strong>综合识别：</strong>{{ formatReadableText(item.modelResult) }}</p>
+                <p><strong>规则检查：</strong>{{ formatReadableText(item.ruleResult) }}</p>
+                <p><strong>系统判断：</strong>{{ formatReadableText(item.modelResult) }}</p>
                 <p><strong>判定依据：</strong>{{ formatReadableText(item.decisionReason) }}</p>
               </article>
             </div>

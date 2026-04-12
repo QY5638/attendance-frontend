@@ -194,7 +194,7 @@ describe('exception view', () => {
 
     const detailText = wrapper.get('[data-testid="exception-detail-dialog"]').text()
     expect(detailText).toContain('高风险代打卡异常')
-    expect(detailText).toContain('基于当前打卡记录重新识别')
+    expect(detailText).toContain('基于当前打卡记录重新判断')
     expect(detailText).not.toContain('123456789')
   })
 
@@ -473,14 +473,14 @@ describe('exception view', () => {
     await flushPromises()
 
     expect(fetchExceptionRuleCheck).toHaveBeenCalledWith({ recordId: '2001' })
-    expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('规则校验结果')
+    expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('规则检查结果')
     expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('代打卡')
 
     await wrapper.get('[data-testid="exception-run-complex-check"]').trigger('click')
     await flushPromises()
 
     expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: '2001' })
-    expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('综合识别结果')
+    expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('系统判断结果')
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('重新识别后仍为高风险')
   })
 

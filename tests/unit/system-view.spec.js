@@ -264,7 +264,7 @@ describe('system view', () => {
       pageSize: 10,
     })
     expect(wrapper.text()).toContain('复杂异常分析')
-    expect(wrapper.text()).toContain('分析方案')
+    expect(wrapper.text()).toContain('方案设置')
   })
 
   it('loads model log panel with real backend data', async () => {
@@ -305,8 +305,8 @@ describe('system view', () => {
     expect(wrapper.text()).toContain('系统管理员（admin）')
     expect(wrapper.text()).toContain('登录系统')
     expect(wrapper.text()).toContain('登录')
-    expect(wrapper.text()).toContain('活体相关记录')
-    expect(wrapper.text()).toContain('登录相关记录')
+    expect(wrapper.text()).toContain('活体相关')
+    expect(wrapper.text()).toContain('登录相关')
   })
 
   it('filters operation log panel by liveness scope', async () => {

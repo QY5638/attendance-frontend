@@ -3,34 +3,34 @@
     <header class="panel-card__header">
       <div>
         <h2>分析记录</h2>
-        <p>用于查看分析过程、所用方案、执行耗时与结果说明。</p>
+        <p>用于查看处理过程、所用方案、耗时与结果说明。</p>
       </div>
       <span class="panel-card__summary">共 {{ pagination.total }} 条</span>
     </header>
 
     <section class="panel-card__hero-strip">
       <article>
-        <span>记录类型</span>
-        <strong>分析记录</strong>
+        <span>内容类型</span>
+        <strong>系统处理</strong>
       </article>
       <article>
         <span>主要用途</span>
-        <strong>查看分析场景、结果与耗时</strong>
+        <strong>查看场景、结果与耗时</strong>
       </article>
     </section>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
-        <span>分析场景</span>
-        <input v-model="filters.businessType" type="text" placeholder="请输入分析场景关键字" />
+        <span>场景</span>
+        <input v-model="filters.businessType" type="text" placeholder="请输入场景关键字" />
       </label>
       <label>
-        <span>关联记录编号</span>
-        <input v-model="filters.businessId" type="text" placeholder="按关联记录编号筛选" />
+        <span>关联编号</span>
+        <input v-model="filters.businessId" type="text" placeholder="按关联编号筛选" />
       </label>
       <label>
-            <span>方案编号</span>
-            <input v-model="filters.promptTemplateId" type="text" placeholder="按方案编号筛选" />
+        <span>方案编号</span>
+        <input v-model="filters.promptTemplateId" type="text" placeholder="按方案编号筛选" />
       </label>
       <label>
         <span>执行状态</span>
@@ -60,14 +60,14 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>分析场景</th>
+            <th>场景</th>
             <th>关联记录</th>
-            <th>分析方案</th>
-            <th>执行状态</th>
-            <th>执行耗时</th>
+            <th>使用方案</th>
+            <th>状态</th>
+            <th>耗时</th>
             <th>输入概述</th>
-            <th>分析结果</th>
-            <th>创建时间</th>
+            <th>结果说明</th>
+            <th>时间</th>
           </tr>
         </thead>
         <tbody>

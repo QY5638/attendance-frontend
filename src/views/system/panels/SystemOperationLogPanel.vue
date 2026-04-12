@@ -20,7 +20,7 @@
     </section>
 
     <p class="panel-card__notice">
-      当前支持按分类查看登录、活体、人脸申请、打卡、复核和系统设置等记录，方便日常核对与问题追踪。
+      当前支持按分类查看登录、活体、人脸申请、打卡、复核和系统设置等内容，方便日常核对与问题追踪。
     </p>
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
@@ -29,7 +29,7 @@
         <input v-model.number="filters.userId" type="number" min="1" placeholder="按操作人筛选" />
       </label>
       <label>
-        <span>事件分类</span>
+        <span>分类</span>
         <select v-model="filters.scope">
           <option value="ALL">全部事件</option>
           <option v-for="option in scopeOptions" :key="option.value" :value="option.value">
@@ -38,7 +38,7 @@
         </select>
       </label>
       <label>
-        <span>操作类型</span>
+        <span>动作</span>
         <select v-model="filters.type">
           <option value="">全部动作</option>
           <option v-for="option in actionOptions" :key="option.value" :value="option.value">
@@ -67,9 +67,9 @@
         <thead>
           <tr>
             <th>操作人</th>
-            <th>操作类型</th>
-            <th>操作摘要</th>
-            <th>操作时间</th>
+            <th>动作</th>
+            <th>内容</th>
+            <th>时间</th>
           </tr>
         </thead>
         <tbody>
@@ -156,12 +156,12 @@ const OPERATION_TYPE_LABELS = {
 }
 
 const SCOPE_OPTIONS = [
-  { value: 'AUTH', label: '登录相关记录', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
-  { value: 'LIVENESS', label: '活体相关记录', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
-  { value: 'ATTENDANCE', label: '打卡事件', types: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'] },
+  { value: 'AUTH', label: '登录相关', types: ['LOGIN', 'LOGIN_FAILURE', 'LOGIN_LOCKED', 'LOGOUT', 'TOKEN_REFRESH', 'TOKEN_REFRESH_FAILURE'] },
+  { value: 'LIVENESS', label: '活体相关', types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS', 'FACE_LIVENESS_FAIL', 'FACE_LIVENESS_REJECT', 'FACE_LIVENESS_CONSUME'] },
+  { value: 'ATTENDANCE', label: '打卡相关', types: ['CHECKIN', 'CHECKOUT', 'ATTENDANCE_APPLY'] },
   { value: 'FACE', label: '人脸申请', types: ['FACE_REGISTER_APPLY', 'FACE_REGISTER_APPROVE', 'FACE_REGISTER_REJECT'] },
-  { value: 'REVIEW', label: '复核事件', types: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'] },
-  { value: 'SYSTEM', label: '系统设置记录', types: ['SYSTEM_CONFIG'] },
+  { value: 'REVIEW', label: '复核相关', types: ['WARNING_REEVALUATE', 'REVIEW_SUBMIT', 'REVIEW_FEEDBACK'] },
+  { value: 'SYSTEM', label: '系统设置', types: ['SYSTEM_CONFIG'] },
 ]
 
 const ACTION_OPTIONS = Object.entries(OPERATION_TYPE_LABELS).map(([value, label]) => ({ value, label }))
@@ -192,17 +192,17 @@ const summaryCards = computed(() => {
     },
     {
       key: 'auth',
-      label: '登录相关记录',
+      label: '登录相关',
       value: sumTypes(typeCounts, resolveScopeTypes('AUTH')),
     },
     {
       key: 'liveness',
-      label: '活体相关记录',
+      label: '活体相关',
       value: sumTypes(typeCounts, resolveScopeTypes('LIVENESS')),
     },
     {
       key: 'attendance',
-      label: '打卡事件',
+      label: '打卡相关',
       value: sumTypes(typeCounts, resolveScopeTypes('ATTENDANCE')),
     },
   ]

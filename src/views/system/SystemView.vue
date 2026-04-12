@@ -2,7 +2,7 @@
   <section class="system-view">
     <ConsoleHero
       title="系统配置"
-      description="统一维护基础配置、分析方案和运行记录，便于集中核查系统状态。"
+      description="统一维护基础配置、方案设置和运行记录，便于集中核查系统状态。"
       theme="violet"
       :cards="heroCards"
     />
@@ -52,12 +52,12 @@ const router = useRouter()
 const navItems = [
   { key: 'device', label: '打卡地点管理', desc: '地点档案与启停状态', component: SystemDevicePanel },
   { key: 'rule', label: '规则配置', desc: '考勤规则与阈值管理', component: SystemRulePanel },
-  { key: 'prompt', label: '分析方案', desc: '方案维护、编辑与启停管理', component: SystemPromptPanel },
+  { key: 'prompt', label: '方案设置', desc: '方案维护、编辑与启停管理', component: SystemPromptPanel },
   { key: 'risk-level', label: '风险等级', desc: '风险名称、说明与状态', component: SystemRiskLevelPanel },
   { key: 'exception-type', label: '异常类型', desc: '异常类别说明与状态', component: SystemExceptionTypePanel },
   { key: 'face-approval', label: '人脸申请', desc: '员工重录申请与审批处理', component: SystemFaceRegisterApprovalPanel },
-  { key: 'model-log', label: '处理记录', desc: '查看分析过程、结果与耗时', component: SystemModelLogPanel },
-  { key: 'operation-log', label: '业务记录', desc: '关键业务操作记录查询', component: SystemOperationLogPanel },
+  { key: 'model-log', label: '分析记录', desc: '查看处理过程、结果与耗时', component: SystemModelLogPanel },
+  { key: 'operation-log', label: '操作记录', desc: '关键操作记录查询', component: SystemOperationLogPanel },
 ]
 
 const validKeys = navItems.map((item) => item.key)
@@ -95,7 +95,7 @@ const overviewItems = computed(() => [
     key: 'scope',
     label: '配置范围',
     value: '7 个配置域',
-    desc: '覆盖打卡地点、规则、方案、风险分级、分析记录与业务日志。',
+    desc: '覆盖打卡地点、规则、方案、风险分级、分析记录与操作记录。',
   },
   {
     key: 'suggestion',

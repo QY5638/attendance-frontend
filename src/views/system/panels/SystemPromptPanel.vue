@@ -2,8 +2,8 @@
   <section class="panel-card">
     <header class="panel-card__header">
       <div>
-        <h2>分析方案</h2>
-        <p>用于维护系统分析方案的适用场景、版本和说明内容。</p>
+        <h2>方案设置</h2>
+        <p>用于维护适用场景、版本和说明内容。</p>
       </div>
       <button
         type="button"
@@ -18,7 +18,7 @@
     <section class="panel-card__hero-strip">
       <article>
         <span>配置目标</span>
-        <strong>分析方案</strong>
+        <strong>方案设置</strong>
       </article>
       <article>
         <span>维护范围</span>
@@ -32,7 +32,7 @@
         <input v-model="filters.keyword" type="text" placeholder="方案标识 / 名称 / 版本号" />
       </label>
       <label>
-        <span>分析场景</span>
+        <span>适用场景</span>
         <input v-model="filters.sceneType" type="text" placeholder="如 异常处置、预警处置、统计分析" />
       </label>
       <label>
@@ -58,7 +58,7 @@
           <tr>
             <th>方案标识</th>
             <th>方案名称</th>
-            <th>分析场景</th>
+            <th>适用场景</th>
             <th>版本号</th>
             <th>状态</th>
             <th>最近更新</th>
@@ -70,7 +70,7 @@
             <td colspan="7">加载中...</td>
           </tr>
           <tr v-else-if="!rows.length">
-            <td colspan="7">暂无分析方案</td>
+            <td colspan="7">暂无方案</td>
           </tr>
           <tr v-for="row in rows" :key="row.id || `${row.code}-${row.version}`">
             <td>{{ row.code || '-' }}</td>
@@ -122,7 +122,7 @@
       <div class="panel-card__dialog">
         <div class="panel-card__dialog-head">
           <div>
-            <strong>{{ form.id ? '编辑分析方案' : '新增分析方案' }}</strong>
+            <strong>{{ form.id ? '编辑方案' : '新增方案' }}</strong>
             <p>方案标识与版本号组合需保持唯一，便于统一管理与后续追溯。</p>
           </div>
           <button type="button" class="panel-card__icon-btn" @click="dialogVisible = false">关闭</button>
@@ -140,8 +140,8 @@
             <input v-model="form.name" type="text" placeholder="请输入方案名称" />
           </label>
           <label>
-            <span>分析场景</span>
-            <input v-model="form.sceneType" type="text" placeholder="请输入分析场景" />
+            <span>适用场景</span>
+            <input v-model="form.sceneType" type="text" placeholder="请输入适用场景" />
           </label>
           <label>
             <span>版本号</span>
@@ -328,7 +328,7 @@ async function loadList() {
   } catch (requestError) {
     rows.value = []
     pagination.total = 0
-    error.value = requestError?.message || '分析方案列表加载失败'
+    error.value = requestError?.message || '方案列表加载失败'
   } finally {
     loading.value = false
   }
@@ -367,7 +367,7 @@ async function handleSubmit() {
   }
 
   if (!form.code.trim() || !form.name.trim() || !form.sceneType.trim() || !form.version.trim() || !form.content.trim()) {
-    error.value = '请完整填写分析方案信息'
+    error.value = '请完整填写方案信息'
     return
   }
 
@@ -388,17 +388,17 @@ async function handleSubmit() {
 
     if (form.id) {
       await updatePromptTemplate(payload)
-      notice.value = '分析方案更新成功'
+      notice.value = '方案更新成功'
     } else {
       await addPromptTemplate(payload)
-      notice.value = '分析方案新增成功'
+      notice.value = '方案新增成功'
     }
 
     ElMessage.success(notice.value)
     dialogVisible.value = false
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '分析方案保存失败'
+    error.value = requestError?.message || '方案保存失败'
   } finally {
     submitting.value = false
   }
@@ -413,11 +413,11 @@ async function handleToggleStatus(row) {
       id: row.id,
       status: nextStatus,
     })
-    notice.value = '分析方案状态更新成功'
+    notice.value = '方案状态更新成功'
     ElMessage.success(notice.value)
     await loadList()
   } catch (requestError) {
-    error.value = requestError?.message || '分析方案状态更新失败'
+    error.value = requestError?.message || '方案状态更新失败'
   }
 }
 
