@@ -424,7 +424,7 @@ describe('warning view', () => {
     await flushPromises()
 
     expect(submitReview).toHaveBeenCalledWith({
-      exceptionId: 3001,
+      exceptionId: '3001',
       reviewResult: 'REJECTED',
       reviewComment: '已核对证据链，当前排除异常',
     })
@@ -584,7 +584,7 @@ describe('warning view', () => {
     await flushPromises()
 
     expect(fetchFe06WarningReevaluate).toHaveBeenCalledWith({
-      warningId: 5001,
+      warningId: '5001',
       reason: '补充现场情况后重新评估',
     })
     expect(fetchFe06WarningList).toHaveBeenCalledTimes(2)

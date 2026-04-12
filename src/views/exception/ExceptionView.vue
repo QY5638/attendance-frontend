@@ -524,8 +524,12 @@ function hasCheckContext() {
 }
 
 function buildCheckPayload() {
+  const recordId = exceptionDetail.value?.recordId === null || exceptionDetail.value?.recordId === undefined
+    ? ''
+    : `${exceptionDetail.value.recordId}`.trim()
+
   return {
-    recordId: Number(exceptionDetail.value?.recordId),
+    recordId,
   }
 }
 

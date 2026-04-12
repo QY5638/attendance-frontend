@@ -404,14 +404,14 @@ describe('exception view', () => {
     await wrapper.get('[data-testid="exception-run-rule-check"]').trigger('click')
     await flushPromises()
 
-    expect(fetchExceptionRuleCheck).toHaveBeenCalledWith({ recordId: 2001 })
+    expect(fetchExceptionRuleCheck).toHaveBeenCalledWith({ recordId: '2001' })
     expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('规则校验结果')
     expect(wrapper.get('[data-testid="exception-rule-check-card"]').text()).toContain('代打卡')
 
     await wrapper.get('[data-testid="exception-run-complex-check"]').trigger('click')
     await flushPromises()
 
-    expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: 2001 })
+    expect(fetchExceptionComplexCheck).toHaveBeenCalledWith({ recordId: '2001' })
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('综合识别结果')
     expect(wrapper.get('[data-testid="exception-complex-check-card"]').text()).toContain('重新识别后仍为高风险')
   })

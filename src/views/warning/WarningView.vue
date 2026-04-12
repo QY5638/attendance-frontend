@@ -1442,7 +1442,7 @@ async function submitReevaluate() {
 
   try {
     const payload = await fetchFe06WarningReevaluate({
-      warningId: Number(reevaluateForm.warningId),
+      warningId: reevaluateForm.warningId,
       reason: reevaluateForm.reason.trim(),
     })
 
@@ -1484,7 +1484,7 @@ async function submitQuickReview() {
 
   try {
     await submitReview({
-      exceptionId: Number(quickReviewForm.exceptionId),
+      exceptionId: quickReviewForm.exceptionId,
       reviewResult: quickReviewForm.reviewResult,
       reviewComment: quickReviewForm.reviewComment.trim(),
     })
