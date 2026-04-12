@@ -62,6 +62,7 @@ const EXCEPTION_TYPE_LABELS = {
   CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
   CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
   CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
   CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
@@ -179,6 +180,23 @@ function formatDisplayValue(value, labelMap) {
   return label || '未识别'
 }
 
+function formatExceptionType(item = {}) {
+  const label = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
+  if (label) {
+    return label
+  }
+
+  if (item.sourceType === 'MODEL' || item.sourceType === 'MODEL_FALLBACK') {
+    return '综合识别异常'
+  }
+
+  if (item.sourceType === 'RULE') {
+    return '规则校验异常'
+  }
+
+  return '待核查异常'
+}
+
 function formatText(value) {
   return formatReadableText(value, '--')
 }
@@ -189,10 +207,10 @@ function resolveLabel(value, labelMap) {
 
 function buildExceptionTitle(item = {}) {
   const riskLabel = resolveLabel(item.riskLevel, RISK_LEVEL_LABELS)
-  const typeLabel = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
+  const typeLabel = formatExceptionType(item)
 
   if (typeLabel) {
-    return `${riskLabel || ''}${typeLabel}异常`
+    return `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
   }
 
   return riskLabel ? `${riskLabel}待核查异常` : '待核查异常'
@@ -505,7 +523,7 @@ watch(
           <dl class="review-detail-grid">
             <div>
               <dt>异常类型</dt>
-              <dd>{{ formatDisplayValue(exceptionDetail?.type, EXCEPTION_TYPE_LABELS) }}</dd>
+                <dd>{{ formatExceptionType(exceptionDetail) }}</dd>
             </div>
             <div>
               <dt>风险等级</dt>

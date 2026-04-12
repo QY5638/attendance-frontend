@@ -28,6 +28,7 @@
             <option value="CONTINUOUS_REPEAT_CHECK">连续重复打卡</option>
             <option value="CONTINUOUS_PROXY_CHECKIN">连续代打卡</option>
             <option value="CONTINUOUS_ATTENDANCE_RISK">连续综合考勤异常</option>
+            <option value="COMPLEX_ATTENDANCE_RISK">综合识别异常</option>
             <option value="CONTINUOUS_MODEL_RISK">连续模型风险异常</option>
             <option value="LATE">迟到</option>
             <option value="EARLY_LEAVE">早退</option>
@@ -92,7 +93,7 @@
             <dl class="exception-item__grid">
               <div>
                 <dt>异常类型</dt>
-                <dd>{{ formatDisplayValue(item.type, EXCEPTION_TYPE_LABELS) }}</dd>
+                <dd>{{ formatExceptionType(item) }}</dd>
               </div>
               <div>
                 <dt>风险等级</dt>
@@ -120,7 +121,7 @@
               </div>
             </dl>
 
-            <p class="exception-item__description">{{ item.description || '暂无情况说明' }}</p>
+            <p class="exception-item__description">{{ formatReadableText(item.description, '暂无情况说明') }}</p>
           </div>
 
           <button
@@ -173,7 +174,7 @@
             <dl class="exception-detail-grid">
               <div>
                 <dt>异常类型</dt>
-                <dd>{{ formatDisplayValue(exceptionDetail?.type, EXCEPTION_TYPE_LABELS) }}</dd>
+                <dd>{{ formatExceptionType(exceptionDetail) }}</dd>
               </div>
               <div>
                 <dt>风险等级</dt>
@@ -201,7 +202,7 @@
               </div>
             </dl>
 
-            <p class="exception-detail-section__description">{{ exceptionDetail?.description || '暂无情况说明' }}</p>
+            <p class="exception-detail-section__description">{{ formatReadableText(exceptionDetail?.description, '暂无情况说明') }}</p>
           </section>
 
           <section class="exception-detail-section">
@@ -316,7 +317,7 @@
                   <span>{{ formatScore(item.confidenceScore) }}</span>
                 </div>
                 <p><strong>规则校验：</strong>{{ formatReadableText(item.ruleResult) }}</p>
-                <p><strong>综合识别：</strong>{{ formatDecisionLabel(item.modelResult) }}</p>
+                <p><strong>综合识别：</strong>{{ formatReadableText(item.modelResult) }}</p>
                 <p><strong>判定依据：</strong>{{ formatReadableText(item.decisionReason) }}</p>
               </article>
             </div>
@@ -354,6 +355,7 @@ const EXCEPTION_TYPE_LABELS = {
   CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
   CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
   CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
   CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
@@ -462,6 +464,23 @@ function formatDisplayValue(value, labelMap) {
   return label || '未识别'
 }
 
+function formatExceptionType(item = {}) {
+  const label = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
+  if (label) {
+    return label
+  }
+
+  if (item.sourceType === 'MODEL' || item.sourceType === 'MODEL_FALLBACK') {
+    return '综合识别异常'
+  }
+
+  if (item.sourceType === 'RULE') {
+    return '规则校验异常'
+  }
+
+  return '待核查异常'
+}
+
 function formatDecisionLabel(value, fallback = '--') {
   if (!value) {
     return fallback
@@ -493,10 +512,10 @@ function resolveLabel(value, labelMap) {
 
 function buildExceptionTitle(item = {}) {
   const riskLabel = resolveLabel(item.riskLevel, RISK_LEVEL_LABELS)
-  const typeLabel = resolveLabel(item.type, EXCEPTION_TYPE_LABELS)
+  const typeLabel = formatExceptionType(item)
 
   if (typeLabel) {
-    return `${riskLabel || ''}${typeLabel}异常`
+    return `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
   }
 
   return riskLabel ? `${riskLabel}待核查异常` : '待核查异常'

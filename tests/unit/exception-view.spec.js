@@ -234,6 +234,45 @@ describe('exception view', () => {
     expect(wrapper.get('[data-testid="exception-detail-dialog"]').text()).toContain('最终进入高风险复核')
   })
 
+  it('renders continuous model risk trace in readable Chinese summary', async () => {
+    fetchExceptionList.mockResolvedValueOnce(createListPayload([
+      createExceptionRecord({ type: 'CONTINUOUS_MODEL_RISK' }),
+    ]))
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionRecord({
+      type: 'CONTINUOUS_MODEL_RISK',
+      description: '模型识别本次异常，且历史模型异常在最近7天内已连续出现',
+    }))
+    fetchExceptionDecisionTrace.mockResolvedValueOnce([
+      createDecisionTrace({
+        finalDecision: 'CONTINUOUS_MODEL_RISK',
+        modelResult: JSON.stringify({
+          conclusion: '该打卡行为存在高度异常，极可能为代打卡或非本人真实出勤。',
+          riskLevel: 'HIGH',
+          confidenceScore: 96,
+          decisionReason: '打卡时间异常，且地点明显偏离办公场所。',
+          reasonSummary: '时间异常、地点异常与历史高频异常共同叠加。',
+          actionSuggestion: '建议立即人工核查。',
+          similarCaseSummary: '近期存在同类高风险案例。',
+        }),
+      }),
+    ])
+
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-detail-3001"]').trigger('click')
+    await flushPromises()
+
+    const detailText = wrapper.get('[data-testid="exception-detail-dialog"]').text()
+    expect(detailText).toContain('高风险连续模型风险异常')
+    expect(detailText).not.toContain('高风险连续模型风险异常异常')
+    expect(detailText).toContain('系统结论：该打卡行为存在高度异常，极可能为代打卡或非本人真实出勤。')
+    expect(detailText).toContain('风险等级：高风险')
+    expect(detailText).toContain('关联案例：近期存在同类高风险案例。')
+    expect(detailText).not.toContain('"conclusion"')
+    expect(detailText).not.toContain('"riskLevel"')
+  })
+
   it('navigates to review page from exception detail with stable exceptionId query', async () => {
     const wrapper = mount(ExceptionView)
     await flushPromises()
@@ -340,7 +379,36 @@ describe('exception view', () => {
     expect(listText).toContain('多地点异常')
     expect(listText).toContain('高风险')
     expect(listText).toContain('待处理')
+    expect(listText).toContain('待核查异常')
     expect(listText).toContain('未识别')
+  })
+
+  it('formats technical mixed text into customer readable Chinese', async () => {
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionRecord({
+      type: 'UNKNOWN_MODEL_TYPE',
+      sourceType: 'MODEL',
+      riskLevel: 'MEDIUM',
+      description: 'faceScore≥95表明生物识别质量良好，但actualHistoryAbnormalCount=1提示该用户过去存在至少一次异常行为（如代打卡、环境异常等）；longitude和latitude为null，削弱了地理围栏验证效力；clientFaceScore为空导致无法交叉验证客户端侧识别结果；其余字段无明显高危信号。',
+    }))
+
+    const wrapper = mount(ExceptionView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="exception-open-detail-3001"]').trigger('click')
+    await flushPromises()
+
+    const detailText = wrapper.get('[data-testid="exception-detail-dialog"]').text()
+    expect(detailText).toContain('中风险综合识别异常')
+    expect(detailText).toContain('综合识别异常')
+    expect(detailText).toContain('人脸分数达到95分以上')
+    expect(detailText).toContain('数据库历史异常次数为1，提示')
+    expect(detailText).toContain('经纬度缺失')
+    expect(detailText).toContain('客户端人脸分数缺失')
+    expect(detailText).toContain('其余信息未发现明显高风险信号')
+    expect(detailText).not.toContain('faceScore')
+    expect(detailText).not.toContain('actualHistoryAbnormalCount')
+    expect(detailText).not.toContain('longitude')
+    expect(detailText).not.toContain('clientFaceScore')
   })
 
   it('keeps the latest detail selection when older slower detail requests resolve later', async () => {
