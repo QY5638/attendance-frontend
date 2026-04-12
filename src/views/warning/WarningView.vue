@@ -727,6 +727,7 @@ const WARNING_EXCEPTION_TYPE_LABELS = {
   CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
   CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
   CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
   CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
@@ -1044,6 +1045,9 @@ const portraitSuggestions = computed(() => {
       break
     case 'CONTINUOUS_ATTENDANCE_RISK':
       suggestions.push('连续综合考勤异常已出现，建议优先查看该人员完整风险档案并完成复核闭环。')
+      break
+    case 'COMPLEX_ATTENDANCE_RISK':
+      suggestions.push('综合识别异常已触发，建议结合分析摘要、原始打卡信息和人工复核意见综合判断。')
       break
     case 'CONTINUOUS_MODEL_RISK':
       suggestions.push('连续模型风险异常已出现，建议优先核查模型结论、相似案例摘要与人工复核记录。')

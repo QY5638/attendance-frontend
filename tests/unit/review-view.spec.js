@@ -182,6 +182,25 @@ describe('review view', () => {
 
     expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('多地点异常')
   })
+
+  it('keeps continuous model risk title readable without duplicated exception suffix', async () => {
+    routeState.query = {
+      exceptionId: '3001',
+    }
+    fetchExceptionDetail.mockResolvedValueOnce(createExceptionDetail({
+      type: 'CONTINUOUS_MODEL_RISK',
+      riskLevel: 'HIGH',
+      description: '连续模型风险异常说明',
+    }))
+
+    const wrapper = mount(ReviewView)
+    await flushPromises()
+
+    const detailText = wrapper.get('[data-testid="review-detail-state"]').text()
+    expect(detailText).toContain('高风险连续模型风险异常')
+    expect(detailText).not.toContain('高风险连续模型风险异常异常')
+  })
+
   it('blocks new review submit when assistant is missing but still allows feedback on the latest review', async () => {
     routeState.query = {
       exceptionId: '3001',
