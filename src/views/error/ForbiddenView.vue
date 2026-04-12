@@ -21,8 +21,8 @@ function goHome() {
   router.replace(authStore.defaultHomePath)
 }
 
-function goLogin() {
-  authStore.logout()
+async function goLogin() {
+  await authStore.logout()
   router.replace('/login')
 }
 </script>

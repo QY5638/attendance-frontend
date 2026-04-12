@@ -1,8 +1,8 @@
 <template>
   <section class="dashboard-page">
     <ConsoleHero
-      title="概览工作台"
-      :description="isAdmin ? '用于查看运行概况、重点预警和待处理事项。' : '用于查看个人考勤概况、当日提醒和常用入口。'"
+      :title="dashboardTitle"
+      :description="dashboardDescription"
       theme="indigo"
       :cards="heroCards"
     >
@@ -28,9 +28,9 @@
       <section class="dashboard-spotlight">
         <div class="dashboard-spotlight__lead">
           <p class="dashboard-spotlight__eyebrow">{{ isAdmin ? '今日重点' : '今日事项' }}</p>
-          <h3>{{ isAdmin ? '优先处理预警与待办复核事项' : '先完成打卡，再核对个人记录' }}</h3>
+          <h3>{{ isAdmin ? '优先处理高风险预警与异常证据链' : '先完成打卡，再核对个人记录' }}</h3>
           <p>
-            {{ isAdmin ? '首页优先展示整体指标、预警概况和风险概况，便于管理人员快速进入当天重点处置任务。' : '员工侧保留常用业务入口，进入系统后可直接完成打卡、查看记录并处理个人异常。' }}
+            {{ isAdmin ? '首页第一屏聚焦异常检测、预警积压、活体拒绝和登录失败等高风险信号，便于管理人员快速进入当天重点处置任务。' : '员工侧保留常用业务入口，进入系统后可直接完成打卡、查看记录并处理个人异常。' }}
           </p>
         </div>
 
@@ -67,6 +67,47 @@
 
       <section
         v-if="isAdmin"
+        data-testid="dashboard-signals"
+        class="dashboard-section"
+      >
+        <div class="dashboard-section__head">
+          <h3>异常处置驾驶舱</h3>
+          <span>实时高风险信号</span>
+        </div>
+
+        <div class="dashboard-metric-grid">
+          <el-card v-for="item in signalCards" :key="item.key" shadow="hover" class="dashboard-metric-card dashboard-metric-card--signal">
+            <p class="dashboard-metric-card__label">{{ item.label }}</p>
+            <strong class="dashboard-metric-card__value">{{ item.value }}</strong>
+            <p class="dashboard-metric-card__desc">{{ item.desc }}</p>
+          </el-card>
+        </div>
+      </section>
+
+      <section
+        v-if="isAdmin"
+        data-testid="dashboard-exception-focus"
+        class="dashboard-section"
+      >
+        <div class="dashboard-section__head">
+          <h3>重点异常类型</h3>
+          <span>当前统计窗口</span>
+        </div>
+
+        <div v-if="exceptionFocusItems.length" class="dashboard-list">
+          <el-card v-for="item in exceptionFocusItems" :key="item.key" class="dashboard-list__item dashboard-list__item--focus">
+            <div class="dashboard-list__title">
+              <strong>{{ item.label }}</strong>
+              <span class="dashboard-list__meta">{{ item.value }}</span>
+            </div>
+            <p>{{ item.desc }}</p>
+          </el-card>
+        </div>
+        <el-empty v-else description="暂无重点异常类型" />
+      </section>
+
+      <section
+        v-if="isAdmin"
         data-testid="dashboard-warning"
         class="dashboard-section"
       >
@@ -84,7 +125,7 @@
             <p>{{ formatReadableText(item.aiSummary || item.disposeSuggestion, '暂无摘要说明') }}</p>
           </el-card>
         </div>
-        <el-empty v-else description="暂无摘要说明" />
+        <el-empty v-else description="暂无预警记录" />
       </section>
 
       <section
@@ -123,6 +164,7 @@ import {
   fetchPersonalStatistics,
   fetchStatisticsSummary,
 } from '../../api/statistics'
+import { fetchOperationLogSummary } from '../../api/system'
 import { fetchWarningList } from '../../api/warning'
 import { useAuthStore } from '../../store/auth'
 import { formatReadableText } from '../../utils/readable-text'
@@ -136,6 +178,11 @@ const errorMessage = ref('')
 const overviewCards = ref([])
 const warningItems = ref([])
 const riskItems = ref([])
+const departmentSummaryData = ref({})
+const runtimeSummaryData = ref({
+  total: 0,
+  typeCounts: {},
+})
 const summaryData = ref({
   summary: '',
   highlightRisks: '',
@@ -156,12 +203,26 @@ const WARNING_STATUS_LABELS = {
 }
 const WARNING_EXCEPTION_LABELS = {
   PROXY_CHECKIN: '代打卡',
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
   ILLEGAL_TIME: '非规定时间打卡',
   REPEAT_CHECK: '重复打卡',
   MULTI_LOCATION_CONFLICT: '多地点异常',
 }
+const dashboardTitle = computed(() => (isAdmin.value ? '异常与预警驾驶舱' : '概览工作台'))
+const dashboardDescription = computed(() => (
+  isAdmin.value
+    ? '集中查看异常侦测、预警积压、活体异常和待办复核事项。'
+    : '用于查看个人考勤概况、当日提醒和常用入口。'
+))
 const heroCards = computed(() => [
   {
     key: 'role',
@@ -173,6 +234,11 @@ const heroCards = computed(() => [
     label: '工作场景',
     value: isAdmin.value ? '管理处置工作区' : '员工业务工作区',
   },
+  {
+    key: 'focus',
+    label: '当前关注',
+    value: isAdmin.value ? `${pendingWarningCount.value} 条待处理预警` : '个人出勤与异常提醒',
+  },
 ])
 const spotlightCards = computed(() => {
   if (isAdmin.value) {
@@ -180,7 +246,7 @@ const spotlightCards = computed(() => {
       {
         label: '预警概况',
         value: `${warningItems.value.length} 条`,
-        desc: '首页仅保留最近 5 条需要关注的记录',
+        desc: '首页聚焦最近 5 条优先处置的预警记录',
       },
       {
         label: '风险概况',
@@ -188,9 +254,9 @@ const spotlightCards = computed(() => {
         desc: '展示全部部门的风险概况和处理建议',
       },
       {
-        label: '综合摘要',
-        value: summaryData.value.summary ? '已生成' : '待生成',
-        desc: '汇总趋势变化、重点关注和处理建议',
+        label: '运行事件',
+        value: `${Number(runtimeSummaryData.value?.total || 0)} 条`,
+        desc: '包含活体拒绝、登录失败与刷新令牌等关键事件',
       },
     ]
   }
@@ -212,6 +278,48 @@ const spotlightCards = computed(() => {
       desc: '给出近期考勤变化和注意事项',
     },
   ]
+})
+const warningStatusDistribution = computed(() => departmentSummaryData.value?.warningStatusDistribution || {})
+const exceptionTypeDistribution = computed(() => departmentSummaryData.value?.exceptionTypeDistribution || {})
+const riskLevelDistribution = computed(() => departmentSummaryData.value?.riskLevelDistribution || {})
+const runtimeTypeCounts = computed(() => runtimeSummaryData.value?.typeCounts || {})
+const pendingWarningCount = computed(() => Number(warningStatusDistribution.value.UNPROCESSED || 0))
+const signalCards = computed(() => [
+  {
+    key: 'pending-warning',
+    label: '待处理预警',
+    value: pendingWarningCount.value,
+    desc: '优先进入预警页和复核页处理当前积压任务',
+  },
+  {
+    key: 'high-risk',
+    label: '高风险异常',
+    value: Number(riskLevelDistribution.value.HIGH || 0),
+    desc: '高风险异常越多，越应优先查看证据链和处置建议',
+  },
+  {
+    key: 'liveness-reject',
+    label: '活体拒绝',
+    value: Number(runtimeTypeCounts.value.FACE_LIVENESS_REJECT || 0),
+    desc: '单机摄像头场景下用于识别可疑重放与挑战失败情况',
+  },
+  {
+    key: 'login-failure',
+    label: '登录失败',
+    value: Number(runtimeTypeCounts.value.LOGIN_FAILURE || 0),
+    desc: '用于快速感知异常登录尝试与账号安全风险',
+  },
+])
+const exceptionFocusItems = computed(() => {
+  return Object.entries(exceptionTypeDistribution.value)
+    .map(([key, value]) => ({
+      key,
+      label: WARNING_EXCEPTION_LABELS[key] || key,
+      value: `${Number(value || 0)} 次`,
+      desc: buildExceptionFocusDescription(key, Number(value || 0)),
+    }))
+    .sort((left, right) => Number.parseInt(right.value, 10) - Number.parseInt(left.value, 10))
+    .slice(0, 4)
 })
 
 const METRIC_LABELS = {
@@ -381,6 +489,46 @@ function buildWarningMeta(item = {}) {
   return [typeLabel, statusLabel].filter(Boolean).join(' · ') || '待处理'
 }
 
+function buildExceptionFocusDescription(type, count) {
+  if (type === 'PROXY_CHECKIN') {
+    return `当前统计窗口内共识别 ${count} 次可疑代打卡，建议优先查看证据链。`
+  }
+  if (type === 'MULTI_LOCATION_CONFLICT') {
+    return `当前统计窗口内共识别 ${count} 次多地点冲突，建议重点核对地点与设备信息。`
+  }
+  if (type === 'CONTINUOUS_LATE') {
+    return `当前统计窗口内共识别 ${count} 次连续迟到模式异常，建议重点关注持续性出勤风险。`
+  }
+  if (type === 'CONTINUOUS_EARLY_LEAVE') {
+    return `当前统计窗口内共识别 ${count} 次连续早退模式异常，建议重点关注持续性离岗风险。`
+  }
+  if (type === 'CONTINUOUS_MULTI_LOCATION_CONFLICT') {
+    return `当前统计窗口内共识别 ${count} 次连续多地点冲突模式异常，建议优先排查位置异常与代打卡风险。`
+  }
+  if (type === 'CONTINUOUS_ILLEGAL_TIME') {
+    return `当前统计窗口内共识别 ${count} 次连续非法时间打卡模式异常，建议重点核查异常时段行为。`
+  }
+  if (type === 'CONTINUOUS_REPEAT_CHECK') {
+    return `当前统计窗口内共识别 ${count} 次连续重复打卡模式异常，建议重点排查反复提交或规避行为。`
+  }
+  if (type === 'CONTINUOUS_PROXY_CHECKIN') {
+    return `当前统计窗口内共识别 ${count} 次连续代打卡模式异常，建议优先核查人脸、设备和地点证据。`
+  }
+  if (type === 'CONTINUOUS_ATTENDANCE_RISK') {
+    return `当前统计窗口内共识别 ${count} 次连续综合考勤异常，建议优先查看该人员完整风险档案。`
+  }
+  if (type === 'CONTINUOUS_MODEL_RISK') {
+    return `当前统计窗口内共识别 ${count} 次连续模型风险异常，建议优先查看模型证据链与人工复核记录。`
+  }
+  if (type === 'ILLEGAL_TIME') {
+    return `当前统计窗口内共识别 ${count} 次非规定时间打卡，建议结合班次规则复核。`
+  }
+  if (type === 'REPEAT_CHECK') {
+    return `当前统计窗口内共识别 ${count} 次重复打卡，建议排查终端或重复提交行为。`
+  }
+  return `当前统计窗口内共识别 ${count} 次${WARNING_EXCEPTION_LABELS[type] || type}相关异常。`
+}
+
 async function loadDashboard() {
   loading.value = true
   errorMessage.value = ''
@@ -391,11 +539,14 @@ async function loadDashboard() {
         fetchDepartmentStatistics(),
         fetchStatisticsSummary(),
       ])
-      const [warnings, risks] = await Promise.all([
+      const [warnings, risks, runtimeSummary] = await Promise.all([
         fetchWarningList({ pageNum: 1, pageSize: 5 }).catch(() => []),
         fetchDepartmentRiskOverview().catch(() => null),
+        fetchOperationLogSummary().catch(() => null),
       ])
 
+      departmentSummaryData.value = departmentData || {}
+      runtimeSummaryData.value = runtimeSummary || { total: 0, typeCounts: {} }
       overviewCards.value = buildMetricCards(departmentData)
       summaryData.value = summary || {}
       warningItems.value = normalizeList(warnings, 5)
@@ -412,6 +563,8 @@ async function loadDashboard() {
     summaryData.value = summary || {}
     warningItems.value = []
     riskItems.value = []
+    departmentSummaryData.value = {}
+    runtimeSummaryData.value = { total: 0, typeCounts: {} }
   } catch (error) {
     errorMessage.value = error?.message || '页面加载失败，请稍后重试'
   } finally {
@@ -533,6 +686,17 @@ onMounted(() => {
   color: #0f172a;
 }
 
+.dashboard-metric-card__desc {
+  margin: 10px 0 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.dashboard-metric-card--signal {
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f4fbfa 100%);
+}
+
 .dashboard-summary-card__content {
   display: grid;
   gap: 12px;
@@ -582,6 +746,11 @@ onMounted(() => {
   margin: 0;
   line-height: 1.7;
   color: #475569;
+}
+
+.dashboard-list__item--focus {
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
 }
 
 @media (max-width: 960px) {

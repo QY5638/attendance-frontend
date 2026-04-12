@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
+import { completeFaceLiveness, createFaceLivenessSession } from '../../api/face'
 import { useAuthStore } from '../../store/auth'
 import {
   getAttendanceListRequest,
@@ -14,6 +15,8 @@ import {
 import { fetchDepartmentList } from '../../api/department'
 import { loadAmapPlugins, loadAmapSdk } from '../../utils/amap'
 import { formatDateTimeDisplay } from '../../utils/date-time'
+import { describeLivenessAction, runFaceLivenessChallenge } from '../../utils/face-liveness'
+import { getTerminalId } from '../../utils/terminal-id'
 
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
@@ -36,12 +39,25 @@ const faceVerifyResult = ref('')
 const currentLocationLoading = ref(false)
 const currentLocationError = ref('')
 const currentLocationSummary = ref('未获取当前位置')
+const computerDeviceInfo = ref('设备信息识别中')
+const terminalId = ref('终端标识获取中')
 const faceInputSource = ref('camera')
 const faceCameraStarting = ref(false)
 const faceCameraError = ref('')
 const faceUploadError = ref('')
 const faceVideoRef = ref(null)
 const faceStreamRef = ref(null)
+const faceLivenessState = reactive({
+  running: false,
+  message: '',
+  actions: [],
+  currentIndex: -1,
+  completedCount: 0,
+  token: '',
+  expiresAt: 0,
+  score: null,
+  imageData: '',
+})
 const deviceMapContainer = ref(null)
 const deviceMapError = ref('')
 let latestRecordRequestId = 0
@@ -122,6 +138,10 @@ function readRecordPage(response) {
 function normalizeFaceVerifyResult(response) {
   const payload = readWrappedData(response)
 
+  if (payload?.livenessPassed === false) {
+    return payload.message || '活体预检未通过'
+  }
+
   if (payload?.matched === true) {
     return '人脸预检通过'
   }
@@ -136,6 +156,13 @@ function normalizeFaceVerifyResult(response) {
 const selectedDevice = computed(() => deviceOptions.value.find((item) => item.id === checkinForm.deviceId) || null)
 
 const hasLiveFaceCamera = computed(() => Boolean(faceStreamRef.value))
+const hasValidFaceLivenessProof = computed(() => {
+  return Boolean(
+    faceLivenessState.token &&
+      faceLivenessState.imageData === checkinForm.imageData &&
+      faceLivenessState.expiresAt > Date.now() + 1000,
+  )
+})
 
 const selectedDeviceLocation = computed(() => selectedDevice.value?.location || '')
 
@@ -157,6 +184,7 @@ const isCheckinDisabled = computed(() => {
   return Boolean(
     deviceOptionsError.value ||
       checkinSubmitting.value ||
+      faceLivenessState.running ||
       !checkinForm.deviceId ||
       !checkinForm.imageData,
   )
@@ -205,7 +233,12 @@ const heroCards = computed(() => {
     {
       key: 'computer',
       label: '当前电脑',
-      value: buildComputerDeviceInfo(),
+      value: computerDeviceInfo.value,
+    },
+    {
+      key: 'terminal',
+      label: '本机标识',
+      value: terminalId.value,
     },
   ]
 })
@@ -228,6 +261,14 @@ const RECORD_STATUS_LABELS = {
 const EXCEPTION_TYPE_LABELS = {
   MULTI_LOCATION_CONFLICT: '多地点异常',
   PROXY_CHECKIN: '代打卡',
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
   ILLEGAL_TIME: '非规定时间打卡',
@@ -255,6 +296,32 @@ function detectBrowserName() {
   return '网页浏览器'
 }
 
+function detectBrowserVersion() {
+  if (typeof navigator === 'undefined') {
+    return ''
+  }
+
+  const userAgent = navigator.userAgent || ''
+  const matchedVersion = userAgent.match(/(Edg|Chrome|Firefox|Version)\/(\d+[\d.]*)/)
+  return matchedVersion?.[2] || ''
+}
+
+function detectPlatformName(platform, platformVersion) {
+  const normalizedPlatform = String(platform || '').toLowerCase()
+  const normalizedVersion = String(platformVersion || '').trim()
+
+  if (normalizedPlatform.includes('win')) {
+    return normalizedVersion ? `Windows ${normalizedVersion}` : 'Windows'
+  }
+  if (normalizedPlatform.includes('mac')) {
+    return normalizedVersion ? `macOS ${normalizedVersion}` : 'macOS'
+  }
+  if (normalizedPlatform.includes('linux')) {
+    return 'Linux'
+  }
+  return platform || '未知系统'
+}
+
 function buildComputerDeviceInfo() {
   if (typeof navigator === 'undefined') {
     return '网页端电脑'
@@ -267,7 +334,105 @@ function buildComputerDeviceInfo() {
     ? `${window.screen.width}x${window.screen.height}`
     : ''
 
-  return [model || platform, browser, resolution].filter(Boolean).join(' · ')
+  const details = []
+  details.push(`设备型号 ${model || '未提供（浏览器限制）'}`)
+  if (platform) {
+    details.push(`系统 ${platform}`)
+  }
+  if (browser) {
+    details.push(`浏览器 ${browser}`)
+  }
+  if (resolution) {
+    details.push(`分辨率 ${resolution}`)
+  }
+
+  return details.join(' / ') || '网页端电脑'
+}
+
+function resolveFaceCameraAccessMessage(error) {
+  const errorName = String(error?.name || '').toLowerCase()
+  if (errorName.includes('notallowed') || errorName.includes('security')) {
+    return '摄像头权限被拒绝，请允许浏览器访问摄像头后重试'
+  }
+  if (errorName.includes('notfound') || errorName.includes('overconstrained')) {
+    return '未检测到可用摄像头，请确认当前电脑已启用摄像头'
+  }
+  if (errorName.includes('notreadable') || errorName.includes('trackstart')) {
+    return '摄像头当前被其他应用占用，请关闭占用程序后重试'
+  }
+  return '无法访问摄像头，请改用本地图片上传'
+}
+
+function formatFaceSubmitError(error) {
+  const message = error?.message || '请求失败，请稍后重试'
+  if (faceInputSource.value === 'upload' && message.includes('活体')) {
+    return `${message}，请切换到摄像头模式完成挑战`
+  }
+  return message
+}
+
+async function loadComputerDeviceInfo() {
+  if (typeof navigator === 'undefined') {
+    computerDeviceInfo.value = '网页端电脑'
+    return
+  }
+
+  let model = navigator.userAgentData?.model || ''
+  let platform = navigator.userAgentData?.platform || navigator.platform || '未知系统'
+  let platformVersion = ''
+  let architecture = ''
+  let browser = detectBrowserName()
+  let browserVersion = detectBrowserVersion()
+
+  try {
+    if (navigator.userAgentData?.getHighEntropyValues) {
+      const entropyValues = await navigator.userAgentData.getHighEntropyValues([
+        'model',
+        'platformVersion',
+        'architecture',
+        'bitness',
+        'fullVersionList',
+      ])
+      model = entropyValues.model || model
+      platformVersion = entropyValues.platformVersion || platformVersion
+      architecture = entropyValues.architecture
+        ? `${entropyValues.architecture}${entropyValues.bitness ? ` ${entropyValues.bitness}位` : ''}`
+        : architecture
+
+      const browserEntry = entropyValues.fullVersionList?.find((item) => {
+        return /Edge|Chrome|Firefox|Safari/i.test(item.brand || '')
+      })
+      if (browserEntry?.brand) {
+        browser = browserEntry.brand.replace(/^Microsoft /, '')
+      }
+      if (browserEntry?.version) {
+        browserVersion = browserEntry.version
+      }
+    }
+  } catch (error) {
+    // 忽略高熵信息获取失败，回退到浏览器基础能力
+  }
+
+  const resolution = typeof window !== 'undefined' && window.screen?.width && window.screen?.height
+    ? `${window.screen.width}x${window.screen.height}`
+    : ''
+
+  const details = [
+    `设备型号 ${model || '未提供（浏览器限制）'}`,
+    `系统 ${detectPlatformName(platform, platformVersion)}`,
+  ]
+
+  if (architecture) {
+    details.push(`架构 ${architecture}`)
+  }
+
+  details.push(`浏览器 ${browser}${browserVersion ? ` ${browserVersion}` : ''}`)
+
+  if (resolution) {
+    details.push(`分辨率 ${resolution}`)
+  }
+
+  computerDeviceInfo.value = details.join(' / ')
 }
 
 async function resolveCurrentLocationLabel(longitude, latitude) {
@@ -392,6 +557,112 @@ function clearFaceCheckinState() {
   faceVerifyResult.value = ''
 }
 
+function resetFaceLivenessState() {
+  faceLivenessState.running = false
+  faceLivenessState.message = ''
+  faceLivenessState.actions = []
+  faceLivenessState.currentIndex = -1
+  faceLivenessState.completedCount = 0
+  faceLivenessState.token = ''
+  faceLivenessState.expiresAt = 0
+  faceLivenessState.score = null
+  faceLivenessState.imageData = ''
+}
+
+function updateFaceLivenessProgress(progress = {}) {
+  faceLivenessState.actions = Array.isArray(progress.actions) ? progress.actions : faceLivenessState.actions
+  faceLivenessState.currentIndex = Number.isFinite(progress.currentIndex) ? progress.currentIndex : faceLivenessState.currentIndex
+  faceLivenessState.completedCount = Array.isArray(progress.completedActions)
+    ? progress.completedActions.length
+    : faceLivenessState.completedCount
+  faceLivenessState.message = progress.message || faceLivenessState.message
+}
+
+async function startFaceLivenessChallenge() {
+  if (faceLivenessState.running) {
+    return
+  }
+
+  if (!hasLiveFaceCamera.value || !faceVideoRef.value) {
+    throw new Error('请先开启摄像头后再开始活体挑战')
+  }
+
+  faceLivenessState.running = true
+  faceLivenessState.message = '正在创建活体挑战...'
+  faceVerifyResult.value = ''
+
+  try {
+    const sessionResponse = await createFaceLivenessSession()
+    if (!sessionResponse || typeof sessionResponse !== 'object' || sessionResponse.code !== 200 || !sessionResponse.data) {
+      throw new Error(sessionResponse?.message || '活体挑战创建失败，请稍后重试')
+    }
+
+    const session = sessionResponse.data
+    faceLivenessState.actions = Array.isArray(session.actions) ? session.actions : []
+    faceLivenessState.currentIndex = 0
+    faceLivenessState.completedCount = 0
+
+    const challengeResult = await runFaceLivenessChallenge({
+      videoElement: faceVideoRef.value,
+      actions: session.actions,
+      onProgress: updateFaceLivenessProgress,
+    })
+
+    const completeResponse = await completeFaceLiveness({
+      sessionId: session.sessionId,
+      imageData: challengeResult.imageData,
+      startedAt: challengeResult.startedAt,
+      completedAt: challengeResult.completedAt,
+      sampleCount: challengeResult.sampleCount,
+      stableFaceFrames: challengeResult.stableFaceFrames,
+      completedActions: challengeResult.completedActions,
+      actionScores: challengeResult.actionScores,
+    })
+
+    if (!completeResponse || typeof completeResponse !== 'object' || completeResponse.code !== 200 || !completeResponse.data) {
+      throw new Error(completeResponse?.message || '活体挑战提交失败，请稍后重试')
+    }
+
+    checkinForm.imageData = challengeResult.imageData
+    faceLivenessState.token = completeResponse.data.livenessToken || ''
+    faceLivenessState.expiresAt = Number(completeResponse.data.expiresAt || 0)
+    faceLivenessState.score = typeof completeResponse.data.livenessScore === 'number'
+      ? completeResponse.data.livenessScore
+      : completeResponse.data.livenessScore || null
+    faceLivenessState.imageData = challengeResult.imageData
+    faceLivenessState.currentIndex = faceLivenessState.actions.length
+    faceLivenessState.completedCount = faceLivenessState.actions.length
+    faceLivenessState.message = completeResponse.data.message || '活体挑战通过'
+    clearFaceCheckinState()
+  } catch (error) {
+    resetFaceLivenessState()
+    throw error
+  } finally {
+    faceLivenessState.running = false
+  }
+}
+
+async function ensureFaceLivenessToken() {
+  if (faceInputSource.value !== 'camera') {
+    return ''
+  }
+
+  if (hasValidFaceLivenessProof.value) {
+    return faceLivenessState.token
+  }
+
+  await startFaceLivenessChallenge()
+  return faceLivenessState.token
+}
+
+async function handleFaceLivenessButton() {
+  try {
+    await startFaceLivenessChallenge()
+  } catch (error) {
+    faceVerifyResult.value = error?.message || '活体挑战失败，请稍后重试'
+  }
+}
+
 function stopFaceCamera() {
   if (!faceStreamRef.value) {
     return
@@ -417,6 +688,7 @@ function switchFaceSource(nextSource) {
   faceInputSource.value = nextSource
   faceCameraError.value = ''
   faceUploadError.value = ''
+  resetFaceLivenessState()
 }
 
 async function startFaceCamera() {
@@ -440,7 +712,7 @@ async function startFaceCamera() {
       faceVideoRef.value.srcObject = stream
     }
   } catch (error) {
-    faceCameraError.value = '无法访问摄像头，请改用本地图片上传'
+    faceCameraError.value = resolveFaceCameraAccessMessage(error)
   } finally {
     faceCameraStarting.value = false
   }
@@ -463,6 +735,7 @@ function captureFaceFrame() {
 
   context.drawImage(faceVideoRef.value, 0, 0, canvas.width, canvas.height)
   checkinForm.imageData = canvas.toDataURL('image/png')
+  resetFaceLivenessState()
   clearFaceCheckinState()
 }
 
@@ -482,6 +755,7 @@ function handleFaceUploadChange(event) {
   const reader = new FileReader()
   reader.onload = (loadEvent) => {
     checkinForm.imageData = loadEvent.target?.result || ''
+    resetFaceLivenessState()
     clearFaceCheckinState()
   }
   reader.readAsDataURL(file)
@@ -491,6 +765,7 @@ function resetFaceImage() {
   checkinForm.imageData = ''
   faceCameraError.value = ''
   faceUploadError.value = ''
+  resetFaceLivenessState()
   clearFaceCheckinState()
 }
 
@@ -693,15 +968,20 @@ async function handleVerifyFace() {
   faceVerifyLoading.value = true
 
   try {
+    await loadComputerDeviceInfo()
+    terminalId.value = getTerminalId()
     await ensureCurrentLocation()
+    const livenessToken = await ensureFaceLivenessToken()
     const response = await verifyFaceRequest({
       imageData: checkinForm.imageData,
+      livenessToken,
+      consumeLiveness: false,
     })
 
     faceVerifyResult.value = normalizeFaceVerifyResult(response)
   } catch (error) {
     currentLocationError.value = error?.message || ''
-    faceVerifyResult.value = error?.message || '人脸预检失败'
+    faceVerifyResult.value = formatFaceSubmitError(error)
   } finally {
     faceVerifyLoading.value = false
   }
@@ -716,15 +996,19 @@ async function handleSubmitCheckin() {
   checkinError.value = ''
 
   try {
+    await loadComputerDeviceInfo()
     await ensureCurrentLocation()
+    const livenessToken = await ensureFaceLivenessToken()
     readWrappedData(
       await submitAttendanceCheckinRequest({
         checkType: checkinForm.checkType,
         deviceId: checkinForm.deviceId,
-        deviceInfo: buildComputerDeviceInfo(),
+        deviceInfo: computerDeviceInfo.value,
+        terminalId: terminalId.value,
         clientLongitude: checkinForm.clientLongitude,
         clientLatitude: checkinForm.clientLatitude,
         imageData: checkinForm.imageData,
+        livenessToken,
       }),
     )
     await loadRecords()
@@ -734,7 +1018,7 @@ async function handleSubmitCheckin() {
     resetCurrentLocation()
   } catch (error) {
     currentLocationError.value = error?.message || ''
-    checkinError.value = error?.message || '打卡失败，请稍后重试'
+    checkinError.value = formatFaceSubmitError(error)
   } finally {
     checkinSubmitting.value = false
   }
@@ -766,6 +1050,8 @@ async function handleSubmitRepair() {
 }
 
 onMounted(() => {
+  void loadComputerDeviceInfo()
+  terminalId.value = getTerminalId()
   if (isAdmin.value) {
     void Promise.allSettled([loadDepartmentOptions(), loadRecords()])
     return
@@ -859,7 +1145,11 @@ onBeforeUnmount(() => {
         </label>
 
         <p data-testid="attendance-computer-device" class="attendance-hint">
-          当前电脑：{{ buildComputerDeviceInfo() }}
+          当前电脑：{{ computerDeviceInfo }}
+        </p>
+
+        <p data-testid="attendance-terminal-id" class="attendance-hint">
+          本机标识：{{ terminalId }}
         </p>
 
         <p v-if="selectedDeviceLocation" data-testid="attendance-device-location" class="attendance-hint">
@@ -975,7 +1265,8 @@ onBeforeUnmount(() => {
           >
             清空图像
           </button>
-          <p class="attendance-hint">上传后将直接用于本次打卡的人脸校验。</p>
+          <p class="attendance-hint">支持本地图片上传；若当前环境启用了活体挑战，请改用摄像头完成实时校验。</p>
+          <p v-if="checkinForm.imageData" class="attendance-hint attendance-hint--accent">当前已选本地图片；若预检或打卡时提示需要活体，请切换到摄像头模式。</p>
           <p v-if="faceUploadError" data-testid="attendance-face-upload-error" class="attendance-error">
             {{ faceUploadError }}
           </p>
@@ -985,6 +1276,41 @@ onBeforeUnmount(() => {
           <img :src="checkinForm.imageData" alt="打卡人脸预览" data-testid="attendance-face-preview" />
         </div>
         <p v-else data-testid="attendance-image-input" class="attendance-hint">请先拍照或上传图片</p>
+
+        <div v-if="faceInputSource === 'camera'" class="attendance-face-liveness">
+          <div class="attendance-face-liveness__header">
+            <strong>活体挑战</strong>
+            <button
+              type="button"
+              data-testid="attendance-face-liveness-button"
+              :disabled="!hasLiveFaceCamera || faceLivenessState.running"
+              @click="handleFaceLivenessButton"
+            >
+              {{ faceLivenessState.running ? '挑战中...' : hasValidFaceLivenessProof ? '重新挑战' : '开始活体挑战' }}
+            </button>
+          </div>
+          <p class="attendance-hint">
+            {{ faceLivenessState.message || '建议先完成随机活体挑战，再进行人脸预检或正式打卡。' }}
+          </p>
+          <p v-if="faceLivenessState.score !== null" class="attendance-hint attendance-hint--accent">
+            活体分值：{{ Number(faceLivenessState.score).toFixed(2) }}
+          </p>
+          <div v-if="faceLivenessState.actions.length" class="attendance-face-liveness__steps">
+            <span
+              v-for="(action, index) in faceLivenessState.actions"
+              :key="`${action}-${index}`"
+              :class="[
+                'attendance-face-liveness__step',
+                {
+                  'attendance-face-liveness__step--completed': index < faceLivenessState.completedCount,
+                  'attendance-face-liveness__step--active': index === faceLivenessState.currentIndex,
+                },
+              ]"
+            >
+              {{ describeLivenessAction(action) }}
+            </span>
+          </div>
+        </div>
       </section>
 
       <section class="attendance-card attendance-card--soft">
@@ -993,7 +1319,7 @@ onBeforeUnmount(() => {
             <p class="attendance-card__eyebrow">提交确认</p>
             <h2>完成人脸校验并提交打卡</h2>
           </div>
-          <span class="attendance-card__badge">办理提交</span>
+          <span class="attendance-card__badge">打卡提交</span>
         </div>
 
         <button
@@ -1010,8 +1336,8 @@ onBeforeUnmount(() => {
         </p>
 
         <div class="attendance-face-card__tips">
-          <span>建议先进行人脸校验，再正式提交打卡。</span>
-          <span>如摄像头不可用，可切换为本地图片上传。</span>
+          <span>建议先完成活体挑战和人脸预检，再正式提交打卡。</span>
+          <span>若当前环境启用了活体挑战，请优先使用摄像头完成校验。</span>
         </div>
 
         <div v-if="checkinError" data-testid="attendance-checkin-error" class="attendance-error">
@@ -1557,6 +1883,47 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.attendance-face-liveness {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(47, 105, 178, 0.12);
+  background: rgba(47, 105, 178, 0.06);
+}
+
+.attendance-face-liveness__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.attendance-face-liveness__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attendance-face-liveness__step {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  font-size: 13px;
+}
+
+.attendance-face-liveness__step--active {
+  background: rgba(37, 83, 145, 0.14);
+  color: #1d4f8f;
+}
+
+.attendance-face-liveness__step--completed {
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+}
+
 .attendance-face-preview img {
   display: block;
   width: 100%;
@@ -1633,6 +2000,11 @@ onBeforeUnmount(() => {
   margin: 0;
   color: #64748b;
   line-height: 1.7;
+}
+
+.attendance-hint--accent {
+  color: #245391;
+  font-weight: 600;
 }
 
 .attendance-repair-dialog {

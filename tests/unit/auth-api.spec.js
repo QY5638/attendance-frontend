@@ -8,7 +8,7 @@ vi.mock('../../src/utils/request', () => ({
   },
 }))
 
-import { loginRequest } from '../../src/api/auth'
+import { loginRequest, logoutRequest, refreshTokenRequest } from '../../src/api/auth'
 
 describe('auth api', () => {
   beforeEach(() => {
@@ -48,11 +48,12 @@ describe('auth api', () => {
   it('keeps login success payload unchanged', async () => {
     post.mockResolvedValue({
       code: 200,
-      data: { token: 'token-value', roleCode: 'ADMIN', realName: '系统管理员' },
+      data: { token: 'token-value', refreshToken: 'refresh-token-value', roleCode: 'ADMIN', realName: '系统管理员' },
     })
 
     await expect(loginRequest({ username: 'admin', password: '123456' })).resolves.toEqual({
       token: 'token-value',
+      refreshToken: 'refresh-token-value',
       roleCode: 'ADMIN',
       realName: '系统管理员',
     })
@@ -76,5 +77,37 @@ describe('auth api', () => {
       field: '',
       message: '登录失败，请稍后重试',
     })
+  })
+
+  it('keeps refresh success payload unchanged', async () => {
+    post.mockResolvedValue({
+      code: 200,
+      data: { token: 'new-token', refreshToken: 'new-refresh-token', roleCode: 'ADMIN', realName: '系统管理员' },
+    })
+
+    await expect(refreshTokenRequest('refresh-token-value')).resolves.toEqual({
+      token: 'new-token',
+      refreshToken: 'new-refresh-token',
+      roleCode: 'ADMIN',
+      realName: '系统管理员',
+    })
+    expect(post).toHaveBeenCalledWith('/auth/refresh', { refreshToken: 'refresh-token-value' })
+  })
+
+  it('rejects refresh failure with unauthorized message', async () => {
+    post.mockResolvedValue({ code: 401, message: '登录状态已失效，请重新登录' })
+
+    await expect(refreshTokenRequest('refresh-token-value')).rejects.toMatchObject({
+      type: 'auth',
+      field: '',
+      message: '登录状态已失效，请重新登录',
+    })
+  })
+
+  it('posts refresh token when logout is requested', async () => {
+    post.mockResolvedValue({ code: 200, message: 'success', data: null })
+
+    await expect(logoutRequest('refresh-token-value')).resolves.toBeNull()
+    expect(post).toHaveBeenCalledWith('/auth/logout', { refreshToken: 'refresh-token-value' })
   })
 })

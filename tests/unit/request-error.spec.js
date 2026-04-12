@@ -32,10 +32,41 @@ describe('request error normalization', () => {
     })
   })
 
+  it('maps backend english server error message to readable chinese text', () => {
+    expect(requestModule.handleRequestError?.({
+      response: {
+        status: 500,
+        data: {
+          message: 'server error',
+        },
+      },
+    })).toEqual({
+      type: 'unknown',
+      message: '服务器异常，请稍后重试',
+      field: '',
+    })
+  })
+
+  it('prefers backend chinese business message when present', () => {
+    expect(requestModule.handleRequestError?.({
+      response: {
+        status: 400,
+        data: {
+          message: '打卡地点已停用，不能打卡',
+        },
+      },
+    })).toEqual({
+      type: 'unknown',
+      message: '打卡地点已停用，不能打卡',
+      field: '',
+    })
+  })
+
   it('clears auth storage and calls unauthorized handler on 401', () => {
     const handler = vi.fn()
     requestModule.setUnauthorizedHandler(handler)
     localStorage.setItem('attendance_token', 'expired-token')
+    localStorage.setItem('attendance_refresh_token', 'expired-refresh-token')
     localStorage.setItem('attendance_role_code', 'ADMIN')
     localStorage.setItem('attendance_real_name', '系统管理员')
 
@@ -47,8 +78,24 @@ describe('request error normalization', () => {
       field: '',
     })
     expect(localStorage.getItem('attendance_token')).toBeNull()
+    expect(localStorage.getItem('attendance_refresh_token')).toBeNull()
     expect(localStorage.getItem('attendance_role_code')).toBeNull()
     expect(localStorage.getItem('attendance_real_name')).toBeNull()
     expect(handler).toHaveBeenCalledWith(normalized)
+  })
+
+  it('maps 403 to forbidden error object with chinese message', () => {
+    expect(requestModule.handleRequestError?.({
+      response: {
+        status: 403,
+        data: {
+          message: 'forbidden',
+        },
+      },
+    })).toEqual({
+      type: 'forbidden',
+      message: '当前账号无权执行此操作',
+      field: '',
+    })
   })
 })

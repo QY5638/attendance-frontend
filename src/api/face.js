@@ -19,7 +19,7 @@ function normalizeFaceError(action, result = {}) {
 }
 
 async function submitFace(action, url, imageData) {
-  const result = await request.post(url, { imageData })
+  const result = await request.post(url, imageData)
 
   if (!result || typeof result !== 'object' || result.code !== 200 || !result.data) {
     throw normalizeFaceError(action, result)
@@ -28,10 +28,26 @@ async function submitFace(action, url, imageData) {
   return result.data
 }
 
-export function registerFace(imageData) {
-  return submitFace('register', '/face/register', imageData)
+export function createFaceLivenessSession() {
+  return request.post('/face/liveness/session', {})
 }
 
-export function verifyFace(imageData) {
-  return submitFace('verify', '/face/verify', imageData)
+export function completeFaceLiveness(payload) {
+  return request.post('/face/liveness/complete', payload)
+}
+
+export function registerFace(imageData, livenessToken = '') {
+  const payload = { imageData }
+  if (livenessToken) {
+    payload.livenessToken = livenessToken
+  }
+  return submitFace('register', '/face/register', payload)
+}
+
+export function verifyFace(imageData, livenessToken = '') {
+  const payload = { imageData }
+  if (livenessToken) {
+    payload.livenessToken = livenessToken
+  }
+  return submitFace('verify', '/face/verify', payload)
 }

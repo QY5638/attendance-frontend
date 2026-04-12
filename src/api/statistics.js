@@ -122,6 +122,11 @@ export async function fetchExceptionTrend(params = {}) {
   return unwrapBusinessResponse(result, '获取异常趋势失败')
 }
 
+export async function fetchExceptionTypeTrend(params = {}) {
+  const result = await request.get('/statistics/exception-type-trend', buildGetConfig(params))
+  return unwrapBusinessResponse(result, '获取异常类型趋势失败')
+}
+
 export async function fetchStatisticsSummary(params = {}) {
   const result = await request.get('/statistics/summary', buildGetConfig(params))
   return unwrapBusinessResponse(result, '获取统计摘要失败')

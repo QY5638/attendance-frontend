@@ -54,6 +54,14 @@ const PROCESS_STATUS_LABELS = {
 
 const EXCEPTION_TYPE_LABELS = {
   PROXY_CHECKIN: '代打卡',
+  CONTINUOUS_LATE: '连续迟到',
+  CONTINUOUS_EARLY_LEAVE: '连续早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
+  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
+  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
+  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
   ILLEGAL_TIME: '非规定时间打卡',
@@ -352,7 +360,7 @@ async function loadReviewPage(currentExceptionId) {
     applyLatestReview(latestResult.value)
   } else {
     applyLatestReview(null)
-    latestError.value = latestResult.reason?.message || '最近办理记录加载失败，请稍后重试'
+    latestError.value = latestResult.reason?.message || '最近复核记录加载失败，请稍后重试'
   }
 
   if (assistantResult.status === 'fulfilled') {
@@ -465,13 +473,13 @@ watch(
   <section class="review-page">
     <ConsoleHero
       title="人工复核"
-      description="查看异常详情、处置参考和办理记录，并完成复核确认与补充说明。"
+      description="查看异常详情、处置参考和最近复核记录，并完成复核确认与补充说明。"
       theme="violet"
       :cards="heroCards"
     />
 
     <section v-if="!hasExceptionId" data-testid="review-empty-state" class="review-panel review-panel--empty">
-      <h2>请选择待处理记录</h2>
+      <h2>请选择需要复核的记录</h2>
       <p>请从异常中心或预警列表进入当前页面。</p>
     </section>
 
@@ -561,12 +569,12 @@ watch(
       <section class="review-panel review-panel--history">
         <div class="review-panel__head">
           <div>
-            <p class="review-panel__eyebrow">最近办理记录</p>
-            <h2>查看最近一次处理结果</h2>
+            <p class="review-panel__eyebrow">最近复核记录</p>
+            <h2>查看最近一次复核结果</h2>
           </div>
         </div>
 
-        <p v-if="latestLoading" class="review-feedback">最近办理记录加载中...</p>
+        <p v-if="latestLoading" class="review-feedback">最近复核记录加载中...</p>
         <p v-else-if="latestError" class="review-feedback review-feedback--error">{{ latestError }}</p>
         <article v-else-if="latestReview" data-testid="review-latest-card" class="review-latest-card">
           <dl class="review-detail-grid">
@@ -608,7 +616,7 @@ watch(
             </div>
           </dl>
         </article>
-        <p v-else class="review-feedback">暂无最近办理记录。</p>
+        <p v-else class="review-feedback">暂无最近复核记录。</p>
       </section>
 
       <section class="review-panel review-panel--decision">
@@ -706,7 +714,7 @@ watch(
           </div>
         </div>
 
-        <p v-if="!latestReview" class="review-feedback">暂无最近办理记录，暂不可补充反馈信息。</p>
+        <p v-if="!latestReview" class="review-feedback">暂无最近复核记录，暂不可补充反馈信息。</p>
         <template v-else>
           <p class="review-form-tip">如需补充处理评价或后续说明，可在下方直接保存。</p>
           <div class="review-form-grid">

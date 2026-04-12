@@ -29,6 +29,11 @@ export async function fetchFe06WarningList(params = {}) {
   return unwrapBusinessResponse(result, '获取预警列表失败')
 }
 
+export async function fetchFe06WarningDashboard() {
+  const result = await request.get('/warning/dashboard')
+  return unwrapBusinessResponse(result, '获取预警看板失败')
+}
+
 export async function fetchFe06WarningAdvice(id) {
   const result = await request.get(`/warning/${id}/advice`)
   return unwrapBusinessResponse(result, '获取预警建议失败')

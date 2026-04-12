@@ -12,7 +12,7 @@
         <div class="crud-page__header">
           <div>
             <strong>部门资料</strong>
-            <p>维护部门名称和说明，当前按平级部门统一管理。</p>
+            <p>维护部门名称和说明，当前按平级组织统一管理。</p>
           </div>
           <el-button type="primary" @click="openCreateDialog">新增部门</el-button>
         </div>

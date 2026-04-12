@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-import { createAuthError, loginRequest } from '../api/auth'
+import { createAuthError, loginRequest, logoutRequest } from '../api/auth'
 import { canAccessRoles, getDefaultHomePath, isSupportedRole } from '../router/access'
 import { clearAuthStorage, readAuthStorage, writeAuthStorage } from '../utils/auth'
 
@@ -39,6 +39,7 @@ export const useAuthStore = defineStore('auth', {
 
       writeAuthStorage({
         token: this.token,
+        refreshToken: data.refreshToken || '',
         roleCode: this.roleCode,
         realName: this.realName,
       })
@@ -72,8 +73,18 @@ export const useAuthStore = defineStore('auth', {
       clearAuthStorage()
     },
 
-    logout() {
-      this.clearSession()
+    async logout() {
+      const { refreshToken } = readAuthStorage()
+
+      try {
+        if (this.token || refreshToken) {
+          await logoutRequest(refreshToken)
+        }
+      } catch {
+        // 退出接口失败时仍然清空本地会话，避免界面停留在过期状态。
+      } finally {
+        this.clearSession()
+      }
     },
 
     hasRole(roles = []) {

@@ -3,7 +3,7 @@
     <header class="panel-card__header">
       <div>
         <h2>处理记录</h2>
-        <p>用于查询系统分析处理记录、方案应用情况、耗时与办理状态。</p>
+        <p>用于查看模型分析过程、方案使用情况、执行耗时与处理结果。</p>
       </div>
       <span class="panel-card__summary">共 {{ pagination.total }} 条</span>
     </header>
@@ -11,7 +11,7 @@
     <section class="panel-card__hero-strip">
       <article>
         <span>内容分类</span>
-        <strong>分析处理记录</strong>
+        <strong>模型分析记录</strong>
       </article>
       <article>
         <span>主要用途</span>
@@ -21,19 +21,19 @@
 
     <form class="panel-card__filters" @submit.prevent="handleSearch">
       <label>
-        <span>办理场景</span>
-        <input v-model="filters.businessType" type="text" placeholder="请输入办理场景关键字" />
+        <span>业务场景</span>
+        <input v-model="filters.businessType" type="text" placeholder="请输入业务场景关键字" />
       </label>
       <label>
-        <span>关联事项</span>
-        <input v-model="filters.businessId" type="text" placeholder="按关联事项筛选" />
+        <span>关联编号</span>
+        <input v-model="filters.businessId" type="text" placeholder="按关联编号筛选" />
       </label>
       <label>
-        <span>方案使用</span>
-        <input v-model="filters.promptTemplateId" type="text" placeholder="按方案使用情况筛选" />
+        <span>方案编号</span>
+        <input v-model="filters.promptTemplateId" type="text" placeholder="按方案编号筛选" />
       </label>
       <label>
-        <span>办理状态</span>
+        <span>执行状态</span>
         <select v-model="filters.status">
           <option value="">全部状态</option>
           <option value="SUCCESS">成功</option>
@@ -60,11 +60,11 @@
       <table class="panel-card__table">
         <thead>
           <tr>
-            <th>办理场景</th>
-            <th>关联事项</th>
-            <th>方案使用</th>
-            <th>办理状态</th>
-            <th>处理耗时</th>
+            <th>业务场景</th>
+            <th>关联编号</th>
+            <th>方案编号</th>
+            <th>执行状态</th>
+            <th>执行耗时</th>
             <th>输入概述</th>
             <th>结果说明</th>
             <th>创建时间</th>
@@ -196,7 +196,7 @@ function formatBusinessReference(row = {}) {
     return `${sceneLabel}：${row.inputSummary}`
   }
 
-  return sceneLabel === '-' ? '当前办理记录' : `${sceneLabel}记录`
+  return sceneLabel === '-' ? '当前记录' : `${sceneLabel}记录`
 }
 
 function formatPromptReference(row = {}) {

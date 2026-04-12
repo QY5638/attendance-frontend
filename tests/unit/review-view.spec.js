@@ -114,7 +114,7 @@ describe('review view', () => {
     expect(fetchExceptionDetail).not.toHaveBeenCalled()
     expect(fetchLatestReview).not.toHaveBeenCalled()
     expect(fetchReviewAssistant).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="review-empty-state"]').text()).toContain('请选择待处理记录')
+    expect(wrapper.get('[data-testid="review-empty-state"]').text()).toContain('请选择需要复核的记录')
   })
 
   it('loads exception detail, assistant and latest review when exceptionId exists', async () => {

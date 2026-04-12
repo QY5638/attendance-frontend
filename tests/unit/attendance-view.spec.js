@@ -7,6 +7,7 @@ const {
   getAttendanceListRequest,
   getAttendanceDeviceOptionsRequest,
   loadAmapSdk,
+  getTerminalId,
   getMyAttendanceRecordRequest,
   submitAttendanceCheckinRequest,
   submitAttendanceRepairRequest,
@@ -22,6 +23,7 @@ const {
   getAttendanceListRequest: vi.fn(),
   getAttendanceDeviceOptionsRequest: vi.fn(),
   loadAmapSdk: vi.fn(),
+  getTerminalId: vi.fn(() => 'terminal-fixed-id'),
   getMyAttendanceRecordRequest: vi.fn(),
   submitAttendanceCheckinRequest: vi.fn(),
   submitAttendanceRepairRequest: vi.fn(),
@@ -47,6 +49,10 @@ vi.mock('../../src/api/department', () => ({
 
 vi.mock('../../src/utils/amap', () => ({
   loadAmapSdk,
+}))
+
+vi.mock('../../src/utils/terminal-id', () => ({
+  getTerminalId,
 }))
 
 import AttendanceView from '../../src/views/attendance/AttendanceView.vue'
@@ -96,6 +102,11 @@ function createRecordResponse(records = [], total = records.length) {
 
 async function setFaceImage(wrapper, imageData = 'base64-image') {
   wrapper.vm.checkinForm.imageData = imageData
+  await wrapper.vm.$nextTick()
+}
+
+async function switchToUploadSource(wrapper) {
+  await wrapper.get('[data-testid="attendance-face-source-upload"]').trigger('click')
   await wrapper.vm.$nextTick()
 }
 
@@ -161,7 +172,7 @@ describe('attendance view', () => {
         checkType: 'IN',
         checkTime: '2026-04-04T09:00:00',
         deviceId: 'DEV-001',
-        deviceInfo: 'Windows 11 · Google Chrome · 1920x1080',
+        deviceInfo: '系统 Windows 11 / 浏览器 Google Chrome / 分辨率 1920x1080',
         location: '办公区A',
         status: 'NORMAL',
         exceptionType: 'MULTI_LOCATION_CONFLICT',
@@ -299,11 +310,13 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
+    await switchToUploadSource(wrapper)
     await setFaceImage(wrapper)
 
     expect(wrapper.get('[data-testid="attendance-device-select"]').text()).toContain('办公区A')
     expect(wrapper.get('[data-testid="attendance-device-location"]').text()).toContain('办公区A（允许半径 30 米）')
     expect(wrapper.get('[data-testid="attendance-computer-device"]').text()).toContain('当前电脑')
+    expect(wrapper.get('[data-testid="attendance-terminal-id"]').text()).toContain('terminal-fixed-id')
     expect(wrapper.get('[data-testid="attendance-face-verify-button"]').attributes('disabled')).toBeUndefined()
 
     expect(wrapper.find('[data-testid="attendance-face-verify-result"]').exists()).toBe(false)
@@ -313,6 +326,8 @@ describe('attendance view', () => {
 
     expect(verifyFaceRequest).toHaveBeenCalledWith({
       imageData: 'base64-image',
+      livenessToken: '',
+      consumeLiveness: false,
     })
     expect(wrapper.get('[data-testid="attendance-face-verify-result"]').text()).toContain('通过')
   })
@@ -360,6 +375,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
+    await switchToUploadSource(wrapper)
     await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
@@ -370,6 +386,7 @@ describe('attendance view', () => {
       deviceId: 'LOC-A',
       imageData: 'base64-image',
       deviceInfo: expect.any(String),
+      terminalId: 'terminal-fixed-id',
       clientLongitude: 116.397128,
       clientLatitude: 39.916527,
     }))
@@ -394,6 +411,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
+    await switchToUploadSource(wrapper)
     await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()
@@ -636,6 +654,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     await wrapper.get('[data-testid="attendance-device-select"]').setValue('LOC-A')
+    await switchToUploadSource(wrapper)
     await setFaceImage(wrapper)
     await wrapper.get('[data-testid="attendance-checkin-submit"]').trigger('click')
     await flushPromises()

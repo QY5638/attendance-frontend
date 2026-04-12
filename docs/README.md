@@ -5,6 +5,7 @@
 本目录用于集中维护前端模块开发说明、界面改造说明和历史设计/计划归档。
 
 - 当前运行、构建、测试和环境变量口径，优先查看 [../README.md](../README.md)。
+- 单机摄像头部署、活体联调和答辩口径，优先查看后端文档中的 [../backend/docs/integration/phase5-local-runbook.md](../backend/docs/integration/phase5-local-runbook.md) 对应章节。
 - 当前模块开发入口，优先查看 [module-guides/README.md](module-guides/README.md)。
 - 当前界面层改造说明，查看 [前端UI改造说明.md](前端UI改造说明.md)。
 - 历史设计稿与实施计划归档，查看 [superpowers/README.md](superpowers/README.md)。

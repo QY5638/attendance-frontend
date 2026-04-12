@@ -23,6 +23,7 @@ import {
   fetchDeviceList,
   fetchExceptionTypeList,
   fetchOperationLogList,
+  fetchOperationLogSummary,
   fetchRiskLevelList,
   fetchRuleList,
   updateDevice,
@@ -250,6 +251,64 @@ describe('system api', () => {
         type: 'LOGIN',
         startDate: '2026-04-01',
         endDate: '2026-04-04',
+      },
+    })
+  })
+
+  it('passes operation log summary query params through', async () => {
+    get.mockResolvedValue({
+      code: 200,
+      data: {
+        total: 2,
+        typeCounts: {
+          LOGIN: 1,
+          FACE_LIVENESS_PASS: 1,
+        },
+      },
+    })
+
+    await expect(fetchOperationLogSummary({
+      userId: 1001,
+      types: ['LOGIN', 'FACE_LIVENESS_PASS'],
+    })).resolves.toEqual({
+      total: 2,
+      typeCounts: {
+        LOGIN: 1,
+        FACE_LIVENESS_PASS: 1,
+      },
+    })
+
+    expect(get).toHaveBeenCalledWith('/log/operation/summary', {
+      params: {
+        userId: 1001,
+        types: 'LOGIN,FACE_LIVENESS_PASS',
+      },
+    })
+  })
+
+  it('passes grouped operation log type filters through as comma string', async () => {
+    get.mockResolvedValue({
+      code: 200,
+      data: {
+        total: 1,
+        records: [{ id: 2, type: 'FACE_LIVENESS_PASS' }],
+      },
+    })
+
+    await expect(fetchOperationLogList({
+      pageNum: 1,
+      pageSize: 10,
+      types: ['FACE_LIVENESS_SESSION', 'FACE_LIVENESS_PASS'],
+    })).resolves.toEqual({
+      total: 1,
+      items: [{ id: 2, type: 'FACE_LIVENESS_PASS' }],
+    })
+
+    expect(get).toHaveBeenCalledWith('/log/operation/list', {
+      params: {
+        pageNum: 1,
+        pageSize: 10,
+        types: 'FACE_LIVENESS_SESSION,FACE_LIVENESS_PASS',
       },
     })
   })

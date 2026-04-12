@@ -128,8 +128,8 @@ function getMenuIcon(title) {
   return MENU_ICONS[title] || '•'
 }
 
-function handleLogout() {
-  authStore.logout()
+async function handleLogout() {
+  await authStore.logout()
   router.replace('/login')
 }
 </script>

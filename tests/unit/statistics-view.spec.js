@@ -7,6 +7,8 @@ const {
   fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchExceptionTrend,
+  fetchExceptionTypeTrend,
+  fetchOperationLogSummary,
   fetchStatisticsSummary,
   messageError,
   messageSuccess,
@@ -15,6 +17,8 @@ const {
   fetchDepartmentRiskOverview: vi.fn(),
   fetchDepartmentStatistics: vi.fn(),
   fetchExceptionTrend: vi.fn(),
+  fetchExceptionTypeTrend: vi.fn(),
+  fetchOperationLogSummary: vi.fn(),
   fetchStatisticsSummary: vi.fn(),
   messageError: vi.fn(),
   messageSuccess: vi.fn(),
@@ -32,7 +36,12 @@ vi.mock('../../src/api/statistics', () => ({
   fetchDepartmentRiskOverview,
   fetchDepartmentStatistics,
   fetchExceptionTrend,
+  fetchExceptionTypeTrend,
   fetchStatisticsSummary,
+}))
+
+vi.mock('../../src/api/system', () => ({
+  fetchOperationLogSummary,
 }))
 
 import StatisticsView from '../../src/views/statistics/StatisticsView.vue'
@@ -96,6 +105,8 @@ describe('statistics view', () => {
     fetchDepartmentRiskOverview.mockReset()
     fetchDepartmentStatistics.mockReset()
     fetchExceptionTrend.mockReset()
+    fetchExceptionTypeTrend.mockReset()
+    fetchOperationLogSummary.mockReset()
     fetchStatisticsSummary.mockReset()
     messageError.mockReset()
     messageSuccess.mockReset()
@@ -106,6 +117,8 @@ describe('statistics view', () => {
       highRiskCount: 3,
       exceptionTypeDistribution: {
         MULTI_LOCATION_CONFLICT: 2,
+        CONTINUOUS_LATE: 3,
+        CONTINUOUS_REPEAT_CHECK: 1,
       },
     })
     fetchExceptionTrend.mockResolvedValue({
@@ -113,6 +126,14 @@ describe('statistics view', () => {
       points: [
         { date: '周一', exceptionCount: 2 },
         { date: '周二', exceptionCount: 4 },
+      ],
+    })
+    fetchExceptionTypeTrend.mockResolvedValue({
+      periodType: 'DAY',
+      labels: ['周一', '周二'],
+      items: [
+        { type: 'CONTINUOUS_LATE', totalCount: 3, values: [1, 2] },
+        { type: 'CONTINUOUS_REPEAT_CHECK', totalCount: 1, values: [0, 1] },
       ],
     })
     fetchStatisticsSummary.mockResolvedValue({
@@ -123,6 +144,16 @@ describe('statistics view', () => {
     fetchDepartmentRiskOverview.mockResolvedValue([
       { deptId: 1, deptName: '研发部', riskScore: 76, riskSummary: '中高风险' },
     ])
+    fetchOperationLogSummary.mockResolvedValue({
+      total: 12,
+      typeCounts: {
+        LOGIN: 3,
+        FACE_LIVENESS_PASS: 4,
+        FACE_LIVENESS_REJECT: 1,
+        CHECKIN: 2,
+        TOKEN_REFRESH: 2,
+      },
+    })
   })
 
   it('loads statistics page sections', async () => {
@@ -136,7 +167,16 @@ describe('statistics view', () => {
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('多地点异常')
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).toContain('2')
     expect(wrapper.get('[data-testid="statistics-overview"]').text()).not.toContain('highRiskCount')
+    expect(wrapper.get('[data-testid="statistics-exception-types"]').text()).toContain('连续迟到')
+    expect(wrapper.get('[data-testid="statistics-exception-types"]').text()).toContain('连续重复打卡')
+    expect(wrapper.get('[data-testid="statistics-exception-types"]').html()).toContain('statistics-type-trend-bars')
     expect(wrapper.get('[data-testid="statistics-trend"]').text()).toContain('周一')
+    expect(wrapper.get('[data-testid="statistics-runtime-events"]').text()).toContain('总事件数')
+    expect(wrapper.get('[data-testid="statistics-runtime-events"]').text()).toContain('12')
+    expect(wrapper.get('[data-testid="statistics-runtime-events"]').text()).toContain('活体事件')
+    expect(wrapper.get('[data-testid="statistics-runtime-events"]').text()).toContain('活体通过')
+    expect(wrapper.get('[data-testid="statistics-continuous-patterns"]').text()).toContain('连续迟到')
+    expect(wrapper.get('[data-testid="statistics-continuous-patterns"]').text()).toContain('连续重复打卡')
     expect(wrapper.get('[data-testid="statistics-risk"]').text()).toContain('研发部')
   })
 
@@ -146,6 +186,13 @@ describe('statistics view', () => {
       points: [
         { date: '2026-03-25', exceptionCount: 1 },
         { date: '2026-03-26', exceptionCount: 3 },
+      ],
+    })
+    fetchExceptionTypeTrend.mockResolvedValue({
+      periodType: 'DAY',
+      labels: ['2026-03-25', '2026-03-26'],
+      items: [
+        { type: 'MULTI_LOCATION_CONFLICT', totalCount: 2, values: [1, 1] },
       ],
     })
 

@@ -2,17 +2,23 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
+  exportStatisticsReport,
   fetchFe06WarningAdvice,
+  fetchFe06WarningDashboard,
   fetchFe06WarningList,
   fetchFe06WarningReevaluate,
   messageSuccess,
   routerPush,
+  submitReview,
 } = vi.hoisted(() => ({
+  exportStatisticsReport: vi.fn(),
   fetchFe06WarningAdvice: vi.fn(),
+  fetchFe06WarningDashboard: vi.fn(),
   fetchFe06WarningList: vi.fn(),
   fetchFe06WarningReevaluate: vi.fn(),
   messageSuccess: vi.fn(),
   routerPush: vi.fn(),
+  submitReview: vi.fn(),
 }))
 
 vi.mock('element-plus', () => ({
@@ -23,8 +29,17 @@ vi.mock('element-plus', () => ({
 
 vi.mock('../../src/api/fe06-warning', () => ({
   fetchFe06WarningAdvice,
+  fetchFe06WarningDashboard,
   fetchFe06WarningList,
   fetchFe06WarningReevaluate,
+}))
+
+vi.mock('../../src/api/review', () => ({
+  submitReview,
+}))
+
+vi.mock('../../src/api/statistics', () => ({
+  exportStatisticsReport,
 }))
 
 vi.mock('vue-router', async () => {
@@ -76,6 +91,8 @@ function createWarningRecord(overrides = {}) {
     disposeSuggestion: '建议优先人工复核',
     decisionSource: 'MODEL_FUSION',
     sendTime: '2026-04-04 10:00:00',
+    overdue: true,
+    overdueMinutes: 1560,
     ...overrides,
   }
 }
@@ -83,25 +100,111 @@ function createWarningRecord(overrides = {}) {
 describe('warning view', () => {
   beforeEach(() => {
     routerPush.mockReset()
+    exportStatisticsReport.mockReset()
     fetchFe06WarningList.mockReset()
     fetchFe06WarningAdvice.mockReset()
+    fetchFe06WarningDashboard.mockReset()
     fetchFe06WarningReevaluate.mockReset()
+    submitReview.mockReset()
     messageSuccess.mockReset()
 
     fetchFe06WarningList.mockResolvedValue(createListPayload([createWarningRecord()]))
+    fetchFe06WarningDashboard.mockResolvedValue({
+      recentDays: 7,
+      totalCount: 6,
+      processedCount: 3,
+      unprocessedCount: 3,
+      highRiskCount: 2,
+      overdueCount: 1,
+      overdue24To48Count: 1,
+      overdue48To72Count: 0,
+      overdueOver72Count: 0,
+      criticalRiskUserCount: 0,
+      highRiskUserCount: 1,
+      mediumRiskUserCount: 0,
+      lowRiskUserCount: 0,
+      slaTargetHours: 24,
+      withinSlaCount: 2,
+      overSlaCount: 1,
+      processedRate: 50,
+      withinSlaRate: 66.67,
+      averageProcessMinutes: 32.5,
+      trendPoints: [
+        { dateLabel: '2026-04-08', totalCount: 1, processedCount: 1, unprocessedCount: 0, highRiskCount: 0 },
+        { dateLabel: '2026-04-09', totalCount: 2, processedCount: 1, unprocessedCount: 1, highRiskCount: 1 },
+        { dateLabel: '2026-04-10', totalCount: 3, processedCount: 1, unprocessedCount: 2, highRiskCount: 1 },
+      ],
+      exceptionTrendItems: [
+        { type: 'CONTINUOUS_LATE', totalCount: 2, highRiskCount: 1, dailyCounts: [0, 0, 1, 0, 0, 1, 0] },
+        { type: 'CONTINUOUS_PROXY_CHECKIN', totalCount: 1, highRiskCount: 1, dailyCounts: [0, 0, 0, 1, 0, 0, 0] },
+      ],
+      topRiskUsers: [
+        { key: '1001', label: '张三（zhangsan）', count: 3, highRiskCount: 2 },
+      ],
+      userPortraits: [
+        {
+          userId: 1001,
+          username: 'zhangsan',
+          realName: '张三',
+          riskTier: 'HIGH',
+          totalWarnings: 3,
+          highRiskWarnings: 2,
+          unprocessedWarnings: 2,
+          overdueWarnings: 1,
+          latestExceptionType: 'CONTINUOUS_LATE',
+          latestWarningLevel: 'HIGH',
+          latestWarningTime: '2026-04-10 08:00:00',
+        },
+      ],
+      topExceptionTypes: [
+        { key: 'CONTINUOUS_LATE', label: 'CONTINUOUS_LATE', count: 2, highRiskCount: 1 },
+      ],
+      overdueItems: [
+        { warningId: 5008, title: 'CONTINUOUS_LATE', realName: '张三', sendTime: '2026-04-09 08:00:00', overdueMinutes: 1560 },
+      ],
+    })
     fetchFe06WarningAdvice.mockResolvedValue({
       id: 5001,
       exceptionId: 3001,
+      type: 'RISK_WARNING',
+      level: 'HIGH',
+      status: 'UNPROCESSED',
       priorityScore: 96,
       aiSummary: '设备与地点异常共同提升风险',
       disposeSuggestion: '建议优先人工复核',
       decisionSource: 'MODEL_FUSION',
+      realName: '张三',
+      username: 'zhangsan',
+      checkTime: '2026-04-04 09:00:00',
+      location: '办公区A',
+      faceScore: 92.5,
+      exceptionSourceType: 'MODEL',
+      exceptionProcessStatus: 'PENDING',
+      exceptionDescription: '疑似代打卡',
+      modelConclusion: '疑似代打卡风险较高',
+      confidenceScore: 92.5,
+      decisionReason: '设备与地点异常共同提升风险',
+      similarCaseSummary: '近期同设备存在多账号快速切换',
+      reviewResult: 'CONFIRMED',
+      reviewUserName: '系统管理员',
+      reviewComment: '已确认异常',
     })
     fetchFe06WarningReevaluate.mockResolvedValue(createWarningRecord({
       status: 'PROCESSED',
       aiSummary: '已完成重新评估',
       disposeSuggestion: '建议结合最新情况处理',
     }))
+    submitReview.mockResolvedValue({
+      id: 6001,
+      exceptionId: 3001,
+      reviewResult: 'CONFIRMED',
+      reviewComment: '已在预警页确认异常',
+    })
+    exportStatisticsReport.mockResolvedValue({
+      blob: new Blob(['预警看板报表'], { type: 'text/csv;charset=UTF-8' }),
+      filename: 'warning-dashboard.csv',
+      contentType: 'text/csv;charset=UTF-8',
+    })
   })
 
   it('loads warning list on mount and renders list fields', async () => {
@@ -115,9 +218,102 @@ describe('warning view', () => {
       status: '',
       type: '',
     })
+    expect(fetchFe06WarningDashboard).toHaveBeenCalledTimes(1)
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('高风险代打卡预警')
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('代打卡异常')
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('待处理')
+    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('超时')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('预警总量')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('高风险 1')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('平均处置时长')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('处置 SLA 统计')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('按时关闭')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('超时关闭')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('66.67%')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('2026-04-10')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('高风险人员排行')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('张三（zhangsan）')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('异常人员画像')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('总预警 3')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('高风险')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('异常类型排行')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('连续迟到')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').html()).toContain('warning-type-trend')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('处置超时提醒')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('24-48h')
+    expect(wrapper.get('[data-testid="warning-continuous-trend"]').text()).toContain('连续代打卡')
+  })
+
+  it('opens portrait dialog and loads warning archive by user id', async () => {
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    await wrapper.find('.warning-portrait-item').trigger('click')
+    await flushPromises()
+
+    expect(fetchFe06WarningList).toHaveBeenNthCalledWith(2, {
+      pageNum: 1,
+      pageSize: 5,
+      userId: 1001,
+    })
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('风险人员档案')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('张三（zhangsan）')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('高风险代打卡预警')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('自动处置建议')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('超时预警')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('高风险')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('处置时间线')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('超时 26 小时')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('一个工作日内完成快速复核')
+  })
+
+  it('applies portrait suggestion into quick review comment', async () => {
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    await wrapper.find('.warning-portrait-item').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('.warning-portrait-suggestion-item button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="warning-quick-review-comment"]').element.value).toContain('超时预警')
+  })
+
+  it('exports warning dashboard summary to csv', async () => {
+    const createObjectURL = vi.fn(() => 'blob:warning-dashboard')
+    const revokeObjectURL = vi.fn()
+    globalThis.URL.createObjectURL = createObjectURL
+    globalThis.URL.revokeObjectURL = revokeObjectURL
+
+    const click = vi.fn()
+    const originalCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation((tagName) => {
+      if (tagName === 'a') {
+        return {
+          click,
+          set href(value) {
+            this._href = value
+          },
+          set download(value) {
+            this._download = value
+          },
+        }
+      }
+      return originalCreateElement(tagName)
+    })
+
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="warning-export-dashboard"]').trigger('click')
+
+    expect(exportStatisticsReport).toHaveBeenCalledWith({ exportType: 'WARNING_DASHBOARD' })
+    expect(createObjectURL).toHaveBeenCalledTimes(1)
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(messageSuccess).toHaveBeenCalledWith('预警看板已导出')
+
+    createElementSpy.mockRestore()
   })
 
   it('replaces raw warning ids with readable warning subjects', async () => {
@@ -184,6 +380,10 @@ describe('warning view', () => {
     expect(fetchFe06WarningAdvice).toHaveBeenCalledWith(5001)
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('设备与地点异常共同提升风险')
     expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('综合识别')
+    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('张三（zhangsan）')
+    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('办公区A')
+    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('疑似代打卡风险较高')
+    expect(wrapper.get('[data-testid="warning-advice-dialog"]').text()).toContain('系统管理员')
   })
 
   it('navigates to exception detail using read only query jump', async () => {
@@ -202,12 +402,35 @@ describe('warning view', () => {
     const wrapper = mount(WarningView)
     await flushPromises()
 
-    await wrapper.get('[data-testid="warning-open-review-3001"]').trigger('click')
+    await wrapper.get('[data-testid="warning-open-review-page-3001"]').trigger('click')
 
     expect(routerPush).toHaveBeenCalledWith({
       path: '/review',
       query: { exceptionId: '3001' },
     })
+  })
+
+  it('submits quick review directly from warning list and refreshes advice when opened', async () => {
+    const wrapper = mount(WarningView)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="warning-open-advice-5001"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="warning-open-review-3001"]').trigger('click')
+    await wrapper.get('[data-testid="warning-quick-review-result"]').setValue('REJECTED')
+    await wrapper.get('[data-testid="warning-quick-review-comment"]').setValue('已核对证据链，当前排除异常')
+    await wrapper.get('[data-testid="warning-quick-review-submit"]').trigger('click')
+    await flushPromises()
+
+    expect(submitReview).toHaveBeenCalledWith({
+      exceptionId: 3001,
+      reviewResult: 'REJECTED',
+      reviewComment: '已核对证据链，当前排除异常',
+    })
+    expect(fetchFe06WarningList).toHaveBeenCalledTimes(2)
+    expect(fetchFe06WarningAdvice).toHaveBeenCalledTimes(2)
+    expect(messageSuccess).toHaveBeenCalledWith('预警已完成快速复核')
   })
 
   it('shows empty state, list error and advice error independently', async () => {

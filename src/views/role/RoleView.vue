@@ -2,7 +2,7 @@
   <section class="crud-page">
     <ConsoleHero
       title="角色管理"
-      description="维护岗位角色资料，用于区分页面访问范围和默认工作区。"
+      description="维护系统角色资料，用于区分页面访问范围和默认工作区。"
       theme="violet"
       :cards="heroCards"
     />

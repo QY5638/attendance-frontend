@@ -160,7 +160,7 @@
 
         <div class="login-page__card-footer">
           <span>未授权人员请勿使用本系统</span>
-          <span>登录成功后请及时开展业务办理</span>
+          <span>登录后请及时完成相关业务操作</span>
         </div>
       </el-card>
     </div>

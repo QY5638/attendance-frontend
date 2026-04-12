@@ -2,7 +2,7 @@
   <section class="crud-page">
     <ConsoleHero
       title="用户管理"
-      description="维护人员资料，并关联所属部门、岗位角色和使用状态。"
+      description="维护人员资料，并关联所属部门、系统角色和账号状态。"
       theme="indigo"
       :cards="heroCards"
     />
@@ -12,7 +12,7 @@
         <div class="crud-page__header">
           <div>
             <strong>人员资料</strong>
-            <p>维护人员基本信息，支持按部门和状态快速检索。</p>
+            <p>维护人员基础信息，支持按部门和状态快速检索。</p>
           </div>
           <el-button type="primary" @click="openCreateDialog">新增人员</el-button>
         </div>
