@@ -9,6 +9,9 @@
         <button type="button" data-testid="warning-refresh" class="warning-page__refresh" @click="loadWarningList">
           刷新
         </button>
+        <button type="button" data-testid="warning-run-absence-check" class="warning-page__refresh warning-page__refresh--secondary" @click="triggerAbsenceCheck">
+          执行缺勤检查
+        </button>
         <button type="button" data-testid="warning-export-dashboard" class="warning-page__refresh warning-page__refresh--secondary" @click="exportDashboard">
           导出看板
         </button>
@@ -370,6 +373,18 @@
                 <dt>处置顺序</dt>
                 <dd>{{ item.priorityScore ?? '--' }}</dd>
               </div>
+              <div>
+                <dt>交互状态</dt>
+                <dd>
+                  <span :class="['warning-tag', getInteractionStatusClass(item.interactionStatus)]">
+                    {{ formatDisplayValue(item.interactionStatus, WARNING_INTERACTION_STATUS_LABELS) }}
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt>回复截止</dt>
+                <dd>{{ formatDateTime(item.employeeReplyDeadline) }}</dd>
+              </div>
             </dl>
 
             <p class="warning-item__summary">{{ formatReadableText(item.aiSummary || item.disposeSuggestion, '暂无情况说明') }}</p>
@@ -399,6 +414,14 @@
               @click="jumpToException(item.exceptionId)"
             >
               查看异常详情
+            </button>
+            <button
+              :data-testid="`warning-open-request-explain-${item.id}`"
+              type="button"
+              class="warning-item__action warning-item__action--secondary"
+              @click="openRequestExplanation(item)"
+            >
+              请求说明
             </button>
             <button
               :data-testid="`warning-open-review-${item.exceptionId}`"
@@ -433,6 +456,7 @@
 
           <div class="warning-advice-dialog__actions">
             <button type="button" class="warning-advice-dialog__quick-review" @click="openQuickReview(getWarningById(selectedWarningId) || adviceDetail)">快速复核</button>
+            <button type="button" class="warning-advice-dialog__reevaluate" @click="openRequestExplanation(getWarningById(selectedWarningId) || adviceDetail)">请求说明</button>
             <button type="button" class="warning-advice-dialog__reevaluate" @click="openReevaluate(selectedWarningId)">重新评估</button>
             <button type="button" class="warning-advice-dialog__close" @click="closeAdvice">关闭</button>
           </div>
@@ -599,8 +623,87 @@
               </div>
             </div>
           </section>
+
+          <section class="warning-advice-section">
+            <div class="warning-advice-section__head">
+              <h4>交互时间线</h4>
+              <span>{{ formatDisplayValue(adviceDetail.interactionStatus, WARNING_INTERACTION_STATUS_LABELS) }}</span>
+            </div>
+            <div class="warning-advice-grid">
+              <div>
+                <dt>交互状态</dt>
+                <dd>{{ formatDisplayValue(adviceDetail.interactionStatus, WARNING_INTERACTION_STATUS_LABELS) }}</dd>
+              </div>
+              <div>
+                <dt>说明截止</dt>
+                <dd>{{ formatDateTime(adviceDetail.employeeReplyDeadline) }}</dd>
+              </div>
+              <div>
+                <dt>最近交互</dt>
+                <dd>{{ formatDateTime(adviceDetail.lastInteractTime) }}</dd>
+              </div>
+            </div>
+            <div v-if="interactionRecords.length" class="warning-interaction-timeline">
+              <article v-for="item in interactionRecords" :key="item.id" class="warning-interaction-timeline__item">
+                <div class="warning-interaction-timeline__head">
+                  <strong>{{ item.senderName || item.senderRole || '系统' }}</strong>
+                  <span>{{ formatDateTime(item.createTime) }}</span>
+                </div>
+                <p>{{ item.content }}</p>
+              </article>
+            </div>
+            <p v-else class="warning-feedback">当前还没有员工交互记录</p>
+          </section>
         </div>
         <p v-else class="warning-feedback">暂无处置建议</p>
+      </div>
+    </section>
+
+    <section v-if="requestExplainVisible" data-testid="warning-request-explain-dialog" class="warning-reevaluate-dialog">
+      <div class="warning-reevaluate-dialog__backdrop" @click="closeRequestExplanation"></div>
+
+      <div class="warning-reevaluate-dialog__panel">
+        <header class="warning-reevaluate-dialog__header">
+          <div>
+            <p class="warning-page__eyebrow">说明请求</p>
+            <h3>向员工发起说明：{{ buildSelectedWarningTitle(requestExplainForm.warningId) }}</h3>
+          </div>
+
+          <button type="button" class="warning-reevaluate-dialog__close" @click="closeRequestExplanation">关闭</button>
+        </header>
+
+        <p class="warning-feedback">用于通知员工在消息中心补充情况说明，提交后会自动写入交互时间线。</p>
+        <p v-if="requestExplainError" data-testid="warning-request-explain-error" class="warning-feedback warning-feedback--error">
+          {{ requestExplainError }}
+        </p>
+
+        <label class="warning-filter-field warning-filter-field--full">
+          <span>回复时限（小时）</span>
+          <input v-model="requestExplainForm.deadlineHours" type="number" min="1" max="168">
+        </label>
+
+        <label class="warning-filter-field warning-filter-field--full">
+          <span>说明要求</span>
+          <textarea
+            v-model="requestExplainForm.content"
+            data-testid="warning-request-explain-content"
+            rows="4"
+            placeholder="请输入希望员工补充的说明内容，例如现场情况、打卡原因、设备环境说明等。"
+          />
+        </label>
+
+        <div class="warning-reevaluate-dialog__actions">
+          <button type="button" class="warning-item__action warning-item__action--muted" @click="closeRequestExplanation">取消</button>
+          <button
+            data-testid="warning-request-explain-submit"
+            type="button"
+            class="warning-item__action warning-item__action--review"
+            :disabled="requestExplainLoading"
+            @click="submitRequestExplanation"
+          >
+            {{ requestExplainLoading ? '发送中...' : '发送说明请求' }}
+          </button>
+        </div>
       </div>
     </section>
 
@@ -702,12 +805,20 @@
 
 <script setup>
 import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
-import { fetchFe06WarningAdvice, fetchFe06WarningDashboard, fetchFe06WarningList, fetchFe06WarningReevaluate } from '../../api/fe06-warning'
+import {
+  fetchFe06WarningAdvice,
+  fetchFe06WarningDashboard,
+  fetchFe06WarningList,
+  fetchFe06WarningReevaluate,
+  fetchWarningInteractions,
+  requestWarningExplanation,
+  runAbsenceCheck,
+} from '../../api/fe06-warning'
 import { submitReview } from '../../api/review'
 import { exportStatisticsReport } from '../../api/statistics'
 import { formatDateTimeDisplay } from '../../utils/date-time'
@@ -735,6 +846,13 @@ const WARNING_LEVEL_LABELS = {
 const WARNING_STATUS_LABELS = {
   UNPROCESSED: '待处理',
   PROCESSED: '已处理',
+}
+
+const WARNING_INTERACTION_STATUS_LABELS = {
+  NONE: '待处理',
+  WAIT_EMPLOYEE_REPLY: '待员工说明',
+  EMPLOYEE_REPLIED: '员工已回复',
+  RESULT_SENT: '结果已通知',
 }
 
 const PORTRAIT_RISK_TIER_LABELS = {
@@ -770,6 +888,7 @@ const REVIEW_RESULT_LABELS = {
   REJECTED: '排除异常',
 }
 
+const route = useRoute() || { query: {} }
 const router = useRouter()
 
 const queryForm = reactive({
@@ -814,6 +933,7 @@ const adviceLoading = ref(false)
 const adviceError = ref('')
 const selectedWarningId = ref('')
 const adviceDetail = ref(null)
+const interactionRecords = ref([])
 let latestAdviceRequestId = 0
 
 const reevaluateVisible = ref(false)
@@ -822,6 +942,15 @@ const reevaluateError = ref('')
 const reevaluateForm = reactive({
   warningId: '',
   reason: '',
+})
+
+const requestExplainVisible = ref(false)
+const requestExplainLoading = ref(false)
+const requestExplainError = ref('')
+const requestExplainForm = reactive({
+  warningId: '',
+  content: '',
+  deadlineHours: 24,
 })
 
 const quickReviewVisible = ref(false)
@@ -1135,6 +1264,13 @@ function buildListQuery() {
   }
 }
 
+function applyListQueryFromRoute(routeQuery = {}) {
+  queryForm.pageNum = 1
+  queryForm.level = typeof routeQuery.level === 'string' ? routeQuery.level : ''
+  queryForm.status = typeof routeQuery.status === 'string' ? routeQuery.status : ''
+  queryForm.type = typeof routeQuery.type === 'string' ? routeQuery.type : ''
+}
+
 function formatDisplayValue(value, labelMap) {
   if (!value) {
     return '--'
@@ -1293,6 +1429,22 @@ function getWarningStatusClass(status) {
   return 'warning-tag--neutral'
 }
 
+function getInteractionStatusClass(status) {
+  if (status === 'WAIT_EMPLOYEE_REPLY') {
+    return 'warning-tag--warning'
+  }
+
+  if (status === 'EMPLOYEE_REPLIED') {
+    return 'warning-tag--info'
+  }
+
+  if (status === 'RESULT_SENT') {
+    return 'warning-tag--safe'
+  }
+
+  return 'warning-tag--neutral'
+}
+
 function getWarningTypeClass(type) {
   if (type === 'RISK_WARNING') {
     return 'warning-tag--info'
@@ -1372,21 +1524,27 @@ async function openAdvice(id) {
   adviceLoading.value = true
   adviceError.value = ''
   adviceDetail.value = null
+  interactionRecords.value = []
 
   try {
-    const payload = await fetchFe06WarningAdvice(id)
+    const [payload, interactions] = await Promise.all([
+      fetchFe06WarningAdvice(id),
+      fetchWarningInteractions(id).catch(() => []),
+    ])
 
     if (requestId !== latestAdviceRequestId) {
       return
     }
 
     adviceDetail.value = payload
+    interactionRecords.value = Array.isArray(interactions) ? interactions : []
   } catch (error) {
     if (requestId !== latestAdviceRequestId) {
       return
     }
 
     adviceError.value = error?.message || '获取处置建议失败'
+    interactionRecords.value = []
   } finally {
     if (requestId === latestAdviceRequestId) {
       adviceLoading.value = false
@@ -1397,6 +1555,31 @@ async function openAdvice(id) {
 function closeAdvice() {
   adviceVisible.value = false
   latestAdviceRequestId += 1
+  interactionRecords.value = []
+}
+
+function openRequestExplanation(item = {}) {
+  const warningId = item?.id === null || item?.id === undefined ? '' : `${item.id}`.trim()
+
+  if (!warningId || warningId === 'null') {
+    return
+  }
+
+  requestExplainForm.warningId = warningId
+  requestExplainForm.content = item?.realName
+    ? `请补充说明本次与${item.realName}相关的异常打卡情况、现场环境及原因。`
+    : '请补充说明本次异常打卡的现场情况、原因及相关证明。'
+  requestExplainForm.deadlineHours = 24
+  requestExplainError.value = ''
+  requestExplainVisible.value = true
+}
+
+function closeRequestExplanation() {
+  requestExplainVisible.value = false
+  requestExplainError.value = ''
+  requestExplainForm.warningId = ''
+  requestExplainForm.content = ''
+  requestExplainForm.deadlineHours = 24
 }
 
 function openReevaluate(warningId) {
@@ -1511,6 +1694,46 @@ async function submitQuickReview() {
   }
 }
 
+async function submitRequestExplanation() {
+  if (!requestExplainForm.warningId || requestExplainLoading.value) {
+    return
+  }
+
+  requestExplainLoading.value = true
+  requestExplainError.value = ''
+
+  try {
+    await requestWarningExplanation(requestExplainForm.warningId, {
+      content: requestExplainForm.content.trim(),
+      deadlineHours: Number(requestExplainForm.deadlineHours || 24),
+    })
+    const shouldRefreshAdvice = adviceVisible.value && `${selectedWarningId.value}` === requestExplainForm.warningId
+    const currentWarningId = requestExplainForm.warningId
+
+    closeRequestExplanation()
+    ElMessage.success('说明请求已发送到员工消息中心')
+    await loadWarningList()
+
+    if (shouldRefreshAdvice) {
+      await openAdvice(currentWarningId)
+    }
+  } catch (error) {
+    requestExplainError.value = error?.message || '发送说明请求失败'
+  } finally {
+    requestExplainLoading.value = false
+  }
+}
+
+async function triggerAbsenceCheck() {
+  try {
+    const count = Number(await runAbsenceCheck())
+    ElMessage.success(`缺勤检查已完成，本次新增 ${Number.isFinite(count) ? count : 0} 条异常`) 
+    await loadWarningList()
+  } catch (error) {
+    listError.value = error?.message || '执行缺勤检查失败'
+  }
+}
+
 function jumpToException(exceptionId) {
   const normalizedId = exceptionId === null || exceptionId === undefined ? '' : `${exceptionId}`.trim()
 
@@ -1542,8 +1765,17 @@ function jumpToReview(exceptionId) {
 }
 
 onMounted(() => {
+  applyListQueryFromRoute(route.query)
   loadWarningList()
 })
+
+watch(
+  () => [route.query?.level, route.query?.status, route.query?.type],
+  () => {
+    applyListQueryFromRoute(route.query)
+    loadWarningList()
+  },
+)
 </script>
 
 <style scoped>
@@ -2545,6 +2777,29 @@ onMounted(() => {
   color: #334155;
   cursor: pointer;
   padding: 10px 16px;
+}
+
+.warning-interaction-timeline {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.warning-interaction-timeline__item {
+  padding-left: 16px;
+  border-left: 3px solid rgba(47, 105, 178, 0.2);
+}
+
+.warning-interaction-timeline__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: #475569;
+}
+
+.warning-interaction-timeline__item p {
+  margin: 10px 0 0;
+  color: #334155;
 }
 
 @media (max-width: 960px) {

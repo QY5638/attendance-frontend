@@ -6,8 +6,9 @@ function resolveStaticAssetPath(relativePath) {
 let faceLandmarkerPromise = null
 
 const BASELINE_SAMPLE_COUNT = 20
-const ACTION_TRANSITION_HOLD_MS = 1200
+const ACTION_TRANSITION_HOLD_MS = 600
 const MAX_CHALLENGE_DURATION_MS = 60000
+const ACTION_HOLD_FRAME_TARGET = 4
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
@@ -216,9 +217,26 @@ function evaluateBlink(metrics, baseline, stepState) {
 
   const reopened = stepState.closed && metrics.eyeOpenness >= baseline.eyeOpenness * 0.82 && metrics.blinkBlend < 0.25
   return {
-    score: stepState.bestScore,
+    score: closureScore,
     completed: reopened && stepState.bestScore >= 0.68 && stepState.stableFrames >= 4,
-    message: describeRunningMessage('BLINK', stepState.bestScore),
+    message: stepState.closed && !reopened
+      ? describeHoldMessage('BLINK')
+      : describeRunningMessage('BLINK', closureScore),
+  }
+}
+
+function describeHoldMessage(action) {
+  switch (action) {
+    case 'BLINK':
+      return '已检测到眨眼，请睁眼并保持正对摄像头'
+    case 'TURN_LEFT':
+      return '已识别左转动作，请保持当前角度片刻'
+    case 'TURN_RIGHT':
+      return '已识别右转动作，请保持当前角度片刻'
+    case 'MOUTH_OPEN':
+      return '已识别张嘴动作，请保持当前动作片刻'
+    default:
+      return '已识别动作，请保持当前状态片刻'
   }
 }
 
@@ -228,17 +246,25 @@ function evaluateMouthOpen(metrics, baseline, stepState) {
   const score = Math.max(ratioScore, blendScore)
 
   stepState.bestScore = Math.max(stepState.bestScore, score)
-  if (score > 0.6) {
+  if (score > 0.58) {
     stepState.holdFrames += 1
     stepState.stableFrames += 1
   } else {
     stepState.holdFrames = 0
   }
 
+  const completed = (
+    stepState.holdFrames >= ACTION_HOLD_FRAME_TARGET && stepState.bestScore >= 0.68
+  ) || (
+    stepState.holdFrames >= 2 && stepState.bestScore >= 0.92
+  )
+
   return {
-    score: stepState.bestScore,
-    completed: stepState.holdFrames >= 6 && stepState.bestScore >= 0.68,
-    message: describeRunningMessage('MOUTH_OPEN', stepState.bestScore),
+    score,
+    completed,
+    message: score >= 0.72
+      ? describeHoldMessage('MOUTH_OPEN')
+      : describeRunningMessage('MOUTH_OPEN', score),
   }
 }
 
@@ -249,17 +275,25 @@ function evaluateTurn(action, metrics, baseline, stepState) {
   const score = normalizeScore(signedDelta, 0.08, 0.24)
 
   stepState.bestScore = Math.max(stepState.bestScore, score)
-  if (score > 0.65) {
+  if (score > 0.58) {
     stepState.holdFrames += 1
     stepState.stableFrames += 1
   } else {
     stepState.holdFrames = 0
   }
 
+  const completed = (
+    stepState.holdFrames >= ACTION_HOLD_FRAME_TARGET && stepState.bestScore >= 0.72
+  ) || (
+    stepState.holdFrames >= 2 && stepState.bestScore >= 0.92
+  )
+
   return {
-    score: stepState.bestScore,
-    completed: stepState.holdFrames >= 6 && stepState.bestScore >= 0.72,
-    message: describeRunningMessage(action, stepState.bestScore),
+    score,
+    completed,
+    message: score >= 0.72
+      ? describeHoldMessage(action)
+      : describeRunningMessage(action, score),
   }
 }
 

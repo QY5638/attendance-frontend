@@ -67,10 +67,8 @@
               <div class="panel-card__location-cell">
                 <span>{{ row.location || '-' }}</span>
                 <small>有效半径 {{ row.radiusMeters || 30 }} 米</small>
-                <small v-if="hasCoordinatePair(row)">
-                  经度 {{ formatCoordinate(row.longitude) }} / 纬度 {{ formatCoordinate(row.latitude) }}
-                </small>
-                <small v-else>未维护地点坐标</small>
+                <small v-if="hasCoordinatePair(row)">地图位置已设置</small>
+                <small v-else>未设置地图位置</small>
               </div>
             </td>
             <td>
@@ -147,7 +145,7 @@
             <div class="panel-card__map-head">
               <div>
                 <strong>地点预览</strong>
-                <p>可通过地点名称搜索或当前位置设点完成设置，系统会自动保存对应坐标。</p>
+                <p>可通过地点名称搜索或当前位置设点完成设置，系统会自动保存地图位置。</p>
               </div>
               <span>{{ coordinateSummary }} / 半径 {{ form.radiusMeters || 30 }} 米</span>
             </div>
@@ -229,10 +227,10 @@ const form = reactive({
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize) || 1))
 const coordinateSummary = computed(() => {
   if (!hasCoordinatePair(form)) {
-    return '未设置位置坐标'
+    return '未设置地图位置'
   }
 
-  return `经度 ${formatCoordinate(form.longitude)} / 纬度 ${formatCoordinate(form.latitude)}`
+  return '地图位置已设置'
 })
 
 function buildListParams() {
@@ -511,7 +509,7 @@ async function resolveAddressFromCoordinates(longitude, latitude) {
   return new Promise((resolve, reject) => {
     geocoder.getAddress([longitude, latitude], (status, result) => {
       if (status !== 'complete' || !result?.regeocode) {
-        reject(new Error('当前坐标未找到可用地点，请重试'))
+        reject(new Error('当前地图位置未找到可用地点，请重试'))
         return
       }
 

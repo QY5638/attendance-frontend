@@ -9,7 +9,9 @@ const RoleView = () => import('../views/role/RoleView.vue')
 const FaceCaptureView = () => import('../views/face/FaceCaptureView.vue')
 const AttendanceView = () => import('../views/attendance/AttendanceView.vue')
 const AttendanceRepairView = () => import('../views/attendance/AttendanceRepairView.vue')
+const AttendanceRepairManageView = () => import('../views/attendance/AttendanceRepairManageView.vue')
 const ProfileView = () => import('../views/profile/ProfileView.vue')
+const MessageCenterView = () => import('../views/message/MessageCenterView.vue')
 const ExceptionView = () => import('../views/exception/ExceptionView.vue')
 const WarningView = () => import('../views/warning/WarningView.vue')
 const ReviewView = () => import('../views/review/ReviewView.vue')
@@ -49,7 +51,7 @@ export const protectedChildRoutes = [
     meta: {
       requiresAuth: true,
       title: '用户管理',
-      menuGroup: '基础资料',
+      menuGroup: '组织管理',
       roles: ['ADMIN'],
       moduleCode: 'FE-03',
     },
@@ -61,7 +63,7 @@ export const protectedChildRoutes = [
     meta: {
       requiresAuth: true,
       title: '部门管理',
-      menuGroup: '基础资料',
+      menuGroup: '组织管理',
       roles: ['ADMIN'],
       moduleCode: 'FE-03',
     },
@@ -73,7 +75,7 @@ export const protectedChildRoutes = [
     meta: {
       requiresAuth: true,
       title: '角色管理',
-      menuGroup: '基础资料',
+      menuGroup: '组织管理',
       roles: ['ADMIN'],
       moduleCode: 'FE-03',
     },
@@ -100,7 +102,7 @@ export const protectedChildRoutes = [
     meta: {
       requiresAuth: true,
       title: '考勤记录',
-      menuGroup: '考勤业务',
+      menuGroup: '考勤管理',
       roles: ['ADMIN'],
       moduleCode: 'FE-05',
     },
@@ -148,6 +150,18 @@ export const protectedChildRoutes = [
     },
   },
   {
+    path: 'attendance/repair-review',
+    name: 'attendance-repair-review',
+    component: AttendanceRepairManageView,
+    meta: {
+      requiresAuth: true,
+      title: '补卡审批',
+      menuGroup: '考勤管理',
+      roles: ['ADMIN'],
+      moduleCode: 'FE-05',
+    },
+  },
+  {
     path: 'profile',
     name: 'profile',
     component: ProfileView,
@@ -160,13 +174,25 @@ export const protectedChildRoutes = [
     },
   },
   {
+    path: 'messages',
+    name: 'messages',
+    component: MessageCenterView,
+    meta: {
+      requiresAuth: true,
+      title: '消息中心',
+      menuGroup: '个人服务',
+      roles: ['EMPLOYEE'],
+      moduleCode: 'FE-06X',
+    },
+  },
+  {
     path: 'exception',
     name: 'exception',
     component: ExceptionView,
     meta: {
       requiresAuth: true,
       title: '异常中心',
-      menuGroup: '风险与系统',
+      menuGroup: '风险处置',
       roles: ['ADMIN'],
       moduleCode: 'FE-06',
     },
@@ -178,7 +204,7 @@ export const protectedChildRoutes = [
     meta: {
       requiresAuth: true,
       title: '预警列表',
-      menuGroup: '风险与系统',
+      menuGroup: '风险处置',
       roles: ['ADMIN'],
       moduleCode: 'FE-06',
     },
@@ -190,7 +216,7 @@ export const protectedChildRoutes = [
     meta: {
       requiresAuth: true,
       title: '人工复核',
-      menuGroup: '风险与系统',
+      menuGroup: '风险处置',
       roles: ['ADMIN'],
       moduleCode: 'FE-07',
     },
@@ -198,11 +224,69 @@ export const protectedChildRoutes = [
   {
     path: 'system',
     name: 'system',
-    component: SystemView,
+    redirect: '/system/basic',
     meta: {
       requiresAuth: true,
-      title: '系统配置',
-      menuGroup: '风险与系统',
+      hidden: true,
+      roles: ['ADMIN'],
+    },
+  },
+  {
+    path: 'system/basic',
+    name: 'system-basic',
+    component: SystemView,
+    props: {
+      fixedGroupKey: 'base',
+    },
+    meta: {
+      requiresAuth: true,
+      title: '基础配置',
+      menuGroup: '系统配置',
+      roles: ['ADMIN'],
+      moduleCode: 'FE-08',
+    },
+  },
+  {
+    path: 'system/prompt',
+    name: 'system-prompt',
+    component: SystemView,
+    props: {
+      fixedGroupKey: 'prompt',
+    },
+    meta: {
+      requiresAuth: true,
+      title: '方案设置',
+      menuGroup: '系统配置',
+      roles: ['ADMIN'],
+      moduleCode: 'FE-08',
+    },
+  },
+  {
+    path: 'system/approval',
+    name: 'system-approval',
+    component: SystemView,
+    props: {
+      fixedGroupKey: 'approval',
+    },
+    meta: {
+      requiresAuth: true,
+      title: '采集申请',
+      menuGroup: '考勤管理',
+      roles: ['ADMIN'],
+      moduleCode: 'FE-08',
+    },
+  },
+  {
+    path: 'system/logs',
+    name: 'system-logs',
+    component: SystemView,
+    props: {
+      fixedGroupKey: 'log',
+    },
+    meta: {
+      requiresAuth: true,
+      title: '操作记录',
+      menuGroup: '考勤管理',
       roles: ['ADMIN'],
       moduleCode: 'FE-08',
     },

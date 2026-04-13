@@ -243,7 +243,7 @@ describe('attendance view', () => {
     await wrapper.get('[data-testid="attendance-record-user-id-input"]').setValue('1001')
     await wrapper.get('[data-testid="attendance-record-dept-id-input"]').setValue('2')
     await wrapper.get('[data-testid="attendance-record-check-type-select"]').setValue('OUT')
-    await wrapper.get('[data-testid="attendance-record-status-select"]').setValue('EXCEPTION')
+    await wrapper.get('[data-testid="attendance-record-status-select"]').setValue('ABNORMAL')
     await wrapper.get('[data-testid="attendance-start-date-input"]').setValue('2026-04-01')
     await wrapper.get('[data-testid="attendance-end-date-input"]').setValue('2026-04-30')
     await wrapper.get('[data-testid="attendance-page-size-select"]').setValue('20')
@@ -383,7 +383,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     expect(loadAmapSdk).toHaveBeenCalledTimes(1)
-    expect(wrapper.get('[data-testid="attendance-device-coordinate"]').text()).toContain('116.397128')
+    expect(wrapper.get('[data-testid="attendance-device-coordinate"]').text()).toContain('地图位置已设置')
     expect(wrapper.get('[data-testid="attendance-device-map"]').exists()).toBe(true)
   })
 

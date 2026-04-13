@@ -107,6 +107,12 @@ textarea {
   font: inherit;
 }
 
+/* 全局去掉页面卡片顶部装饰小字（登录页未使用该命名，不受影响） */
+[class*='__eyebrow'],
+[class*='__badge'] {
+  display: none !important;
+}
+
 .console-overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

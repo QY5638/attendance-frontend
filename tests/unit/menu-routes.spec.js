@@ -6,10 +6,16 @@ describe('menu routes', () => {
   it('filters admin menu without employee-only face route', () => {
     const groups = getMenuGroups(protectedChildRoutes, 'ADMIN')
     const paths = groups.flatMap((group) => group.items.map((item) => item.path))
+    const names = groups.map((group) => group.name)
 
     expect(paths).toContain('/dashboard')
-    expect(paths).toContain('/system')
+    expect(paths).toContain('/system/basic')
+    expect(paths).toContain('/system/prompt')
+    expect(paths).toContain('/system/approval')
+    expect(paths).toContain('/system/logs')
     expect(paths).not.toContain('/face')
+    expect(names).toEqual(['工作台', '组织管理', '考勤管理', '风险处置', '系统配置'])
+    expect(groups.find((group) => group.name === '考勤管理')?.items.map((item) => item.title)).toContain('操作记录')
   })
 
   it('keeps employee menu scoped to personal features', () => {
@@ -40,7 +46,7 @@ describe('menu routes', () => {
     const attendanceRepairRoute = protectedChildRoutes.find((route) => route.path === 'attendance/repair')
 
     expect(attendanceRoute?.meta.roles).toEqual(['ADMIN'])
-    expect(attendanceRoute?.meta.menuGroup).toBe('考勤业务')
+    expect(attendanceRoute?.meta.menuGroup).toBe('考勤管理')
     expect(attendanceRoute?.meta.moduleCode).toBe('FE-05')
     expect(attendanceCheckinRoute?.meta.roles).toEqual(['EMPLOYEE'])
     expect(attendanceRecordsRoute?.meta.roles).toEqual(['EMPLOYEE'])

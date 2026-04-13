@@ -792,7 +792,7 @@ function replaceDepartmentExportHeader(text) {
 
   return source.replace(
     /deptId,deptName,recordCount,exceptionCount,analysisCount,warningCount,reviewCount,closedLoopCount/g,
-    '部门编号,部门名称,考勤记录数,异常记录数,分析记录数,预警记录数,复核记录数,闭环记录数',
+    '部门编号,部门名称,考勤记录数,异常记录数,系统处理次数,预警记录数,复核记录数,闭环记录数',
   )
 }
 

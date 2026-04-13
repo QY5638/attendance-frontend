@@ -8,7 +8,7 @@ describe('readable text', () => {
 
     expect(result).toContain('人脸分数达到95分以上')
     expect(result).toContain('数据库历史异常次数为1，提示')
-    expect(result).toContain('经纬度缺失')
+    expect(result).toContain('位置信息缺失')
     expect(result).toContain('客户端人脸分数缺失')
     expect(result).toContain('其余信息未发现明显高风险信号')
     expect(result).not.toContain('faceScore')
