@@ -78,6 +78,10 @@
 
             <dl class="exception-item__grid">
               <div>
+                <dt>异常人员</dt>
+                <dd>{{ formatExceptionOwner(item) }}</dd>
+              </div>
+              <div>
                 <dt>异常类型</dt>
                 <dd>{{ formatExceptionType(item) }}</dd>
               </div>
@@ -159,6 +163,10 @@
 
             <dl class="exception-detail-grid">
               <div>
+                <dt>异常人员</dt>
+                <dd>{{ formatExceptionOwner(exceptionDetail) }}</dd>
+              </div>
+              <div>
                 <dt>异常类型</dt>
                 <dd>{{ formatExceptionType(exceptionDetail) }}</dd>
               </div>
@@ -194,10 +202,10 @@
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
               <h4>重新判断</h4>
-              <span>{{ hasCheckContext() ? '基于当前打卡记录重新判断' : '缺少记录信息' }}</span>
+              <span>{{ getManualCheckContextLabel() }}</span>
             </div>
 
-            <p class="exception-feedback">可基于当前考勤记录重新执行规则检查或系统判断，辅助核查当前异常。</p>
+            <p class="exception-feedback">可基于当前考勤记录或异常上下文重新执行规则检查、系统判断，辅助核查当前异常。</p>
             <p v-if="manualCheckError" data-testid="exception-manual-check-error" class="exception-feedback exception-feedback--error">
               {{ manualCheckError }}
             </p>
@@ -335,6 +343,7 @@ import {
   EXCEPTION_TYPE_LABELS,
   EXCEPTION_TYPE_OPTIONS,
   formatExceptionType,
+  formatExceptionOwner,
   getExceptionTypeLabel,
   RISK_LEVEL_LABELS,
 } from '../../utils/exception-display'
@@ -355,7 +364,7 @@ const INTERFACE_ERROR_MESSAGES = {
   'server error': '服务器异常，请稍后重试',
 }
 
-const route = useRoute()
+const route = useRoute() || { query: {} }
 const router = useRouter()
 
 const queryForm = reactive({
@@ -425,6 +434,14 @@ function buildListQuery() {
   }
 }
 
+function applyListQueryFromRoute(routeQuery = {}) {
+  queryForm.pageNum = 1
+  queryForm.type = typeof routeQuery.type === 'string' ? routeQuery.type : ''
+  queryForm.riskLevel = typeof routeQuery.riskLevel === 'string' ? routeQuery.riskLevel : ''
+  queryForm.processStatus = typeof routeQuery.processStatus === 'string' ? routeQuery.processStatus : ''
+  queryForm.userId = typeof routeQuery.userId === 'string' ? routeQuery.userId : ''
+}
+
 function formatDisplayValue(value, labelMap) {
   if (!value) {
     return '--'
@@ -481,16 +498,35 @@ function formatScore(value) {
 }
 
 function hasCheckContext() {
-  return Boolean(exceptionDetail.value?.recordId)
+  return Boolean(exceptionDetail.value?.recordId || isContextOnlyException(exceptionDetail.value))
+}
+
+function isContextOnlyException(target) {
+  return String(target?.type || '').trim().toUpperCase() === 'ABSENT'
+}
+
+function getManualCheckContextLabel() {
+  if (exceptionDetail.value?.recordId) {
+    return '基于当前打卡记录重新判断'
+  }
+  if (isContextOnlyException(exceptionDetail.value)) {
+    return '基于当前异常信息重新判断'
+  }
+  return '缺少记录信息'
 }
 
 function buildCheckPayload() {
   const recordId = exceptionDetail.value?.recordId === null || exceptionDetail.value?.recordId === undefined
     ? ''
     : `${exceptionDetail.value.recordId}`.trim()
+  const exceptionId = exceptionDetail.value?.id === null || exceptionDetail.value?.id === undefined
+    ? ''
+    : `${exceptionDetail.value.id}`.trim()
 
   return {
     recordId,
+    exceptionId,
+    userId: exceptionDetail.value?.userId || '',
   }
 }
 
@@ -597,7 +633,8 @@ async function loadExceptionDetail(id, resetManualResults = false) {
   if (analysisResult.status === 'fulfilled') {
     analysisBrief.value = analysisResult.value
   } else {
-    analysisError.value = analysisResult.reason?.message || '获取分析摘要失败'
+    const message = analysisResult.reason?.message || '获取分析摘要失败'
+    analysisError.value = message === '异常分析摘要不存在' ? '' : message
   }
 
   if (traceResult.status === 'fulfilled') {
@@ -696,6 +733,14 @@ async function runComplexCheck() {
 }
 
 watch(
+  () => [route.query?.type, route.query?.riskLevel, route.query?.processStatus, route.query?.userId],
+  () => {
+    applyListQueryFromRoute(route.query)
+    loadExceptionList()
+  },
+)
+
+watch(
   () => route.query?.exceptionId,
   (exceptionId) => {
     const normalizedValue = Array.isArray(exceptionId) ? exceptionId[0] : exceptionId
@@ -711,6 +756,7 @@ watch(
 )
 
 onMounted(() => {
+  applyListQueryFromRoute(route.query)
   loadExceptionList()
 })
 </script>

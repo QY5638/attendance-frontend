@@ -9,7 +9,6 @@ const {
   fetchDeviceList,
   fetchFaceRegisterApprovalList,
   fetchExceptionTypeList,
-  fetchModelLogList,
   fetchOperationLogList,
   fetchOperationLogSummary,
   fetchPromptTemplateList,
@@ -27,7 +26,6 @@ const {
   fetchDeviceList: vi.fn(),
   fetchFaceRegisterApprovalList: vi.fn(),
   fetchExceptionTypeList: vi.fn(),
-  fetchModelLogList: vi.fn(),
   fetchOperationLogList: vi.fn(),
   fetchOperationLogSummary: vi.fn(),
   fetchPromptTemplateList: vi.fn(),
@@ -48,7 +46,6 @@ vi.mock('../../src/api/system', () => ({
   fetchDeviceList,
   fetchFaceRegisterApprovalList,
   fetchExceptionTypeList,
-  fetchModelLogList,
   fetchOperationLogList,
   fetchOperationLogSummary,
   fetchPromptTemplateList,
@@ -80,15 +77,24 @@ import SystemExceptionTypePanel from '../../src/views/system/panels/SystemExcept
 import SystemFaceRegisterApprovalPanel from '../../src/views/system/panels/SystemFaceRegisterApprovalPanel.vue'
 import SystemOperationLogPanel from '../../src/views/system/panels/SystemOperationLogPanel.vue'
 import SystemPromptPanel from '../../src/views/system/panels/SystemPromptPanel.vue'
-import SystemModelLogPanel from '../../src/views/system/panels/SystemModelLogPanel.vue'
 import SystemRiskLevelPanel from '../../src/views/system/panels/SystemRiskLevelPanel.vue'
 
-async function mountSystemView(path = '/system') {
+async function mountSystemView(path = '/system/basic') {
+  const fixedGroupKey = path.startsWith('/system/basic')
+    ? 'base'
+    : path.startsWith('/system/prompt')
+      ? 'prompt'
+      : path.startsWith('/system/approval')
+        ? 'approval'
+        : path.startsWith('/system/logs')
+          ? 'log'
+          : ''
+
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
       {
-        path: '/system',
+        path: '/system/:section?',
         component: SystemView,
       },
     ],
@@ -98,6 +104,9 @@ async function mountSystemView(path = '/system') {
   await router.isReady()
 
   const wrapper = mount(SystemView, {
+    props: {
+      fixedGroupKey,
+    },
     global: {
       plugins: [router],
     },
@@ -122,7 +131,6 @@ describe('system view', () => {
     fetchDeviceList.mockReset()
     fetchFaceRegisterApprovalList.mockReset()
     fetchExceptionTypeList.mockReset()
-    fetchModelLogList.mockReset()
     fetchOperationLogList.mockReset()
     fetchOperationLogSummary.mockReset()
     fetchPromptTemplateList.mockReset()
@@ -165,23 +173,6 @@ describe('system view', () => {
         FACE_LIVENESS_PASS: 1,
         CHECKIN: 1,
       },
-    })
-    fetchModelLogList.mockResolvedValue({
-      total: 1,
-      items: [
-        {
-          id: 11,
-          businessType: 'ATTENDANCE_ANALYSIS',
-          businessId: 20260405001,
-          promptTemplateId: 123456789,
-          inputSummary: '近 7 日打卡摘要',
-          outputSummary: '识别出连续晚到风险',
-          status: 'SUCCESS',
-          latencyMs: 520,
-          errorMessage: '',
-          createTime: '2026-04-05T10:30:00',
-        },
-      ],
     })
     fetchPromptTemplateList.mockResolvedValue({
       total: 1,
@@ -231,15 +222,28 @@ describe('system view', () => {
   })
 
   it('loads device panel by default', async () => {
-    const { wrapper } = await mountSystemView('/system')
+    const { wrapper } = await mountSystemView('/system/basic')
 
-    expect(wrapper.text()).toContain('系统配置')
+    expect(wrapper.text()).toContain('基础配置')
+    expect(wrapper.findAll('[data-group]').length).toBe(0)
     expect(wrapper.text()).toContain('打卡地点管理')
+    expect(wrapper.text()).not.toContain('当前页面')
+    expect(wrapper.text()).not.toContain('当前分类')
+    expect(wrapper.text()).not.toContain('使用建议')
+    expect(wrapper.text()).not.toContain('配置范围')
+    expect(wrapper.text()).not.toContain('4 个分组 / 8 项内容')
     expect(wrapper.get('[data-tab="device"]').text()).toContain('地点档案与启停状态')
   })
 
+  it('hides tab switcher for single-purpose standalone page', async () => {
+    const { wrapper } = await mountSystemView('/system/prompt')
+
+    expect(wrapper.findAll('[data-tab]').length).toBe(0)
+    expect(wrapper.text()).toContain('方案设置')
+  })
+
   it('switches to rule panel by query tab', async () => {
-    const { router, wrapper } = await mountSystemView('/system')
+    const { router, wrapper } = await mountSystemView('/system/basic')
 
     await wrapper.get('[data-tab="rule"]').trigger('click')
     await flushPromises()
@@ -248,8 +252,19 @@ describe('system view', () => {
     expect(wrapper.get('[data-tab="rule"]').text()).toContain('考勤规则与阈值管理')
   })
 
+  it('switches group and loads first panel in that group', async () => {
+    const { router, wrapper } = await mountSystemView('/system')
+
+    await wrapper.get('[data-group="log"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.tab).toBe('operation-log')
+    expect(wrapper.text()).toContain('操作记录')
+    expect(wrapper.findAll('[data-tab]').length).toBe(0)
+  })
+
   it('falls back invalid tab to device', async () => {
-    const { router, wrapper } = await mountSystemView('/system?tab=unknown')
+    const { router, wrapper } = await mountSystemView('/system/basic?tab=unknown')
 
     expect(router.currentRoute.value.query.tab).toBe('device')
     expect(wrapper.get('[data-tab="device"]').classes()).toContain('system-view__tab--active')
@@ -265,20 +280,6 @@ describe('system view', () => {
     })
     expect(wrapper.text()).toContain('复杂异常分析')
     expect(wrapper.text()).toContain('方案设置')
-  })
-
-  it('loads model log panel with real backend data', async () => {
-    const wrapper = await mountPanel(SystemModelLogPanel)
-
-    expect(fetchModelLogList).toHaveBeenCalledWith({
-      pageNum: 1,
-      pageSize: 10,
-    })
-    expect(wrapper.text()).toContain('考勤分析')
-    expect(wrapper.text()).toContain('考勤分析记录：近 7 日打卡摘要')
-    expect(wrapper.text()).toContain('已使用指定方案')
-    expect(wrapper.text()).toContain('识别出连续晚到风险')
-    expect(wrapper.text()).toContain('分析记录')
   })
 
   it('loads face register approval panel with pending request', async () => {

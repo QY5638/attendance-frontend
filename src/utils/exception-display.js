@@ -20,6 +20,8 @@ export const EXCEPTION_TYPE_LABELS = Object.freeze({
   ILLEGAL_TIME: '非规定时间打卡',
   REPEAT_CHECK: '重复打卡',
   MULTI_LOCATION_CONFLICT: '多地点异常',
+  ABSENT: '缺勤',
+  NORMAL: '正常',
 })
 
 export const EXCEPTION_TYPE_OPTIONS = Object.freeze([
@@ -38,6 +40,7 @@ export const EXCEPTION_TYPE_OPTIONS = Object.freeze([
   'ILLEGAL_TIME',
   'REPEAT_CHECK',
   'MULTI_LOCATION_CONFLICT',
+  'ABSENT',
 ].map((value) => ({
   value,
   label: EXCEPTION_TYPE_LABELS[value],
@@ -60,6 +63,9 @@ function normalizeExceptionTarget(target) {
       type: target,
       sourceType: '',
       riskLevel: '',
+      username: '',
+      realName: '',
+      userId: '',
     }
   }
 
@@ -67,7 +73,28 @@ function normalizeExceptionTarget(target) {
     type: target?.type || target?.exceptionType || '',
     sourceType: target?.sourceType || target?.exceptionSourceType || '',
     riskLevel: target?.riskLevel || '',
+    username: target?.username || '',
+    realName: target?.realName || '',
+    userId: target?.userId || '',
   }
+}
+
+export function formatExceptionOwner(target, fallback = '--') {
+  const normalizedTarget = normalizeExceptionTarget(target)
+
+  if (normalizedTarget.realName) {
+    return normalizedTarget.realName
+  }
+
+  if (normalizedTarget.username) {
+    return normalizedTarget.username
+  }
+
+  if (normalizedTarget.userId) {
+    return `用户 ${normalizedTarget.userId}`
+  }
+
+  return fallback
 }
 
 export function getExceptionTypeLabel(type, fallback = '') {
@@ -106,12 +133,15 @@ export function buildExceptionTitle(target, options = {}) {
     fallback,
     unknownFallback: fallback,
   })
+  const ownerLabel = formatExceptionOwner(normalizedTarget, '')
 
   if (typeLabel) {
-    return `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
+    const coreTitle = `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
+    return ownerLabel ? `${ownerLabel} · ${coreTitle}` : coreTitle
   }
 
-  return riskLabel ? `${riskLabel}${fallback}` : fallback
+  const fallbackTitle = riskLabel ? `${riskLabel}${fallback}` : fallback
+  return ownerLabel ? `${ownerLabel} · ${fallbackTitle}` : fallbackTitle
 }
 
 export function buildExceptionRelation(target, fallback = '关联异常记录') {

@@ -190,11 +190,6 @@ export async function updatePromptTemplateStatus(payload) {
   return result.data ?? null
 }
 
-export async function fetchModelLogList(params = {}) {
-  const result = ensureSuccess(await request.get('/system/model-log/list', { params: normalizeListQuery(params) }))
-  return normalizeListData(result.data)
-}
-
 export async function addRule(payload) {
   const result = ensureSuccess(await request.post('/rule/add', normalizeRulePayload(payload)))
   return result.data ?? null

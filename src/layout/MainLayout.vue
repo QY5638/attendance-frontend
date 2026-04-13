@@ -2,7 +2,6 @@
   <el-container class="layout-shell">
     <el-aside width="248px" class="layout-sidebar">
       <div class="layout-brand">
-        <div class="layout-brand__mark">勤</div>
         <div class="layout-brand__copy">
           <div class="layout-brand__title">企业考勤管理系统</div>
           <div class="layout-brand__subtitle">内部办公平台</div>
@@ -35,8 +34,7 @@
     <el-container class="layout-content-shell">
       <el-header class="layout-header">
         <div class="layout-header__intro">
-          <div class="layout-header__title">{{ currentTitle }}</div>
-          <div class="layout-header__desc">{{ currentDescription }}</div>
+          <div class="layout-header__title">{{ currentCategory }}</div>
         </div>
 
         <div class="layout-header__actions">
@@ -44,6 +42,10 @@
             <span class="layout-header__identity-label">当前登录</span>
             <strong class="layout-header__name">{{ currentLoginName }}</strong>
           </div>
+          <button v-if="showMessageEntry" type="button" class="layout-header__message-button" @click="openMessages">
+            <span>消息中心</span>
+            <span v-if="unreadCount > 0" class="layout-header__message-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+          </button>
           <el-tag v-if="showRoleTag" effect="dark" class="layout-header__role-tag">{{ roleLabel }}</el-tag>
           <el-button type="primary" plain @click="handleLogout">退出登录</el-button>
         </div>
@@ -59,15 +61,17 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { getMenuGroups } from '../router/routes'
 import { useAuthStore } from '../store/auth'
+import { useNotificationStore } from '../store/notification'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 
 const menuRoutes = computed(() => {
   const layoutRoute = router.options.routes.find((item) => item.path === '/')
@@ -87,27 +91,7 @@ const currentLoginName = computed(() => {
 
   return '未登录用户'
 })
-const currentTitle = computed(() => route.meta?.title || '管理首页')
-const currentDescription = computed(() => {
-    const descriptions = {
-      概览工作台: '集中查看运行概况、重点提醒和常用入口。',
-      统计分析: '查看部门指标、趋势变化和统计结果。',
-      用户管理: '维护人员资料、所属部门和角色信息。',
-      部门管理: '维护组织部门资料，便于统一归口管理。',
-      角色管理: '维护岗位角色资料和页面访问范围。',
-      人脸采集: '完成人脸信息采集与资料更新。',
-      考勤打卡: '完成地点校验、活体挑战和正式打卡提交流程。',
-      考勤记录: '查看个人或全员考勤记录，并识别可补卡异常。',
-      补卡申请: '针对未打卡场景单独填写补卡时间和原因后提交申请。',
-      个人中心: '查看并维护当前员工的基础资料和登录信息。',
-      异常中心: '集中处理异常记录、查看原因并进入复核。',
-      预警列表: '查看预警信息、处置建议和相关异常。',
-      人工复核: '结合辅助意见完成复核处理和反馈。',
-    系统配置: '维护基础配置、方案设置和运行记录。',
-  }
-
-  return descriptions[route.meta?.title] || '集中展示当前页面的主要信息和常用操作。'
-})
+const currentCategory = computed(() => route.meta?.menuGroup || route.meta?.title || '管理首页')
 const roleLabel = computed(() => {
   if (authStore.roleCode === 'ADMIN') {
     return '管理员'
@@ -122,32 +106,58 @@ const roleLabel = computed(() => {
 const showRoleTag = computed(() => {
   return Boolean(authStore.token) && Boolean(roleLabel.value) && currentLoginName.value !== roleLabel.value
 })
+const unreadCount = computed(() => Number(notificationStore.unreadCount || 0))
+const showMessageEntry = computed(() => Boolean(authStore.token) && authStore.roleCode === 'EMPLOYEE')
 
 const MENU_ICONS = {
   概览工作台: '◫',
   统计分析: '▦',
-  用户管理: '◎',
-  部门管理: '◌',
-  角色管理: '◈',
-  人脸采集: '◐',
-  考勤打卡: '◫',
-  考勤记录: '◧',
-  补卡申请: '◭',
-  个人中心: '◎',
-  异常中心: '▲',
-  预警列表: '△',
-  人工复核: '◇',
-  系统配置: '▣',
+      用户管理: '◎',
+      部门管理: '◌',
+      角色管理: '◈',
+      人脸采集: '◐',
+      考勤打卡: '◫',
+      考勤记录: '◧',
+      补卡申请: '◭',
+      补卡审批: '◬',
+      个人中心: '◎',
+      消息中心: '◍',
+      异常中心: '▲',
+      预警列表: '△',
+      人工复核: '◇',
+      基础配置: '▣',
+      方案设置: '◭',
+      采集申请: '◈',
+      操作记录: '◨',
 }
 
 function getMenuIcon(title) {
   return MENU_ICONS[title] || '•'
 }
 
+function openMessages() {
+  router.push('/messages')
+}
+
 async function handleLogout() {
+  notificationStore.reset()
   await authStore.logout()
   router.replace('/login')
 }
+
+onMounted(() => {
+  if (!authStore.token || authStore.roleCode !== 'EMPLOYEE') {
+    notificationStore.reset()
+    return
+  }
+
+  void notificationStore.refreshUnreadCount()
+  notificationStore.connectStream()
+})
+
+onBeforeUnmount(() => {
+  notificationStore.closeStream()
+})
 </script>
 
 <style scoped>
@@ -177,22 +187,8 @@ async function handleLogout() {
 }
 
 .layout-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 20px 16px;
-}
-
-.layout-brand__mark {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, rgba(125, 211, 252, 0.24), rgba(47, 105, 178, 0.34));
-  color: #f8fafc;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  padding: 20px 18px 14px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.12);
 }
 
 .layout-brand__copy {
@@ -200,12 +196,13 @@ async function handleLogout() {
 }
 
 .layout-brand__title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
+  line-height: 1.4;
 }
 
 .layout-brand__subtitle {
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 12px;
   color: rgba(226, 232, 240, 0.72);
 }
@@ -213,7 +210,7 @@ async function handleLogout() {
 .layout-menu-groups {
   flex: 1;
   overflow-y: auto;
-  padding: 0 12px 20px;
+  padding: 10px 12px 20px;
 }
 
 .layout-group + .layout-group {
@@ -294,6 +291,30 @@ async function handleLogout() {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.layout-header__message-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(47, 105, 178, 0.18);
+  border-radius: 999px;
+  background: rgba(47, 105, 178, 0.08);
+  color: #245391;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.layout-header__message-badge {
+  min-width: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12px;
+  text-align: center;
 }
 
 .layout-header__identity {

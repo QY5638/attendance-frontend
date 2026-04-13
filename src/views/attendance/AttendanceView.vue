@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRoute, useRouter } from 'vue-router'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import { completeFaceLiveness, createFaceLivenessSession } from '../../api/face'
@@ -26,6 +27,8 @@ const props = defineProps({
   },
 })
 
+const route = useRoute() || { query: {} }
+const router = useRouter()
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
 const forcedTab = computed(() => {
@@ -44,6 +47,7 @@ const deviceOptions = ref([])
 const departmentOptions = ref([])
 const deviceOptionsError = ref('')
 const checkinError = ref('')
+const checkinSuccess = ref(null)
 const recordList = ref([])
 const recordTotal = ref(0)
 const recordError = ref('')
@@ -175,15 +179,6 @@ const hasValidFaceLivenessProof = computed(() => {
 
 const selectedDeviceLocation = computed(() => selectedDevice.value?.location || '')
 
-const selectedDeviceCoordinate = computed(() => {
-  const coordinates = readCoordinatePair(selectedDevice.value)
-
-  if (!coordinates) {
-    return ''
-  }
-
-  return `${formatCoordinate(coordinates[0])}, ${formatCoordinate(coordinates[1])}`
-})
 const selectedDeviceRadius = computed(() => selectedDevice.value?.radiusMeters || 30)
 const hasSelectedDeviceCoordinates = computed(() => Boolean(readCoordinatePair(selectedDevice.value)))
 
@@ -568,6 +563,7 @@ function destroyDevicePreviewMap() {
 function clearFaceCheckinState() {
   checkinError.value = ''
   faceVerifyResult.value = ''
+  checkinSuccess.value = null
 }
 
 function resetFaceLivenessState() {
@@ -905,6 +901,16 @@ function handleSearchRecords() {
   return loadRecords()
 }
 
+function applyRecordQueryFromRoute(routeQuery = {}) {
+  recordQuery.pageNum = 1
+  recordQuery.userId = typeof routeQuery.userId === 'string' ? routeQuery.userId : ''
+  recordQuery.deptId = typeof routeQuery.deptId === 'string' ? routeQuery.deptId : ''
+  recordQuery.checkType = typeof routeQuery.checkType === 'string' ? routeQuery.checkType : ''
+  recordQuery.status = typeof routeQuery.status === 'string' ? routeQuery.status : ''
+  recordQuery.startDate = typeof routeQuery.startDate === 'string' ? routeQuery.startDate : ''
+  recordQuery.endDate = typeof routeQuery.endDate === 'string' ? routeQuery.endDate : ''
+}
+
 function handleResetRecords() {
   recordQuery.pageNum = 1
   recordQuery.pageSize = 10
@@ -965,6 +971,36 @@ function isRepairableRecord(record) {
   return REPAIRABLE_RECORD_STATUSES.has(String(record?.status || '').toUpperCase())
 }
 
+function resolveRepairTagType(record) {
+  const repairStatus = String(record?.repairStatus || '').toUpperCase()
+  if (repairStatus === 'APPROVED') {
+    return 'REPAIRED'
+  }
+  if (repairStatus === 'PENDING') {
+    return 'PENDING'
+  }
+  if (isRepairableRecord(record)) {
+    return 'REPAIRABLE'
+  }
+  return 'NONE'
+}
+
+function openRepairApplication(record) {
+  if (!record?.id || resolveRepairTagType(record) !== 'REPAIRABLE') {
+    return
+  }
+
+  router.push({
+    path: '/attendance/repair',
+    query: {
+      sourceRecordId: String(record.id),
+      sourceStatus: String(record.status || ''),
+      sourceCheckType: String(record.checkType || ''),
+      sourceCheckTime: String(record.checkTime || ''),
+    },
+  })
+}
+
 async function handleVerifyFace() {
   if (!checkinForm.imageData || faceVerifyLoading.value) {
     return
@@ -987,6 +1023,7 @@ async function handleVerifyFace() {
   } catch (error) {
     currentLocationError.value = error?.message || ''
     faceVerifyResult.value = formatFaceSubmitError(error)
+    ElMessage.error(faceVerifyResult.value)
   } finally {
     faceVerifyLoading.value = false
   }
@@ -1004,7 +1041,7 @@ async function handleSubmitCheckin() {
     await loadComputerDeviceInfo()
     await ensureCurrentLocation()
     const livenessToken = await ensureFaceLivenessToken()
-    readWrappedData(
+    const checkinResult = readWrappedData(
       await submitAttendanceCheckinRequest({
         checkType: checkinForm.checkType,
         deviceId: checkinForm.deviceId,
@@ -1016,23 +1053,33 @@ async function handleSubmitCheckin() {
         livenessToken,
       }),
     )
+    checkinSuccess.value = {
+      message: checkinResult?.message || '打卡提交成功',
+      checkTime: checkinResult?.checkTime || '',
+      checkType: checkinResult?.checkType || checkinForm.checkType,
+      location: checkinResult?.location || selectedDeviceLocation.value || '',
+      faceScore: checkinResult?.faceScore ?? null,
+      status: checkinResult?.status || '',
+    }
     if (showTabSwitcher.value || showRecordPanel.value) {
       await loadRecords()
       if (recordError.value) {
         checkinError.value = recordError.value
       }
     }
-    ElMessage.success('打卡提交成功')
+    ElMessage.success(checkinSuccess.value?.message || '打卡提交成功')
     resetCurrentLocation()
   } catch (error) {
     currentLocationError.value = error?.message || ''
     checkinError.value = formatFaceSubmitError(error)
+    ElMessage.error(checkinError.value)
   } finally {
     checkinSubmitting.value = false
   }
 }
 
 onMounted(() => {
+  applyRecordQueryFromRoute(route.query)
   void loadComputerDeviceInfo()
   terminalId.value = getTerminalId()
   if (isAdmin.value) {
@@ -1083,9 +1130,26 @@ watch(showRecordPanel, (visible) => {
   }
 })
 
+watch(
+  () => [route.query?.userId, route.query?.deptId, route.query?.checkType, route.query?.status, route.query?.startDate, route.query?.endDate],
+  () => {
+    if (!showRecordPanel.value) {
+      return
+    }
+
+    applyRecordQueryFromRoute(route.query)
+    void loadRecords()
+  },
+)
+
 watch(() => checkinForm.deviceId, () => {
+  clearFaceCheckinState()
   resetCurrentLocation()
   void syncSelectedDeviceMap()
+})
+
+watch(() => checkinForm.checkType, () => {
+  clearFaceCheckinState()
 })
 
 watch(activeTab, (tab) => {
@@ -1179,8 +1243,8 @@ onBeforeUnmount(() => {
           打卡地点：{{ selectedDeviceLocation }}（允许半径 {{ selectedDeviceRadius }} 米）
         </p>
 
-        <p v-if="selectedDeviceCoordinate" data-testid="attendance-device-coordinate" class="attendance-hint">
-          地点经纬度：{{ selectedDeviceCoordinate }}
+        <p v-if="hasSelectedDeviceCoordinates" data-testid="attendance-device-coordinate" class="attendance-hint">
+          地图位置已设置，可直接查看预览。
         </p>
 
         <div class="attendance-location-actions">
@@ -1204,7 +1268,7 @@ onBeforeUnmount(() => {
             {{ deviceMapError }}
           </div>
           <p v-else-if="!hasSelectedDeviceCoordinates" data-testid="attendance-device-map-empty" class="attendance-hint">
-            当前打卡地点未配置地图坐标，暂无法展示地图预览
+            当前打卡地点未设置地图位置，暂无法展示地图预览
           </p>
           <div v-else ref="deviceMapContainer" data-testid="attendance-device-map" class="attendance-device-map"></div>
         </div>
@@ -1266,13 +1330,13 @@ onBeforeUnmount(() => {
                 {{ faceLivenessState.running ? '挑战中...' : hasValidFaceLivenessProof ? '重新挑战' : '开始活体挑战' }}
               </button>
             </div>
-            <p class="attendance-hint">
+            <p class="attendance-hint attendance-face-liveness__message">
               {{ faceLivenessState.message || '打卡前必须先完成随机活体挑战，再进行人脸预检或正式提交。' }}
             </p>
             <p v-if="faceLivenessState.score !== null" class="attendance-hint attendance-hint--accent">
               活体分值：{{ Number(faceLivenessState.score).toFixed(2) }}
             </p>
-            <div v-if="faceLivenessState.actions.length" class="attendance-face-liveness__steps">
+            <div class="attendance-face-liveness__steps">
               <span
                 v-for="(action, index) in faceLivenessState.actions"
                 :key="`${action}-${index}`"
@@ -1329,13 +1393,23 @@ onBeforeUnmount(() => {
             {{ checkinError }}
           </div>
 
+          <div v-if="checkinSuccess" data-testid="attendance-checkin-success" class="attendance-success">
+            <strong>{{ checkinSuccess.message }}</strong>
+            <p>提交时间：{{ formatDateTime(checkinSuccess.checkTime) }}</p>
+            <p>打卡类型：{{ formatCheckType(checkinSuccess.checkType) }}</p>
+            <p>打卡地点：{{ checkinSuccess.location || '--' }}</p>
+            <p v-if="checkinSuccess.faceScore !== null && checkinSuccess.faceScore !== undefined">
+              人脸分值：{{ Number(checkinSuccess.faceScore).toFixed(2) }}
+            </p>
+          </div>
+
           <button
             data-testid="attendance-checkin-submit"
             type="button"
             :disabled="isCheckinDisabled"
             @click="handleSubmitCheckin"
           >
-            提交打卡
+            {{ checkinSubmitting ? '提交中...' : '提交打卡' }}
           </button>
         </section>
       </div>
@@ -1389,7 +1463,7 @@ onBeforeUnmount(() => {
             <select v-model="recordQuery.status" data-testid="attendance-record-status-select">
               <option value="">全部</option>
               <option value="NORMAL">正常</option>
-              <option value="EXCEPTION">异常</option>
+              <option value="ABNORMAL">异常</option>
               <option value="REPAIRED">已补卡</option>
               <option value="REPAIR_PENDING">补卡处理中</option>
               <option value="ABSENT">缺勤</option>
@@ -1505,7 +1579,17 @@ onBeforeUnmount(() => {
             <td>{{ formatRecordStatus(record.status) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
             <td v-if="!isAdmin">
-              <span v-if="isRepairableRecord(record)" :data-testid="`attendance-repair-tag-${record.id}`" class="attendance-record-tag">可补卡</span>
+              <button
+                v-if="resolveRepairTagType(record) === 'REPAIRABLE'"
+                type="button"
+                :data-testid="`attendance-repair-tag-${record.id}`"
+                class="attendance-record-tag attendance-record-tag--action"
+                @click="openRepairApplication(record)"
+              >
+                可补卡
+              </button>
+              <span v-else-if="resolveRepairTagType(record) === 'PENDING'" class="attendance-record-tag attendance-record-tag--pending">补卡处理中</span>
+              <span v-else-if="resolveRepairTagType(record) === 'REPAIRED'" class="attendance-record-tag attendance-record-tag--done">已补卡</span>
             </td>
           </tr>
         </tbody>
@@ -1775,6 +1859,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 20px;
+  align-items: start;
 }
 
 .attendance-face-card {
@@ -1848,11 +1933,13 @@ onBeforeUnmount(() => {
 
 .attendance-face-liveness {
   display: grid;
+  align-content: start;
   gap: 10px;
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid rgba(47, 105, 178, 0.12);
   background: rgba(47, 105, 178, 0.06);
+  overflow-anchor: none;
 }
 
 .attendance-face-liveness__header {
@@ -1867,6 +1954,12 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-height: 40px;
+  align-content: flex-start;
+}
+
+.attendance-face-liveness__message {
+  min-height: 48px;
 }
 
 .attendance-face-liveness__step {
@@ -1962,11 +2055,58 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
+.attendance-record-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.attendance-record-tag--action {
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid rgba(47, 105, 178, 0.28) !important;
+  background: rgba(47, 105, 178, 0.08) !important;
+  color: #245391 !important;
+  box-shadow: none !important;
+}
+
+.attendance-record-tag--pending {
+  color: #92400e;
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.attendance-record-tag--done {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.18);
+}
+
 .attendance-error {
   padding: 12px 14px;
   color: #b91c1c;
   background: rgba(248, 113, 113, 0.12);
   border-radius: 16px;
+}
+
+.attendance-success {
+  padding: 14px 16px;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.12);
+  border-radius: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.attendance-success strong,
+.attendance-success p {
+  margin: 0;
 }
 
 .attendance-hint {

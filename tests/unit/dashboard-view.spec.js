@@ -8,6 +8,7 @@ const {
   fetchDepartmentStatistics,
   fetchOperationLogSummary,
   fetchPersonalStatistics,
+  push,
   fetchStatisticsSummary,
   fetchWarningList,
 } = vi.hoisted(() => ({
@@ -21,8 +22,13 @@ const {
   fetchDepartmentStatistics: vi.fn(),
   fetchOperationLogSummary: vi.fn(),
   fetchPersonalStatistics: vi.fn(),
+  push: vi.fn(),
   fetchStatisticsSummary: vi.fn(),
   fetchWarningList: vi.fn(),
+}))
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push }),
 }))
 
 vi.mock('../../src/store/auth', () => ({
@@ -104,6 +110,7 @@ describe('dashboard view', () => {
     fetchDepartmentStatistics.mockReset()
     fetchOperationLogSummary.mockReset()
     fetchPersonalStatistics.mockReset()
+    push.mockReset()
     fetchStatisticsSummary.mockReset()
     fetchWarningList.mockReset()
   })
@@ -227,5 +234,21 @@ describe('dashboard view', () => {
     expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('技术部')
     expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('财务部')
     expect(wrapper.get('[data-testid="dashboard-risk"]').text()).toContain('市场部')
+  })
+
+  it('navigates when clicking admin spotlight cards', async () => {
+    authStoreRef.current = { roleCode: 'ADMIN', realName: '管理员' }
+    fetchDepartmentStatistics.mockResolvedValue({ attendanceRate: 0.91, exceptionRate: 0.08 })
+    fetchStatisticsSummary.mockResolvedValue({ summary: '部门异常率上升', highlightRisks: '连续三天设备异常', manageSuggestion: '优先排查设备' })
+    fetchWarningList.mockResolvedValue([{ id: 1, type: 'RISK_WARNING', exceptionType: 'PROXY_CHECKIN', level: 'HIGH', aiSummary: '高风险异常' }])
+    fetchDepartmentRiskOverview.mockResolvedValue([{ deptId: 1, deptName: '研发部', riskScore: 82 }])
+    fetchOperationLogSummary.mockResolvedValue({ total: 9, typeCounts: { FACE_LIVENESS_REJECT: 2, LOGIN_FAILURE: 1 } })
+
+    const wrapper = mountDashboardView()
+    await flushPromises()
+
+    await wrapper.find('.dashboard-spotlight__cards .console-overview-card').trigger('click')
+
+    expect(push).toHaveBeenCalledWith('/warning')
   })
 })

@@ -1,17 +1,32 @@
 <template>
   <section class="system-view">
     <ConsoleHero
-      title="系统配置"
-      description="统一维护基础配置、方案设置和运行记录，便于集中核查系统状态。"
+      :title="heroTitle"
+      :description="heroDescription"
       theme="violet"
       :cards="heroCards"
     />
 
-    <ConsoleOverviewCards :items="overviewItems" />
+    <ConsoleOverviewCards v-if="showOverviewCards" :items="overviewItems" />
 
-    <nav class="system-view__tabs" aria-label="系统配置子页切换">
+    <nav v-if="showGroupNav" class="system-view__groups" aria-label="系统配置分组切换">
       <button
-        v-for="item in navItems"
+        v-for="group in tabGroups"
+        :key="group.key"
+        :data-group="group.key"
+        type="button"
+        class="system-view__group"
+        :class="{ 'system-view__group--active': group.key === activeGroup.key }"
+        @click="handleGroupChange(group.key)"
+      >
+        <span>{{ group.label }}</span>
+        <small>{{ group.desc }}</small>
+      </button>
+    </nav>
+
+    <nav v-if="showTabNav" class="system-view__tabs" :class="{ 'system-view__tabs--standalone': standaloneGroup }" aria-label="系统配置子页切换">
+      <button
+        v-for="item in activeGroup.items"
         :key="item.key"
         :data-tab="item.key"
         type="button"
@@ -43,77 +58,164 @@ const SystemPromptPanel = defineAsyncComponent(() => import('./panels/SystemProm
 const SystemRiskLevelPanel = defineAsyncComponent(() => import('./panels/SystemRiskLevelPanel.vue'))
 const SystemExceptionTypePanel = defineAsyncComponent(() => import('./panels/SystemExceptionTypePanel.vue'))
 const SystemFaceRegisterApprovalPanel = defineAsyncComponent(() => import('./panels/SystemFaceRegisterApprovalPanel.vue'))
-const SystemModelLogPanel = defineAsyncComponent(() => import('./panels/SystemModelLogPanel.vue'))
 const SystemOperationLogPanel = defineAsyncComponent(() => import('./panels/SystemOperationLogPanel.vue'))
+
+const props = defineProps({
+  fixedGroupKey: {
+    type: String,
+    default: '',
+  },
+})
 
 const route = useRoute()
 const router = useRouter()
 
-const navItems = [
+const panelItems = [
   { key: 'device', label: '打卡地点管理', desc: '地点档案与启停状态', component: SystemDevicePanel },
   { key: 'rule', label: '规则配置', desc: '考勤规则与阈值管理', component: SystemRulePanel },
   { key: 'prompt', label: '方案设置', desc: '方案维护、编辑与启停管理', component: SystemPromptPanel },
   { key: 'risk-level', label: '风险等级', desc: '风险名称、说明与状态', component: SystemRiskLevelPanel },
   { key: 'exception-type', label: '异常类型', desc: '异常类别说明与状态', component: SystemExceptionTypePanel },
-  { key: 'face-approval', label: '人脸申请', desc: '员工重录申请与审批处理', component: SystemFaceRegisterApprovalPanel },
-  { key: 'model-log', label: '分析记录', desc: '查看处理过程、结果与耗时', component: SystemModelLogPanel },
+  { key: 'face-approval', label: '人脸采集申请', desc: '员工重录申请与审批处理', component: SystemFaceRegisterApprovalPanel },
   { key: 'operation-log', label: '操作记录', desc: '关键操作记录查询', component: SystemOperationLogPanel },
 ]
 
-const validKeys = navItems.map((item) => item.key)
+const tabGroups = [
+  {
+    key: 'base',
+    label: '基础配置',
+    desc: '地点、规则、风险和异常设置',
+    items: ['device', 'rule', 'risk-level', 'exception-type'],
+  },
+  {
+    key: 'prompt',
+    label: '方案设置',
+    desc: '分析方案维护与启停管理',
+    items: ['prompt'],
+  },
+  {
+    key: 'approval',
+    label: '采集申请',
+    desc: '处理员工的人脸重录申请',
+    items: ['face-approval'],
+  },
+  {
+    key: 'log',
+    label: '操作记录',
+    desc: '查看关键操作记录',
+    items: ['operation-log'],
+  },
+].map((group) => ({
+  ...group,
+  items: group.items
+    .map((itemKey) => panelItems.find((item) => item.key === itemKey))
+    .filter(Boolean),
+}))
+
+function getGroupByKey(groupKey) {
+  return tabGroups.find((group) => group.key === groupKey) || null
+}
+
+const standaloneGroup = computed(() => getGroupByKey(props.fixedGroupKey))
+const showGroupNav = computed(() => !standaloneGroup.value)
+const showOverviewCards = computed(() => !standaloneGroup.value)
+const showTabNav = computed(() => activeGroup.value.items.length > 1)
+const allowedKeys = computed(() => {
+  if (standaloneGroup.value) {
+    return standaloneGroup.value.items.map((item) => item.key)
+  }
+
+  return panelItems.map((item) => item.key)
+})
+const defaultTabKey = computed(() => {
+  return standaloneGroup.value?.items?.[0]?.key || panelItems[0]?.key || ''
+})
 
 const activeTab = computed(() => {
   const tab = typeof route.query.tab === 'string' ? route.query.tab : ''
-  return validKeys.includes(tab) ? tab : 'device'
+  return allowedKeys.value.includes(tab) ? tab : defaultTabKey.value
 })
 
 const activeItem = computed(() => {
-  return navItems.find((item) => item.key === activeTab.value) || navItems[0]
+  return panelItems.find((item) => item.key === activeTab.value) || panelItems[0]
 })
 
-const heroCards = computed(() => [
-  {
-    key: 'current',
-    label: '当前分类',
-    value: activeItem.value.label,
-  },
-  {
-    key: 'scope',
-    label: '配置范围',
-    value: `${navItems.length} 个配置域`,
-  },
-])
+const activeGroup = computed(() => {
+  if (standaloneGroup.value) {
+    return standaloneGroup.value
+  }
 
-const overviewItems = computed(() => [
-  {
-    key: 'current',
-    label: '当前子页',
-    value: activeItem.value.label,
-    desc: activeItem.value.desc,
-  },
-  {
-    key: 'scope',
-    label: '配置范围',
-    value: '7 个配置域',
-    desc: '覆盖打卡地点、规则、方案、风险分级、分析记录与操作记录。',
-  },
-  {
-    key: 'suggestion',
-    label: '使用建议',
-    value: '先配置后核查',
-    desc: '建议先完成基础配置，再结合分析记录和业务日志进行核查。',
-  },
-])
+  return tabGroups.find((group) => group.items.some((item) => item.key === activeTab.value)) || tabGroups[0]
+})
+
+const heroTitle = computed(() => (standaloneGroup.value ? activeGroup.value.label : '系统配置'))
+const heroDescription = computed(() => {
+  if (standaloneGroup.value) {
+    return activeGroup.value.desc
+  }
+
+  return '统一维护基础配置、方案设置、采集申请和操作记录。'
+})
+
+const heroCards = computed(() => {
+  if (standaloneGroup.value) {
+    return []
+  }
+
+  return [
+    {
+      key: 'current',
+      label: '当前分类',
+      value: activeGroup.value.label,
+    },
+    {
+      key: 'page',
+      label: '当前页面',
+      value: activeItem.value.label,
+    },
+  ]
+})
+
+const overviewItems = computed(() => {
+  return [
+    {
+      key: 'group',
+      label: '当前分组',
+      value: activeGroup.value.label,
+      desc: activeGroup.value.desc,
+    },
+    {
+      key: 'current',
+      label: '当前页面',
+      value: activeItem.value.label,
+      desc: activeItem.value.desc,
+    },
+    {
+      key: 'scope',
+      label: '配置范围',
+      value: `${tabGroups.length} 个分组 / ${panelItems.length} 项内容`,
+      desc: '覆盖基础配置、方案设置、采集申请和操作记录。',
+    },
+    {
+      key: 'suggestion',
+      label: '使用建议',
+      value: activeGroup.value.key === 'log' ? '先看记录再排查' : '先设置再核查',
+      desc: activeGroup.value.key === 'log'
+        ? '建议先查看关键操作记录，再回到对应配置项排查问题。'
+        : '建议先完成当前分组配置，再按需要进入审批和记录页面核查。',
+    },
+  ]
+})
 
 watch(
   () => route.query.tab,
   (tab) => {
-    if (typeof tab === 'string' && tab && !validKeys.includes(tab)) {
+    if (typeof tab === 'string' && tab && !allowedKeys.value.includes(tab)) {
       router.replace({
         path: route.path,
         query: {
           ...route.query,
-          tab: 'device',
+          tab: defaultTabKey.value,
         },
       })
     }
@@ -135,6 +237,17 @@ function handleTabChange(tab) {
       tab,
     },
   })
+}
+
+function handleGroupChange(groupKey) {
+  const targetGroup = tabGroups.find((group) => group.key === groupKey)
+  const nextItem = targetGroup?.items?.[0]
+
+  if (!nextItem) {
+    return
+  }
+
+  handleTabChange(nextItem.key)
 }
 </script>
 
@@ -194,13 +307,13 @@ function handleTabChange(tab) {
   color: #0f172a;
 }
 
-.system-view__tabs {
+.system-view__groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
 
-.system-view__tab {
+.system-view__group {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -214,27 +327,84 @@ function handleTabChange(tab) {
   transition: 0.2s ease;
 }
 
-.system-view__tab:hover {
+.system-view__group:hover {
   border-color: rgba(79, 70, 229, 0.28);
   transform: translateY(-1px);
 }
 
-.system-view__tab--active {
+.system-view__group--active {
   border-color: transparent;
   background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
   color: #ffffff;
   box-shadow: 0 18px 40px rgba(79, 70, 229, 0.24);
 }
 
-.system-view__tab span {
+.system-view__group span {
   font-size: 15px;
+  font-weight: 700;
+}
+
+.system-view__group small {
+  font-size: 12px;
+  opacity: 0.78;
+  text-align: left;
+}
+
+.system-view__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px;
+  border-radius: 20px;
+  background: rgba(79, 70, 229, 0.06);
+}
+
+.system-view__tabs--standalone {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 0;
+  background: transparent;
+}
+
+.system-view__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 180px;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.system-view__tab:hover {
+  border-color: rgba(79, 70, 229, 0.2);
+}
+
+.system-view__tab--active {
+  border-color: rgba(67, 56, 202, 0.16);
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.12);
+}
+
+.system-view__tab span {
+  font-size: 14px;
   font-weight: 700;
 }
 
 .system-view__tab small {
   font-size: 12px;
-  opacity: 0.78;
+  color: #64748b;
   text-align: left;
+}
+
+.system-view__tab--active small {
+  color: #475569;
 }
 
 .system-view__panel {

@@ -39,12 +39,13 @@ function createFaceVerifyPayload(payload = {}) {
 }
 
 function createRepairPayload(payload = {}) {
-  const { checkType, checkTime, repairReason } = payload
+  const { checkType, checkTime, repairReason, recordId } = payload
 
   return {
     checkType,
     checkTime,
     repairReason,
+    recordId,
   }
 }
 
@@ -102,6 +103,54 @@ function createAttendanceListParams(payload = {}) {
   return params
 }
 
+function createAttendanceRepairListParams(payload = {}) {
+  const { pageNum, pageSize, keyword, userId, deptId, checkType, status, startDate, endDate } = payload
+
+  const params = {
+    pageNum,
+    pageSize,
+  }
+
+  if (keyword) {
+    params.keyword = keyword
+  }
+
+  if (userId !== '' && userId !== null && userId !== undefined) {
+    params.userId = userId
+  }
+
+  if (deptId !== '' && deptId !== null && deptId !== undefined) {
+    params.deptId = deptId
+  }
+
+  if (checkType) {
+    params.checkType = checkType
+  }
+
+  if (status) {
+    params.status = status
+  }
+
+  if (startDate) {
+    params.startDate = startDate
+  }
+
+  if (endDate) {
+    params.endDate = endDate
+  }
+
+  return params
+}
+
+function createAttendanceRepairReviewPayload(payload = {}) {
+  const { status, reviewComment } = payload
+
+  return {
+    status,
+    reviewComment,
+  }
+}
+
 export function getAttendanceDeviceOptionsRequest() {
   return request.get('/attendance/device-options')
 }
@@ -124,6 +173,16 @@ export function getAttendanceListRequest(payload) {
 
 export function submitAttendanceRepairRequest(payload) {
   return request.post('/attendance/repair', createRepairPayload(payload))
+}
+
+export function getAttendanceRepairListRequest(payload) {
+  return request.get('/attendance/repair/list', {
+    params: createAttendanceRepairListParams(payload),
+  })
+}
+
+export function reviewAttendanceRepairRequest(repairId, payload) {
+  return request.post(`/attendance/repair/${repairId}/review`, createAttendanceRepairReviewPayload(payload))
 }
 
 export function verifyFaceRequest(payload) {

@@ -44,7 +44,14 @@
         </div>
 
         <div class="dashboard-metric-grid">
-          <el-card v-for="item in overviewCards" :key="item.key" shadow="hover" class="dashboard-metric-card">
+          <el-card
+            v-for="item in overviewCards"
+            :key="item.key"
+            shadow="hover"
+            class="dashboard-metric-card"
+            :class="{ 'dashboard-metric-card--clickable': Boolean(item.onClick) }"
+            @click="item.onClick?.()"
+          >
             <p class="dashboard-metric-card__label">{{ item.label }}</p>
             <strong class="dashboard-metric-card__value">{{ item.value }}</strong>
           </el-card>
@@ -75,7 +82,14 @@
         </div>
 
         <div class="dashboard-metric-grid">
-          <el-card v-for="item in signalCards" :key="item.key" shadow="hover" class="dashboard-metric-card dashboard-metric-card--signal">
+          <el-card
+            v-for="item in signalCards"
+            :key="item.key"
+            shadow="hover"
+            class="dashboard-metric-card dashboard-metric-card--signal"
+            :class="{ 'dashboard-metric-card--clickable': Boolean(item.onClick) }"
+            @click="item.onClick?.()"
+          >
             <p class="dashboard-metric-card__label">{{ item.label }}</p>
             <strong class="dashboard-metric-card__value">{{ item.value }}</strong>
             <p class="dashboard-metric-card__desc">{{ item.desc }}</p>
@@ -94,7 +108,13 @@
         </div>
 
         <div v-if="exceptionFocusItems.length" class="dashboard-list">
-          <el-card v-for="item in exceptionFocusItems" :key="item.key" class="dashboard-list__item dashboard-list__item--focus">
+          <el-card
+            v-for="item in exceptionFocusItems"
+            :key="item.key"
+            class="dashboard-list__item dashboard-list__item--focus"
+            :class="{ 'dashboard-list__item--clickable': Boolean(item.onClick) }"
+            @click="item.onClick?.()"
+          >
             <div class="dashboard-list__title">
               <strong>{{ item.label }}</strong>
               <span class="dashboard-list__meta">{{ item.value }}</span>
@@ -116,7 +136,13 @@
         </div>
 
         <div v-if="warningItems.length" class="dashboard-list">
-          <el-card v-for="item in warningItems" :key="item.id || item.exceptionId || item.aiSummary" class="dashboard-list__item">
+          <el-card
+            v-for="item in warningItems"
+            :key="item.id || item.exceptionId || item.aiSummary"
+            class="dashboard-list__item"
+            :class="{ 'dashboard-list__item--clickable': Boolean(item.onClick) }"
+            @click="item.onClick?.()"
+          >
             <div class="dashboard-list__title">
               <strong>{{ buildWarningTitle(item) }}</strong>
               <span class="dashboard-list__meta">{{ buildWarningMeta(item) }}</span>
@@ -138,7 +164,13 @@
         </div>
 
         <div v-if="riskItems.length" class="dashboard-list dashboard-list--risk">
-          <el-card v-for="item in riskItems" :key="item.deptId || item.deptName" class="dashboard-list__item">
+          <el-card
+            v-for="item in riskItems"
+            :key="item.deptId || item.deptName"
+            class="dashboard-list__item"
+            :class="{ 'dashboard-list__item--clickable': Boolean(item.onClick) }"
+            @click="item.onClick?.()"
+          >
             <div class="dashboard-list__title">
               <strong>{{ item.deptName || '未知部门' }}</strong>
               <span>{{ item.riskScore ?? '--' }}</span>
@@ -154,6 +186,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import ConsoleHero from '../../components/console/ConsoleHero.vue'
 import ConsoleOverviewCards from '../../components/console/ConsoleOverviewCards.vue'
@@ -170,6 +203,7 @@ import { EXCEPTION_TYPE_LABELS, formatExceptionType } from '../../utils/exceptio
 import { formatReadableText } from '../../utils/readable-text'
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const isAdmin = computed(() => authStore.roleCode === 'ADMIN')
 const loading = ref(true)
@@ -223,38 +257,50 @@ const spotlightCards = computed(() => {
   if (isAdmin.value) {
     return [
       {
+        key: 'warning',
         label: '最近预警',
         value: `${warningItems.value.length} 条`,
         desc: '首页聚焦最近 5 条优先处置的预警记录',
+        onClick: () => router.push('/warning'),
       },
       {
+        key: 'risk',
         label: '部门风险',
         value: `${riskItems.value.length} 个`,
         desc: '展示全部部门的风险概况和处理建议',
+        onClick: () => router.push('/statistics'),
       },
       {
-        label: '运行事件',
+        key: 'runtime',
+        label: '操作记录',
         value: `${Number(runtimeSummaryData.value?.total || 0)} 条`,
         desc: '包含活体拒绝、登录失败与登录续期等关键记录',
+        onClick: () => router.push('/system/logs'),
       },
     ]
   }
 
   return [
     {
+      key: 'account',
       label: '当前账号',
       value: authStore.realName || '当前用户',
       desc: '登录后默认进入个人业务页面',
+      onClick: () => router.push('/profile'),
     },
     {
+      key: 'records',
       label: '个人概况',
       value: overviewCards.value.length ? '已同步' : '待同步',
       desc: '用于查看近期出勤、异常和缺勤情况',
+      onClick: () => router.push('/attendance/records'),
     },
     {
+      key: 'checkin',
       label: '整体提醒',
       value: summaryData.value.summary ? '已生成' : '待生成',
       desc: '给出近期考勤变化和注意事项',
+      onClick: () => router.push('/attendance/checkin'),
     },
   ]
 })
@@ -269,24 +315,28 @@ const signalCards = computed(() => [
     label: '待处理预警',
     value: pendingWarningCount.value,
     desc: '优先进入预警页和复核页处理当前积压任务',
+    onClick: () => router.push('/warning'),
   },
   {
     key: 'high-risk',
     label: '高风险异常',
     value: Number(riskLevelDistribution.value.HIGH || 0),
     desc: '高风险异常越多，越应优先查看证据链和处置建议',
+    onClick: () => router.push('/exception'),
   },
   {
     key: 'liveness-reject',
     label: '活体拒绝',
     value: Number(runtimeTypeCounts.value.FACE_LIVENESS_REJECT || 0),
     desc: '单机摄像头场景下用于识别可疑重放与挑战失败情况',
+    onClick: () => router.push('/system/logs'),
   },
   {
     key: 'login-failure',
     label: '登录失败',
     value: Number(runtimeTypeCounts.value.LOGIN_FAILURE || 0),
     desc: '用于快速感知异常登录尝试与账号安全风险',
+    onClick: () => router.push('/system/logs'),
   },
 ])
 const exceptionFocusItems = computed(() => {
@@ -296,6 +346,7 @@ const exceptionFocusItems = computed(() => {
       label: WARNING_EXCEPTION_LABELS[key] || key,
       value: `${Number(value || 0)} 次`,
       desc: buildExceptionFocusDescription(key, Number(value || 0)),
+      onClick: () => router.push({ path: '/exception', query: { type: key } }),
     }))
     .sort((left, right) => Number.parseInt(right.value, 10) - Number.parseInt(left.value, 10))
     .slice(0, 4)
@@ -413,7 +464,37 @@ function buildMetricCards(payload = {}, limit = 4) {
       key,
       label: resolveMetricLabel(key),
       value: formatMetricValue(key, value),
+      onClick: buildMetricCardNavigation(key),
     }))
+}
+
+function buildMetricCardNavigation(key) {
+  if (isAdmin.value) {
+    if (['recordCount', 'attendanceCount', 'normalCount', 'attendanceRate', 'lateCount', 'absentCount'].includes(key)) {
+      return () => router.push('/attendance')
+    }
+    if (['exceptionCount', 'exceptionRate'].includes(key)) {
+      return () => router.push('/exception')
+    }
+    if (key === 'warningCount') {
+      return () => router.push('/warning')
+    }
+    if (['reviewCount', 'closedLoopCount'].includes(key)) {
+      return () => router.push('/review')
+    }
+    if (key === 'analysisCount') {
+      return () => router.push('/statistics')
+    }
+  }
+
+  if (['attendanceCount', 'normalCount', 'attendanceRate', 'lateCount', 'absentCount', 'recordCount'].includes(key)) {
+    return () => router.push('/attendance/records')
+  }
+  if (['exceptionCount', 'exceptionRate'].includes(key)) {
+    return () => router.push('/attendance/records')
+  }
+
+  return null
 }
 
 function normalizeList(payload, limit) {
@@ -531,8 +612,27 @@ async function loadDashboard() {
       runtimeSummaryData.value = runtimeSummary || { total: 0, typeCounts: {} }
       overviewCards.value = buildMetricCards(departmentData)
       summaryData.value = summary || {}
-      warningItems.value = normalizeList(warnings, 5)
-      riskItems.value = normalizeRiskItems(risks)
+      warningItems.value = normalizeList(warnings, 5).map((item) => ({
+        ...item,
+        onClick: () => router.push({
+          path: '/warning',
+          query: {
+            status: item.status || '',
+            level: item.level || '',
+            type: item.type || '',
+          },
+        }),
+      }))
+      riskItems.value = normalizeRiskItems(risks).map((item) => ({
+        ...item,
+        onClick: () => router.push({
+          path: '/attendance',
+          query: {
+            deptId: item.deptId || '',
+            status: 'ABNORMAL',
+          },
+        }),
+      }))
       return
     }
 
@@ -652,6 +752,10 @@ onMounted(() => {
   border: 1px solid rgba(99, 102, 241, 0.08);
 }
 
+.dashboard-metric-card--clickable {
+  cursor: pointer;
+}
+
 .dashboard-metric-card__label {
   margin: 0 0 10px;
   font-size: 13px;
@@ -697,6 +801,10 @@ onMounted(() => {
 
 .dashboard-list__item {
   border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.dashboard-list__item--clickable {
+  cursor: pointer;
 }
 
 .dashboard-list__title {

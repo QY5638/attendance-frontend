@@ -49,6 +49,7 @@ export async function fetchExceptionAnalysisBrief(id) {
 export async function fetchExceptionRuleCheck(payload = {}) {
   const result = await request.post('/exception/rule-check', {
     recordId: payload.recordId,
+    exceptionId: payload.exceptionId,
   })
 
   return unwrapBusinessResponse(result, '规则校验失败')
@@ -57,6 +58,7 @@ export async function fetchExceptionRuleCheck(payload = {}) {
 export async function fetchExceptionComplexCheck(payload = {}) {
   const result = await request.post('/exception/complex-check', {
     recordId: payload.recordId,
+    exceptionId: payload.exceptionId,
     userId: payload.userId,
     riskFeatures: payload.riskFeatures,
   }, {
@@ -64,4 +66,9 @@ export async function fetchExceptionComplexCheck(payload = {}) {
   })
 
   return unwrapBusinessResponse(result, '综合识别失败')
+}
+
+export async function backfillAbsenceExceptionContext() {
+  const result = await request.post('/exception/backfill-absence-context')
+  return unwrapBusinessResponse(result, '批量补齐缺勤异常依据失败')
 }

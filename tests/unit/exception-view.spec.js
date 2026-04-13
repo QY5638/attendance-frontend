@@ -402,7 +402,7 @@ describe('exception view', () => {
     expect(detailText).toContain('综合识别异常')
     expect(detailText).toContain('人脸分数达到95分以上')
     expect(detailText).toContain('数据库历史异常次数为1，提示')
-    expect(detailText).toContain('经纬度缺失')
+    expect(detailText).toContain('位置信息缺失')
     expect(detailText).toContain('客户端人脸分数缺失')
     expect(detailText).toContain('其余信息未发现明显高风险信号')
     expect(detailText).not.toContain('faceScore')
