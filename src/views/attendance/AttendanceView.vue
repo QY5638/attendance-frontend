@@ -945,11 +945,8 @@ function formatExceptionType(exceptionType, status, exceptionProcessStatus, revi
     if (normalizedReviewResult === 'REJECTED' || normalizedStatus === 'NORMAL' || normalizedStatus === 'REPAIRED') {
       return '无异常'
     }
-    if (normalizedReviewResult === 'CONFIRMED' && exceptionType) {
+    if ((normalizedReviewResult === 'CONFIRMED' || normalizedStatus === 'ABNORMAL') && exceptionType) {
       return getExceptionTypeLabel(exceptionType, exceptionType)
-    }
-    if (normalizedStatus === 'NORMAL' || normalizedStatus === 'REPAIRED') {
-      return '无异常'
     }
     return '已完成复核'
   }
@@ -975,7 +972,14 @@ function formatDateTime(value) {
   return formatDateTimeDisplay(value, '--')
 }
 
-function formatRecordStatus(status) {
+function formatRecordStatus(status, reviewResult) {
+  const normalizedReviewResult = String(reviewResult || '').toUpperCase()
+  if (normalizedReviewResult === 'REJECTED') {
+    return RECORD_STATUS_LABELS.NORMAL
+  }
+  if (normalizedReviewResult === 'CONFIRMED') {
+    return RECORD_STATUS_LABELS.ABNORMAL
+  }
   if (!status) {
     return '-'
   }
@@ -1623,7 +1627,7 @@ onBeforeUnmount(() => {
             <td>{{ formatDateTime(record.checkTime) }}</td>
             <td v-if="isAdmin">{{ record.location || '--' }}</td>
             <td v-if="isAdmin">{{ formatComputerDevice(record.deviceInfo) }}</td>
-            <td>{{ formatRecordStatus(record.status) }}</td>
+            <td>{{ formatRecordStatus(record.status, record.reviewResult) }}</td>
             <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType, record.status, record.exceptionProcessStatus, record.reviewResult) }}</td>
             <td v-if="!isAdmin">
               <button
