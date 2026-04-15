@@ -281,11 +281,12 @@ const RECORD_STATUS_LABELS = {
   REPAIRED: '已补卡',
   REPAIR_PENDING: '补卡处理中',
   ABSENT: '缺勤',
+  MISSING_CHECKOUT: '下班缺卡',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
 }
 
-const REPAIRABLE_RECORD_STATUSES = new Set(['ABNORMAL', 'ABSENT', 'LATE', 'EARLY_LEAVE'])
+const REPAIRABLE_RECORD_STATUSES = new Set(['ABNORMAL', 'ABSENT', 'MISSING_CHECKOUT', 'LATE', 'EARLY_LEAVE'])
 
 function detectBrowserName() {
   if (typeof navigator === 'undefined') {
@@ -935,12 +936,35 @@ function changePage(nextPageNum) {
   return loadRecords()
 }
 
-function formatExceptionType(exceptionType) {
-  if (!exceptionType) {
-    return '待核查异常'
+function formatExceptionType(exceptionType, status, exceptionProcessStatus, reviewResult) {
+  const normalizedProcessStatus = String(exceptionProcessStatus || '').toUpperCase()
+  const normalizedStatus = String(status || '').toUpperCase()
+  const normalizedReviewResult = String(reviewResult || '').toUpperCase()
+
+  if (normalizedProcessStatus === 'REVIEWED') {
+    if (normalizedReviewResult === 'REJECTED' || normalizedStatus === 'NORMAL' || normalizedStatus === 'REPAIRED') {
+      return '无异常'
+    }
+    if (normalizedReviewResult === 'CONFIRMED' && exceptionType) {
+      return getExceptionTypeLabel(exceptionType, exceptionType)
+    }
+    if (normalizedStatus === 'NORMAL' || normalizedStatus === 'REPAIRED') {
+      return '无异常'
+    }
+    return '已完成复核'
   }
 
-  return getExceptionTypeLabel(exceptionType, '待核查异常')
+  if (!exceptionType) {
+    if (normalizedStatus === 'ABNORMAL' || normalizedStatus === 'EXCEPTION' || normalizedStatus === 'ABSENT' || normalizedStatus === 'MISSING_CHECKOUT' || normalizedStatus === 'LATE' || normalizedStatus === 'EARLY_LEAVE') {
+      return '异常待核查'
+    }
+    if (normalizedStatus === 'REPAIR_PENDING') {
+      return '补卡处理中'
+    }
+    return '无异常'
+  }
+
+  return getExceptionTypeLabel(exceptionType, exceptionType)
 }
 
 function formatCheckType(checkType) {
@@ -973,11 +997,15 @@ function isRepairableRecord(record) {
 
 function resolveRepairTagType(record) {
   const repairStatus = String(record?.repairStatus || '').toUpperCase()
+  const reviewResult = String(record?.reviewResult || '').toUpperCase()
   if (repairStatus === 'APPROVED') {
     return 'REPAIRED'
   }
   if (repairStatus === 'PENDING') {
     return 'PENDING'
+  }
+  if (reviewResult === 'CONFIRMED' || reviewResult === 'REJECTED') {
+    return 'REVIEWED'
   }
   if (isRepairableRecord(record)) {
     return 'REPAIRABLE'
@@ -985,19 +1013,35 @@ function resolveRepairTagType(record) {
   return 'NONE'
 }
 
+function isContextOnlyExceptionRecord(record) {
+  const normalizedExceptionType = String(record?.exceptionType || '').toUpperCase()
+  const isSyntheticAbsence = normalizedExceptionType === 'ABSENT'
+  const isSyntheticMissingCheckout = normalizedExceptionType === 'MISSING_CHECKOUT'
+  return !record?.deviceId && (isSyntheticAbsence || isSyntheticMissingCheckout)
+}
+
 function openRepairApplication(record) {
-  if (!record?.id || resolveRepairTagType(record) !== 'REPAIRABLE') {
+  if (!record || resolveRepairTagType(record) !== 'REPAIRABLE') {
     return
+  }
+
+  const contextOnlyException = isContextOnlyExceptionRecord(record)
+  if (!contextOnlyException && !record?.id) {
+    return
+  }
+
+  const query = {
+    sourceStatus: String(record.status || ''),
+    sourceCheckType: String(record.checkType || ''),
+    sourceCheckTime: String(record.checkTime || ''),
+  }
+  if (!contextOnlyException && record?.id) {
+    query.sourceRecordId = String(record.id)
   }
 
   router.push({
     path: '/attendance/repair',
-    query: {
-      sourceRecordId: String(record.id),
-      sourceStatus: String(record.status || ''),
-      sourceCheckType: String(record.checkType || ''),
-      sourceCheckTime: String(record.checkTime || ''),
-    },
+    query,
   })
 }
 
@@ -1009,9 +1053,8 @@ async function handleVerifyFace() {
   faceVerifyLoading.value = true
 
   try {
-    await loadComputerDeviceInfo()
+    await Promise.all([loadComputerDeviceInfo(), ensureCurrentLocation()])
     terminalId.value = getTerminalId()
-    await ensureCurrentLocation()
     const livenessToken = await ensureFaceLivenessToken()
     const response = await verifyFaceRequest({
       imageData: checkinForm.imageData,
@@ -1038,8 +1081,8 @@ async function handleSubmitCheckin() {
   checkinError.value = ''
 
   try {
-    await loadComputerDeviceInfo()
-    await ensureCurrentLocation()
+    await Promise.all([loadComputerDeviceInfo(), ensureCurrentLocation()])
+    terminalId.value = getTerminalId()
     const livenessToken = await ensureFaceLivenessToken()
     const checkinResult = readWrappedData(
       await submitAttendanceCheckinRequest({
@@ -1061,14 +1104,17 @@ async function handleSubmitCheckin() {
       faceScore: checkinResult?.faceScore ?? null,
       status: checkinResult?.status || '',
     }
-    if (showTabSwitcher.value || showRecordPanel.value) {
-      await loadRecords()
-      if (recordError.value) {
-        checkinError.value = recordError.value
-      }
-    }
+    checkinSubmitting.value = false
     ElMessage.success(checkinSuccess.value?.message || '打卡提交成功')
     resetCurrentLocation()
+
+    if (showTabSwitcher.value || showRecordPanel.value) {
+      void loadRecords().then(() => {
+        if (recordError.value) {
+          checkinError.value = recordError.value
+        }
+      })
+    }
   } catch (error) {
     currentLocationError.value = error?.message || ''
     checkinError.value = formatFaceSubmitError(error)
@@ -1425,7 +1471,7 @@ onBeforeUnmount(() => {
           <span class="attendance-card__badge">{{ isAdmin ? '支持筛选' : '仅查看记录' }}</span>
         </div>
 
-        <p v-if="!isAdmin" class="attendance-hint attendance-record__hint">补卡申请已拆分为独立页面；当前列表仅标记可补卡记录，正常记录不再显示补卡入口。</p>
+        <p v-if="!isAdmin" class="attendance-hint attendance-record__hint">补卡申请已拆分为独立页面；当前列表会展示补卡、复核等处理标记，便于员工查看最新处理结果。</p>
 
         <div class="attendance-record-filters">
           <div :class="['attendance-record-filters__fields', { 'attendance-record-filters__fields--admin': isAdmin }]">
@@ -1467,6 +1513,7 @@ onBeforeUnmount(() => {
               <option value="REPAIRED">已补卡</option>
               <option value="REPAIR_PENDING">补卡处理中</option>
               <option value="ABSENT">缺勤</option>
+              <option value="MISSING_CHECKOUT">下班缺卡</option>
               <option value="LATE">迟到</option>
               <option value="EARLY_LEAVE">早退</option>
             </select>
@@ -1563,7 +1610,7 @@ onBeforeUnmount(() => {
             <th v-if="isAdmin">电脑设备</th>
             <th>状态</th>
             <th>异常识别</th>
-            <th v-if="!isAdmin">补卡标记</th>
+            <th v-if="!isAdmin">处理标记</th>
           </tr>
         </thead>
         <tbody>
@@ -1577,7 +1624,7 @@ onBeforeUnmount(() => {
             <td v-if="isAdmin">{{ record.location || '--' }}</td>
             <td v-if="isAdmin">{{ formatComputerDevice(record.deviceInfo) }}</td>
             <td>{{ formatRecordStatus(record.status) }}</td>
-            <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType) }}</td>
+            <td :data-testid="`attendance-record-exception-${record.id}`">{{ formatExceptionType(record.exceptionType, record.status, record.exceptionProcessStatus, record.reviewResult) }}</td>
             <td v-if="!isAdmin">
               <button
                 v-if="resolveRepairTagType(record) === 'REPAIRABLE'"
@@ -1590,6 +1637,7 @@ onBeforeUnmount(() => {
               </button>
               <span v-else-if="resolveRepairTagType(record) === 'PENDING'" class="attendance-record-tag attendance-record-tag--pending">补卡处理中</span>
               <span v-else-if="resolveRepairTagType(record) === 'REPAIRED'" class="attendance-record-tag attendance-record-tag--done">已补卡</span>
+              <span v-else-if="resolveRepairTagType(record) === 'REVIEWED'" class="attendance-record-tag attendance-record-tag--done">已复核</span>
             </td>
           </tr>
         </tbody>

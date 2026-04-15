@@ -59,17 +59,17 @@
     <section class="exception-list-card">
       <div class="exception-list-card__head">
         <h3>异常列表</h3>
-        <span>共 {{ listTotal }} 条</span>
+        <span>共 {{ displayedListTotal }} 条</span>
       </div>
 
       <p v-if="listError" data-testid="exception-list-error" class="exception-feedback exception-feedback--error">
         {{ listError }}
       </p>
       <p v-else-if="listLoading" data-testid="exception-list-loading" class="exception-feedback">异常列表加载中...</p>
-      <p v-else-if="!exceptionList.length" data-testid="exception-list-empty" class="exception-feedback">暂无异常记录</p>
+      <p v-else-if="!displayedExceptionList.length" data-testid="exception-list-empty" class="exception-feedback">暂无异常记录</p>
 
       <div v-else data-testid="exception-list" class="exception-list">
-        <article v-for="item in exceptionList" :key="item.id" class="exception-item">
+        <article v-for="item in displayedExceptionList" :key="item.id" class="exception-item">
           <div class="exception-item__main">
             <div class="exception-item__title-row">
                 <strong>{{ buildExceptionTitle(item) }}</strong>
@@ -158,45 +158,45 @@
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
               <h4>基础信息</h4>
-              <span>{{ exceptionDetail ? formatDateTime(exceptionDetail.createTime) : '--' }}</span>
+              <span>{{ effectiveExceptionDetail ? formatDateTime(effectiveExceptionDetail.createTime) : '--' }}</span>
             </div>
 
             <dl class="exception-detail-grid">
               <div>
                 <dt>异常人员</dt>
-                <dd>{{ formatExceptionOwner(exceptionDetail) }}</dd>
+                <dd>{{ formatExceptionOwner(effectiveExceptionDetail) }}</dd>
               </div>
               <div>
                 <dt>异常类型</dt>
-                <dd>{{ formatExceptionType(exceptionDetail) }}</dd>
+                <dd>{{ formatExceptionType(effectiveExceptionDetail) }}</dd>
               </div>
               <div>
                 <dt>风险等级</dt>
                 <dd>
-                  <span :class="['exception-tag', getRiskTagClass(exceptionDetail?.riskLevel)]">
-                    {{ formatDisplayValue(exceptionDetail?.riskLevel, RISK_LEVEL_LABELS) }}
+                  <span :class="['exception-tag', getRiskTagClass(effectiveExceptionDetail?.riskLevel)]">
+                    {{ formatDisplayValue(effectiveExceptionDetail?.riskLevel, RISK_LEVEL_LABELS) }}
                   </span>
                 </dd>
               </div>
               <div>
                 <dt>识别方式</dt>
                 <dd>
-                  <span :class="['exception-tag', getSourceTagClass(exceptionDetail?.sourceType)]">
-                    {{ formatDisplayValue(exceptionDetail?.sourceType, SOURCE_TYPE_LABELS) }}
+                  <span :class="['exception-tag', getSourceTagClass(effectiveExceptionDetail?.sourceType)]">
+                    {{ formatDisplayValue(effectiveExceptionDetail?.sourceType, SOURCE_TYPE_LABELS) }}
                   </span>
                 </dd>
               </div>
               <div>
                 <dt>处理状态</dt>
                 <dd>
-                  <span :class="['exception-tag', getProcessTagClass(exceptionDetail?.processStatus)]">
-                    {{ formatDisplayValue(exceptionDetail?.processStatus, PROCESS_STATUS_LABELS) }}
+                  <span :class="['exception-tag', getProcessTagClass(effectiveExceptionDetail?.processStatus)]">
+                    {{ formatDisplayValue(effectiveExceptionDetail?.processStatus, PROCESS_STATUS_LABELS) }}
                   </span>
                 </dd>
               </div>
             </dl>
 
-            <p class="exception-detail-section__description">{{ formatReadableText(exceptionDetail?.description, '暂无情况说明') }}</p>
+            <p class="exception-detail-section__description">{{ formatReadableText(effectiveExceptionDetail?.description, '暂无情况说明') }}</p>
           </section>
 
           <section class="exception-detail-section">
@@ -265,32 +265,32 @@
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
               <h4>系统摘要</h4>
-              <span>{{ analysisBrief?.promptVersion ? `分析版本 ${analysisBrief.promptVersion}` : '未记录版本' }}</span>
+              <span>{{ effectiveAnalysisBrief?.promptVersion ? `分析版本 ${effectiveAnalysisBrief.promptVersion}` : '未记录版本' }}</span>
             </div>
 
             <p v-if="analysisError" data-testid="exception-analysis-error" class="exception-feedback exception-feedback--error">
               {{ analysisError }}
             </p>
-            <div v-else-if="analysisBrief" class="exception-summary-grid">
+            <div v-else-if="effectiveAnalysisBrief" class="exception-summary-grid">
               <div>
                 <dt>系统结论</dt>
-                <dd>{{ formatDecisionLabel(analysisBrief.modelConclusion) }}</dd>
+                <dd>{{ formatDecisionLabel(effectiveAnalysisBrief.modelConclusion) }}</dd>
               </div>
               <div>
                 <dt>可信度</dt>
-                <dd>{{ formatScore(analysisBrief.confidenceScore) }}</dd>
+                <dd>{{ formatScore(effectiveAnalysisBrief.confidenceScore) }}</dd>
               </div>
               <div>
                 <dt>说明摘要</dt>
-                <dd>{{ formatReadableText(analysisBrief.reasonSummary) }}</dd>
+                <dd>{{ formatReadableText(effectiveAnalysisBrief.reasonSummary) }}</dd>
               </div>
               <div>
                 <dt>处理建议</dt>
-                <dd>{{ formatReadableText(analysisBrief.actionSuggestion) }}</dd>
+                <dd>{{ formatReadableText(effectiveAnalysisBrief.actionSuggestion) }}</dd>
               </div>
               <div>
                 <dt>关联案例</dt>
-                <dd>{{ formatReadableText(analysisBrief.similarCaseSummary) }}</dd>
+                <dd>{{ formatReadableText(effectiveAnalysisBrief.similarCaseSummary) }}</dd>
               </div>
             </div>
             <p v-else class="exception-feedback">暂无分析摘要</p>
@@ -299,13 +299,16 @@
           <section class="exception-detail-section">
             <div class="exception-detail-section__head">
               <h4>判断依据</h4>
-              <span>{{ decisionTraceList.length }} 条</span>
+              <span>{{ displayedDecisionTraceList.length }} / {{ decisionTraceList.length }} 条</span>
             </div>
 
             <p v-if="decisionTraceError" class="exception-feedback exception-feedback--error">{{ decisionTraceError }}</p>
             <p v-else-if="!decisionTraceList.length" class="exception-feedback">暂无处理依据记录</p>
+            <p v-else-if="hiddenDecisionTraceCount > 0" class="exception-feedback">
+              当前仅展示最新有效判断依据，已隐藏 {{ hiddenDecisionTraceCount }} 条历史判断记录。
+            </p>
             <div v-else class="exception-trace-list">
-              <article v-for="item in decisionTraceList" :key="item.id || `${item.businessType}-${item.businessId}`" class="exception-trace-item">
+              <article v-for="item in displayedDecisionTraceList" :key="item.id || `${item.businessType}-${item.businessId}`" class="exception-trace-item">
                 <div class="exception-trace-item__head">
                   <strong>{{ formatDecisionLabel(item.finalDecision, '未生成最终结论') }}</strong>
                   <span>{{ formatScore(item.confidenceScore) }}</span>
@@ -369,7 +372,7 @@ const router = useRouter()
 
 const queryForm = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 200,
   type: '',
   riskLevel: '',
   processStatus: '',
@@ -397,11 +400,80 @@ const ruleCheckResult = ref(null)
 const complexCheckResult = ref(null)
 let latestDetailRequestId = 0
 
+const closedFalsePositive = computed(() => {
+  const description = `${exceptionDetail.value?.description || ''}`.trim()
+  return exceptionDetail.value?.processStatus === 'REVIEWED' && description.includes('原综合异常已关闭')
+})
+
+const effectiveManualDecision = computed(() => {
+  if (complexCheckResult.value?.sourceType === 'RULE') {
+    return complexCheckResult.value
+  }
+  if (ruleCheckResult.value?.sourceType === 'RULE') {
+    return ruleCheckResult.value
+  }
+  return null
+})
+
+const effectiveExceptionDetail = computed(() => {
+  if (!exceptionDetail.value) {
+    return null
+  }
+  const manualDecision = effectiveManualDecision.value
+  if (!manualDecision) {
+    return exceptionDetail.value
+  }
+  return {
+    ...exceptionDetail.value,
+    type: manualDecision.type || exceptionDetail.value.type,
+    riskLevel: manualDecision.riskLevel || exceptionDetail.value.riskLevel,
+    sourceType: manualDecision.sourceType || exceptionDetail.value.sourceType,
+    processStatus: manualDecision.processStatus || exceptionDetail.value.processStatus,
+    description: buildEffectiveDescription(manualDecision),
+  }
+})
+
+const effectiveAnalysisBrief = computed(() => {
+  const manualDecision = effectiveManualDecision.value
+  if (manualDecision) {
+    return buildRuleBasedAnalysisBrief(manualDecision)
+  }
+  if (closedFalsePositive.value) {
+    return {
+      modelConclusion: '已关闭误报',
+      confidenceScore: null,
+      reasonSummary: exceptionDetail.value?.description || '经重新判断，该记录符合已配置打卡规则，原综合异常已关闭。',
+      actionSuggestion: '无需继续按综合异常升级处理，请以当前有效规则结果为准。',
+      similarCaseSummary: '历史综合识别结果已失效，本条记录不再作为综合异常案例参考。',
+      promptVersion: analysisBrief.value?.promptVersion || '',
+    }
+  }
+  return analysisBrief.value
+})
+
+const displayedDecisionTraceList = computed(() => {
+  if (!Array.isArray(decisionTraceList.value) || !decisionTraceList.value.length) {
+    return []
+  }
+  return [decisionTraceList.value[decisionTraceList.value.length - 1]]
+})
+
+const hiddenDecisionTraceCount = computed(() => Math.max(0, decisionTraceList.value.length - displayedDecisionTraceList.value.length))
+
+const displayedExceptionList = computed(() => {
+  if (!Array.isArray(exceptionList.value) || !exceptionList.value.length) {
+    return []
+  }
+  return exceptionList.value.filter((item) => !isClosedFalsePositiveException(item))
+})
+
+const displayedListTotal = computed(() => displayedExceptionList.value.length)
+
 const overviewItems = computed(() => [
   {
     key: 'total',
     label: '异常总数',
-    value: `${listTotal.value}`,
+    value: `${displayedListTotal.value}`,
     desc: '按当前筛选条件汇总',
   },
   {
@@ -481,8 +553,8 @@ function resolveLabel(value, labelMap) {
 }
 
 function formatSelectedExceptionTitle() {
-  if (exceptionDetail.value) {
-    return buildExceptionTitle(exceptionDetail.value)
+  if (effectiveExceptionDetail.value) {
+    return buildExceptionTitle(effectiveExceptionDetail.value)
   }
 
   const currentItem = exceptionList.value.find((item) => `${item.id}` === `${selectedExceptionId.value}`)
@@ -497,12 +569,59 @@ function formatScore(value) {
   return `${value}`
 }
 
+function isClosedFalsePositiveException(target) {
+  const sourceType = `${target?.sourceType || ''}`.trim()
+  const processStatus = `${target?.processStatus || ''}`.trim()
+  const description = `${target?.description || ''}`.trim()
+  return (sourceType === 'MODEL' || sourceType === 'MODEL_FALLBACK')
+    && processStatus === 'REVIEWED'
+    && description.includes('原综合异常已关闭')
+}
+
 function hasCheckContext() {
   return Boolean(exceptionDetail.value?.recordId || isContextOnlyException(exceptionDetail.value))
 }
 
+function buildEffectiveDescription(decision) {
+  if (!decision || !decision.type) {
+    return exceptionDetail.value?.description || ''
+  }
+  if (decision.type === 'NORMAL') {
+    return '当前有效结果为正常：地点符合系统配置，人脸校验通过，本次应按正常打卡处理。'
+  }
+  if (decision.type === 'LATE') {
+    return '当前有效结果为迟到：地点符合系统配置，人脸校验通过，本次仅按迟到规则处理。'
+  }
+  return `当前有效结果为规则判断：${formatDecisionLabel(decision.type, decision.type)}`
+}
+
+function buildRuleBasedAnalysisBrief(decision) {
+  if (!decision) {
+    return null
+  }
+  const isNormal = decision.type === 'NORMAL'
+  const isLate = decision.type === 'LATE'
+  return {
+    modelConclusion: isNormal ? '当前有效结果：正常' : (isLate ? '当前有效结果：迟到' : '当前有效结果：规则判断'),
+    confidenceScore: null,
+    reasonSummary: isNormal
+      ? '该记录打卡地点符合系统配置、人脸校验通过，且按当前考勤规则应视为正常打卡。'
+      : isLate
+      ? '该记录打卡地点符合系统配置、人脸校验通过，本次仅属于上班时间偏晚，按迟到处理。'
+      : '当前记录已按规则判断处理，无需继续按综合异常升级。',
+    actionSuggestion: isNormal
+      ? '按正常打卡处理即可，无需按综合异常升级处置。'
+      : isLate
+      ? '按迟到规则进行后续考勤处理，无需按综合异常升级处置。'
+      : '请按当前有效规则结果继续处理。',
+    similarCaseSummary: '当前展示的是最新有效结果，历史综合识别记录仅作留痕，不作为当前处理依据。',
+    promptVersion: analysisBrief.value?.promptVersion || '',
+  }
+}
+
 function isContextOnlyException(target) {
-  return String(target?.type || '').trim().toUpperCase() === 'ABSENT'
+  const normalizedType = String(target?.type || '').trim().toUpperCase()
+  return normalizedType === 'ABSENT' || normalizedType === 'MISSING_CHECKOUT'
 }
 
 function getManualCheckContextLabel() {
@@ -650,8 +769,8 @@ async function refreshExceptionDetailAfterCheck(preferredExceptionId) {
   await loadExceptionList()
 
   const preferredId = preferredExceptionId === null || preferredExceptionId === undefined ? '' : `${preferredExceptionId}`.trim()
-  const nextException = exceptionList.value.find((item) => `${item.id}` === preferredId)
-    || exceptionList.value.find((item) => item.recordId === exceptionDetail.value?.recordId)
+  const nextException = displayedExceptionList.value.find((item) => `${item.id}` === preferredId)
+    || displayedExceptionList.value.find((item) => item.recordId === exceptionDetail.value?.recordId)
 
   if (!nextException) {
     return
@@ -701,9 +820,7 @@ async function runRuleCheck() {
   manualCheckError.value = ''
 
   try {
-    ruleCheckResult.value = await fetchExceptionRuleCheck({
-      recordId: buildCheckPayload().recordId,
-    })
+    ruleCheckResult.value = await fetchExceptionRuleCheck(buildCheckPayload())
     ElMessage.success('规则校验已完成')
     await refreshExceptionDetailAfterCheck(ruleCheckResult.value?.exceptionId)
   } catch (error) {

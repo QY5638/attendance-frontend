@@ -5,22 +5,23 @@ export const RISK_LEVEL_LABELS = Object.freeze({
 })
 
 export const EXCEPTION_TYPE_LABELS = Object.freeze({
-  PROXY_CHECKIN: '代打卡',
-  CONTINUOUS_LATE: '连续迟到',
-  CONTINUOUS_EARLY_LEAVE: '连续早退',
-  CONTINUOUS_MULTI_LOCATION_CONFLICT: '连续多地点冲突',
-  CONTINUOUS_ILLEGAL_TIME: '连续非法时间打卡',
-  CONTINUOUS_REPEAT_CHECK: '连续重复打卡',
-  CONTINUOUS_PROXY_CHECKIN: '连续代打卡',
-  CONTINUOUS_ATTENDANCE_RISK: '连续综合考勤异常',
-  COMPLEX_ATTENDANCE_RISK: '综合识别异常',
-  CONTINUOUS_MODEL_RISK: '连续模型风险异常',
+  PROXY_CHECKIN: '可疑代打卡',
+  CONTINUOUS_LATE: '多次迟到',
+  CONTINUOUS_EARLY_LEAVE: '多次早退',
+  CONTINUOUS_MULTI_LOCATION_CONFLICT: '多次异地打卡',
+  CONTINUOUS_ILLEGAL_TIME: '多次异常时段打卡',
+  CONTINUOUS_REPEAT_CHECK: '多次重复打卡',
+  CONTINUOUS_PROXY_CHECKIN: '多次可疑代打卡',
+  CONTINUOUS_ATTENDANCE_RISK: '多次异常打卡',
+  COMPLEX_ATTENDANCE_RISK: '可疑打卡',
+  CONTINUOUS_MODEL_RISK: '多次可疑打卡',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
-  ILLEGAL_TIME: '非规定时间打卡',
+  ILLEGAL_TIME: '异常时段打卡',
   REPEAT_CHECK: '重复打卡',
-  MULTI_LOCATION_CONFLICT: '多地点异常',
+  MULTI_LOCATION_CONFLICT: '异地打卡',
   ABSENT: '缺勤',
+  MISSING_CHECKOUT: '未打下班卡',
   NORMAL: '正常',
 })
 
@@ -41,6 +42,7 @@ export const EXCEPTION_TYPE_OPTIONS = Object.freeze([
   'REPEAT_CHECK',
   'MULTI_LOCATION_CONFLICT',
   'ABSENT',
+  'MISSING_CHECKOUT',
 ].map((value) => ({
   value,
   label: EXCEPTION_TYPE_LABELS[value],
@@ -136,7 +138,9 @@ export function buildExceptionTitle(target, options = {}) {
   const ownerLabel = formatExceptionOwner(normalizedTarget, '')
 
   if (typeLabel) {
-    const coreTitle = `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
+    const coreTitle = typeLabel === '正常'
+      ? `${riskLabel || ''}${typeLabel}`
+      : `${riskLabel || ''}${typeLabel.endsWith('异常') ? typeLabel : `${typeLabel}异常`}`
     return ownerLabel ? `${ownerLabel} · ${coreTitle}` : coreTitle
   }
 
