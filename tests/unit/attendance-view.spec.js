@@ -9,6 +9,7 @@ const {
   loadAmapSdk,
   getTerminalId,
   getMyAttendanceRecordRequest,
+  routerPush,
   submitAttendanceCheckinRequest,
   submitAttendanceRepairRequest,
   verifyFaceRequest,
@@ -25,10 +26,23 @@ const {
   loadAmapSdk: vi.fn(),
   getTerminalId: vi.fn(() => 'terminal-fixed-id'),
   getMyAttendanceRecordRequest: vi.fn(),
+  routerPush: vi.fn(),
   submitAttendanceCheckinRequest: vi.fn(),
   submitAttendanceRepairRequest: vi.fn(),
   verifyFaceRequest: vi.fn(),
 }))
+
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual('vue-router')
+
+  return {
+    ...actual,
+    useRoute: () => ({ query: {} }),
+    useRouter: () => ({
+      push: routerPush,
+    }),
+  }
+})
 
 vi.mock('../../src/store/auth', () => ({
   useAuthStore: () => authStoreRef.current,
@@ -129,6 +143,7 @@ describe('attendance view', () => {
       },
     })
     authStoreRef.current = { roleCode: 'EMPLOYEE', realName: '张三' }
+    routerPush.mockReset()
     fetchDepartmentList.mockReset()
     fetchDepartmentList.mockResolvedValue({
       total: 2,
@@ -524,7 +539,7 @@ describe('attendance view', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="attendance-record-total"]').text()).toContain('21')
-    expect(wrapper.text()).toContain('多地点异常')
+    expect(wrapper.text()).toContain('异地打卡')
     expect(getMyAttendanceRecordRequest).toHaveBeenNthCalledWith(2, {
       pageNum: 1,
       pageSize: 10,

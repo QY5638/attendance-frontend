@@ -3,16 +3,19 @@ import { describe, expect, it } from 'vitest'
 import { protectedChildRoutes } from '../../src/router/routes'
 
 describe('fe-08 routes', () => {
-  it('keeps system as a single protected route for admin only', () => {
+  it('keeps FE-08 system routes protected for admin only', () => {
     const systemRoute = protectedChildRoutes.find((item) => item.name === 'system')
-    const fe08Paths = protectedChildRoutes
+    const fe08Routes = protectedChildRoutes
       .filter((item) => item.meta?.moduleCode === 'FE-08')
-      .map((item) => item.path)
+    const fe08Paths = fe08Routes.map((item) => item.path)
 
     expect(systemRoute?.path).toBe('system')
     expect(systemRoute?.meta?.roles).toEqual(['ADMIN'])
-    expect(systemRoute?.meta?.moduleCode).toBe('FE-08')
-    expect(typeof systemRoute?.component).toBe('function')
-    expect(fe08Paths).toEqual(['system'])
+    expect(systemRoute?.meta?.hidden).toBe(true)
+    expect(fe08Paths).toEqual(['system/basic', 'system/prompt', 'system/approval', 'system/logs'])
+    fe08Routes.forEach((route) => {
+      expect(route?.meta?.roles).toEqual(['ADMIN'])
+      expect(typeof route?.component).toBe('function')
+    })
   })
 })

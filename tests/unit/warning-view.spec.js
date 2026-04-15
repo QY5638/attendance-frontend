@@ -7,8 +7,11 @@ const {
   fetchFe06WarningDashboard,
   fetchFe06WarningList,
   fetchFe06WarningReevaluate,
+  fetchWarningInteractions,
   messageSuccess,
+  requestWarningExplanation,
   routerPush,
+  runAbsenceCheck,
   submitReview,
 } = vi.hoisted(() => ({
   exportStatisticsReport: vi.fn(),
@@ -16,8 +19,11 @@ const {
   fetchFe06WarningDashboard: vi.fn(),
   fetchFe06WarningList: vi.fn(),
   fetchFe06WarningReevaluate: vi.fn(),
+  fetchWarningInteractions: vi.fn(),
   messageSuccess: vi.fn(),
+  requestWarningExplanation: vi.fn(),
   routerPush: vi.fn(),
+  runAbsenceCheck: vi.fn(),
   submitReview: vi.fn(),
 }))
 
@@ -32,6 +38,9 @@ vi.mock('../../src/api/fe06-warning', () => ({
   fetchFe06WarningDashboard,
   fetchFe06WarningList,
   fetchFe06WarningReevaluate,
+  fetchWarningInteractions,
+  requestWarningExplanation,
+  runAbsenceCheck,
 }))
 
 vi.mock('../../src/api/review', () => ({
@@ -47,6 +56,7 @@ vi.mock('vue-router', async () => {
 
   return {
     ...actual,
+    useRoute: () => ({ query: {} }),
     useRouter: () => ({
       push: routerPush,
     }),
@@ -105,8 +115,11 @@ describe('warning view', () => {
     fetchFe06WarningAdvice.mockReset()
     fetchFe06WarningDashboard.mockReset()
     fetchFe06WarningReevaluate.mockReset()
+    fetchWarningInteractions.mockReset()
     submitReview.mockReset()
     messageSuccess.mockReset()
+    requestWarningExplanation.mockReset()
+    runAbsenceCheck.mockReset()
 
     fetchFe06WarningList.mockResolvedValue(createListPayload([createWarningRecord()]))
     fetchFe06WarningDashboard.mockResolvedValue({
@@ -194,6 +207,9 @@ describe('warning view', () => {
       aiSummary: '已完成重新评估',
       disposeSuggestion: '建议结合最新情况处理',
     }))
+    fetchWarningInteractions.mockResolvedValue([])
+    requestWarningExplanation.mockResolvedValue(null)
+    runAbsenceCheck.mockResolvedValue(0)
     submitReview.mockResolvedValue({
       id: 6001,
       exceptionId: 3001,
@@ -219,8 +235,8 @@ describe('warning view', () => {
       type: '',
     })
     expect(fetchFe06WarningDashboard).toHaveBeenCalledTimes(1)
-    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('高风险代打卡预警')
-    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('代打卡异常')
+    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('高风险可疑代打卡预警')
+    expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('可疑代打卡异常')
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('待处理')
     expect(wrapper.get('[data-testid="warning-list"]').text()).toContain('超时')
     expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('预警总量')
@@ -237,11 +253,11 @@ describe('warning view', () => {
     expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('总预警 3')
     expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('高风险')
     expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('高频异常')
-    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('连续迟到')
+    expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('多次迟到')
     expect(wrapper.get('[data-testid="warning-dashboard"]').html()).toContain('warning-type-trend')
     expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('超时提醒')
     expect(wrapper.get('[data-testid="warning-dashboard"]').text()).toContain('24-48h')
-    expect(wrapper.get('[data-testid="warning-continuous-trend"]').text()).toContain('连续代打卡')
+    expect(wrapper.get('[data-testid="warning-continuous-trend"]').text()).toContain('多次可疑代打卡')
   })
 
   it('keeps related exception text readable for complex exception type', async () => {
@@ -256,8 +272,8 @@ describe('warning view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="warning-list"]').text()
-    expect(listText).toContain('高风险综合识别异常预警')
-    expect(listText).not.toContain('高风险综合识别异常异常预警')
+    expect(listText).toContain('高风险可疑打卡预警')
+    expect(listText).not.toContain('高风险可疑打卡异常预警')
   })
 
   it('opens portrait dialog and loads warning archive by user id', async () => {
@@ -274,7 +290,7 @@ describe('warning view', () => {
     })
     expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('人员档案')
     expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('张三（zhangsan）')
-    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('高风险代打卡预警')
+    expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('高风险可疑代打卡预警')
     expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('处理建议')
     expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('超时预警')
     expect(wrapper.get('[data-testid="warning-portrait-dialog"]').text()).toContain('高风险')
@@ -354,8 +370,8 @@ describe('warning view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="warning-list"]').text()
-    expect(listText).toContain('高风险多地点异常预警')
-    expect(listText).toContain('多地点异常')
+    expect(listText).toContain('高风险异地打卡预警')
+    expect(listText).toContain('异地打卡')
     expect(listText).not.toContain('123456789')
     expect(listText).not.toContain('987654321')
 
@@ -363,8 +379,8 @@ describe('warning view', () => {
     await flushPromises()
 
     const adviceText = wrapper.get('[data-testid="warning-advice-dialog"]').text()
-    expect(adviceText).toContain('高风险多地点异常预警')
-    expect(adviceText).toContain('多地点异常')
+    expect(adviceText).toContain('高风险异地打卡预警')
+    expect(adviceText).toContain('异地打卡')
   })
 
   it('submits filters and refreshes the warning list', async () => {
@@ -512,7 +528,7 @@ describe('warning view', () => {
     await flushPromises()
 
     const listText = wrapper.get('[data-testid="warning-list"]').text()
-    expect(listText).toContain('多地点异常')
+    expect(listText).toContain('异地打卡')
   })
 
   it('keeps the latest advice selection when older slower advice requests resolve later', async () => {
@@ -560,7 +576,7 @@ describe('warning view', () => {
     await flushPromises()
 
     const adviceText = wrapper.get('[data-testid="warning-advice-dialog"]').text()
-    expect(adviceText).toContain('高风险多地点异常预警')
+    expect(adviceText).toContain('高风险异地打卡预警')
     expect(adviceText).toContain('第二条预警摘要')
     expect(adviceText).toContain('第二条建议')
     expect(adviceText).not.toContain('第一条预警摘要')

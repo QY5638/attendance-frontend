@@ -158,7 +158,7 @@ describe('dashboard view', () => {
     expect(fetchDepartmentStatistics).toHaveBeenCalledTimes(1)
     expect(fetchWarningList).toHaveBeenCalledWith({ pageNum: 1, pageSize: 5 })
     expect(fetchOperationLogSummary).toHaveBeenCalledTimes(1)
-    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('高风险代打卡预警')
+    expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('高风险可疑代打卡预警')
     expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('高风险异常')
     expect(wrapper.get('[data-testid="dashboard-warning"]').text()).toContain('风险预警')
     expect(wrapper.get('[data-testid="dashboard-signals"]').text()).toContain('活体拒绝')

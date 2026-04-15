@@ -15,7 +15,7 @@ describe('fe-07 routes', () => {
     const reviewRoute = protectedChildRoutes.find((item) => item.name === 'review')
 
     expect(reviewRoute?.meta.roles).toEqual(['ADMIN'])
-    expect(reviewRoute?.meta.menuGroup).toBe('风险与系统')
+    expect(reviewRoute?.meta.menuGroup).toBe('风险处置')
     expect(reviewRoute?.meta.moduleCode).toBe('FE-07')
   })
 })

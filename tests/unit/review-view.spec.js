@@ -147,7 +147,7 @@ describe('review view', () => {
     expect(fetchExceptionDetail).toHaveBeenCalledWith('3001')
     expect(fetchLatestReview).toHaveBeenCalledWith('3001')
     expect(fetchReviewAssistant).toHaveBeenCalledWith('3001')
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('高风险代打卡异常')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('高风险可疑代打卡异常')
   })
   it('replaces raw review ids with readable exception and review meanings', async () => {
     routeState.query = {
@@ -167,7 +167,7 @@ describe('review view', () => {
     await flushPromises()
 
     const detailText = wrapper.get('[data-testid="review-detail-state"]').text()
-    expect(detailText).toContain('高风险代打卡异常')
+    expect(detailText).toContain('高风险可疑代打卡异常')
     expect(detailText).toContain('排除异常')
     expect(detailText).not.toContain('123456789')
   })
@@ -183,7 +183,7 @@ describe('review view', () => {
     const wrapper = mount(ReviewView)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('多地点异常')
+    expect(wrapper.get('[data-testid="review-detail-state"]').text()).toContain('异地打卡')
   })
 
   it('keeps continuous model risk title readable without duplicated exception suffix', async () => {
@@ -200,8 +200,8 @@ describe('review view', () => {
     await flushPromises()
 
     const detailText = wrapper.get('[data-testid="review-detail-state"]').text()
-    expect(detailText).toContain('高风险连续模型风险异常')
-    expect(detailText).not.toContain('高风险连续模型风险异常异常')
+    expect(detailText).toContain('高风险多次可疑打卡异常')
+    expect(detailText).not.toContain('高风险多次可疑打卡异常异常')
   })
 
   it('blocks new review submit when assistant is missing but still allows feedback on the latest review', async () => {
