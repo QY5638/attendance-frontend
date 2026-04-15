@@ -45,7 +45,7 @@
 
         <label class="exception-filter-field">
           <span>人员</span>
-          <input v-model="queryForm.userId" data-testid="exception-filter-user-id" type="text" placeholder="按人员筛选" />
+          <input v-model="queryForm.userKeyword" data-testid="exception-filter-user-id" type="text" placeholder="按姓名、账号或ID筛选" />
         </label>
       </div>
 
@@ -376,7 +376,7 @@ const queryForm = reactive({
   type: '',
   riskLevel: '',
   processStatus: '',
-  userId: '',
+  userKeyword: '',
 })
 
 const listLoading = ref(false)
@@ -483,7 +483,7 @@ const overviewItems = computed(() => [
       EXCEPTION_TYPE_LABELS[queryForm.type] ||
       RISK_LEVEL_LABELS[queryForm.riskLevel] ||
       PROCESS_STATUS_LABELS[queryForm.processStatus] ||
-      queryForm.userId ||
+      queryForm.userKeyword ||
       '全部异常',
     desc: '支持按类型、风险、状态和人员维度查看',
   },
@@ -502,7 +502,7 @@ function buildListQuery() {
     type: queryForm.type,
     riskLevel: queryForm.riskLevel,
     processStatus: queryForm.processStatus,
-    userId: queryForm.userId.trim(),
+    userKeyword: queryForm.userKeyword.trim(),
   }
 }
 
@@ -511,7 +511,9 @@ function applyListQueryFromRoute(routeQuery = {}) {
   queryForm.type = typeof routeQuery.type === 'string' ? routeQuery.type : ''
   queryForm.riskLevel = typeof routeQuery.riskLevel === 'string' ? routeQuery.riskLevel : ''
   queryForm.processStatus = typeof routeQuery.processStatus === 'string' ? routeQuery.processStatus : ''
-  queryForm.userId = typeof routeQuery.userId === 'string' ? routeQuery.userId : ''
+  queryForm.userKeyword = typeof routeQuery.userKeyword === 'string'
+    ? routeQuery.userKeyword
+    : (typeof routeQuery.userId === 'string' ? routeQuery.userId : '')
 }
 
 function formatDisplayValue(value, labelMap) {
@@ -850,7 +852,7 @@ async function runComplexCheck() {
 }
 
 watch(
-  () => [route.query?.type, route.query?.riskLevel, route.query?.processStatus, route.query?.userId],
+  () => [route.query?.type, route.query?.riskLevel, route.query?.processStatus, route.query?.userKeyword, route.query?.userId],
   () => {
     applyListQueryFromRoute(route.query)
     loadExceptionList()
