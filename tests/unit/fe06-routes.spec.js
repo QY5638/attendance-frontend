@@ -21,11 +21,11 @@ describe('fe-06 routes', () => {
     const warningRoute = protectedChildRoutes.find((item) => item.name === 'warning')
 
     expect(exceptionRoute?.meta.roles).toEqual(['ADMIN'])
-    expect(exceptionRoute?.meta.menuGroup).toBe('风险与系统')
+    expect(exceptionRoute?.meta.menuGroup).toBe('风险处置')
     expect(exceptionRoute?.meta.moduleCode).toBe('FE-06')
 
     expect(warningRoute?.meta.roles).toEqual(['ADMIN'])
-    expect(warningRoute?.meta.menuGroup).toBe('风险与系统')
+    expect(warningRoute?.meta.menuGroup).toBe('风险处置')
     expect(warningRoute?.meta.moduleCode).toBe('FE-06')
   })
 })

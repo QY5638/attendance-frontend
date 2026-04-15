@@ -376,10 +376,11 @@ function normalizeSourceRecordId(value) {
 }
 
 function buildRouteSourceRecord() {
-  const sourceRecordId = normalizeSourceRecordId(route.query?.sourceRecordId)
-  const checkType = String(route.query?.sourceCheckType || '').toUpperCase() === 'OUT' ? 'OUT' : 'IN'
-  const normalizedCheckTime = normalizeRepairDateTime(route.query?.sourceCheckTime)
-  const normalizedStatus = String(route.query?.sourceStatus || '').toUpperCase()
+  const routeQuery = route?.query || {}
+  const sourceRecordId = normalizeSourceRecordId(routeQuery.sourceRecordId)
+  const checkType = String(routeQuery.sourceCheckType || '').toUpperCase() === 'OUT' ? 'OUT' : 'IN'
+  const normalizedCheckTime = normalizeRepairDateTime(routeQuery.sourceCheckTime)
+  const normalizedStatus = String(routeQuery.sourceStatus || '').toUpperCase()
   const hasSourceContext = Boolean(sourceRecordId || normalizedCheckTime || normalizedStatus)
   if (!hasSourceContext) {
     return null
