@@ -9,6 +9,8 @@ const BASELINE_SAMPLE_COUNT = 20
 const ACTION_TRANSITION_HOLD_MS = 600
 const MAX_CHALLENGE_DURATION_MS = 60000
 const ACTION_HOLD_FRAME_TARGET = 4
+const MOUTH_OPEN_HOLD_FRAME_TARGET = 8
+const MOUTH_OPEN_HIGH_SCORE_HOLD_FRAME_TARGET = 5
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
@@ -254,9 +256,9 @@ function evaluateMouthOpen(metrics, baseline, stepState) {
   }
 
   const completed = (
-    stepState.holdFrames >= ACTION_HOLD_FRAME_TARGET && stepState.bestScore >= 0.68
+    stepState.holdFrames >= MOUTH_OPEN_HOLD_FRAME_TARGET && stepState.bestScore >= 0.68
   ) || (
-    stepState.holdFrames >= 2 && stepState.bestScore >= 0.92
+    stepState.holdFrames >= MOUTH_OPEN_HIGH_SCORE_HOLD_FRAME_TARGET && stepState.bestScore >= 0.92
   )
 
   return {

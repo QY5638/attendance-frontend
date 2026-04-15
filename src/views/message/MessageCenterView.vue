@@ -20,6 +20,7 @@ import { useAuthStore } from '../../store/auth'
 import { useNotificationStore } from '../../store/notification'
 import { formatDateTimeDisplay } from '../../utils/date-time'
 import { formatExceptionType } from '../../utils/exception-display'
+import { formatReadableText } from '../../utils/readable-text'
 
 const CATEGORY_LABELS = {
   EXCEPTION_NOTICE: '异常通知',
@@ -28,9 +29,12 @@ const CATEGORY_LABELS = {
   EMPLOYEE_REPLY: '员工回复',
   REVIEW_RESULT: '处理结果',
   REPAIR_RESULT: '补卡结果',
+  FACE_REGISTER_RESULT: '人脸采集结果',
   EMPLOYEE_REPLY_REMINDER: '回复提醒',
   WARNING_OVERDUE_REMINDER: '超时催办',
 }
+
+const RESULT_NOTICE_CATEGORIES = ['REVIEW_RESULT', 'EMPLOYEE_REPLY', 'REPAIR_RESULT', 'FACE_REGISTER_RESULT']
 
 const INTERACTION_STATUS_LABELS = {
   NONE: '待处理',
@@ -100,7 +104,7 @@ const overviewItems = computed(() => [
 ])
 
 const pendingReplyCount = computed(() => notifications.value.filter((item) => isReplyAction(item)).length)
-const resultNoticeCount = computed(() => notifications.value.filter((item) => item.category === 'REVIEW_RESULT' || item.category === 'REPAIR_RESULT').length)
+const resultNoticeCount = computed(() => notifications.value.filter((item) => RESULT_NOTICE_CATEGORIES.includes(item.category)).length)
 
 const displayNotifications = computed(() => {
   if (activeTab.value === 'unread') {
@@ -112,7 +116,7 @@ const displayNotifications = computed(() => {
   }
 
   if (activeTab.value === 'result') {
-    return notifications.value.filter((item) => item.category === 'REVIEW_RESULT' || item.category === 'EMPLOYEE_REPLY' || item.category === 'REPAIR_RESULT')
+    return notifications.value.filter((item) => RESULT_NOTICE_CATEGORIES.includes(item.category))
   }
 
   return notifications.value
@@ -362,7 +366,7 @@ function jumpToWarning() {
             <span v-if="item.deadline" class="message-card__tag message-card__tag--deadline">截止 {{ formatDateTime(item.deadline) }}</span>
           </div>
 
-          <p class="message-card__content">{{ item.content }}</p>
+          <p class="message-card__content">{{ formatReadableText(item.content, '历史通知内容无法直接显示，请联系管理员查看原始记录。') }}</p>
 
           <footer class="message-card__footer">
             <span>发送方：{{ item.senderName || '系统' }}</span>
@@ -414,7 +418,7 @@ function jumpToWarning() {
                 <dd>{{ formatDateTime(detailNotification.deadline) }}</dd>
               </div>
             </div>
-            <p class="message-detail-dialog__content">{{ detailNotification.content }}</p>
+            <p class="message-detail-dialog__content">{{ formatReadableText(detailNotification.content, '历史通知内容无法直接显示，请联系管理员查看原始记录。') }}</p>
           </section>
 
           <section v-if="detailAdvice" class="message-detail-dialog__section">
@@ -442,9 +446,9 @@ function jumpToWarning() {
               </div>
             </div>
 
-            <p class="message-detail-dialog__content"><strong>系统摘要：</strong>{{ detailAdvice.aiSummary || '暂无系统摘要' }}</p>
-            <p class="message-detail-dialog__content"><strong>处置建议：</strong>{{ detailAdvice.disposeSuggestion || '暂无处置建议' }}</p>
-            <p v-if="detailAdvice.reviewComment" class="message-detail-dialog__content"><strong>复核意见：</strong>{{ detailAdvice.reviewComment }}</p>
+            <p class="message-detail-dialog__content"><strong>系统摘要：</strong>{{ formatReadableText(detailAdvice.aiSummary, '暂无系统摘要') }}</p>
+            <p class="message-detail-dialog__content"><strong>处置建议：</strong>{{ formatReadableText(detailAdvice.disposeSuggestion, '暂无处置建议') }}</p>
+            <p v-if="detailAdvice.reviewComment" class="message-detail-dialog__content"><strong>复核意见：</strong>{{ formatReadableText(detailAdvice.reviewComment, '暂无复核意见') }}</p>
           </section>
 
           <section class="message-detail-dialog__section">
@@ -459,7 +463,7 @@ function jumpToWarning() {
                   <strong>{{ item.senderName || item.senderRole || '系统' }}</strong>
                   <span>{{ formatDateTime(item.createTime) }}</span>
                 </div>
-                <p>{{ item.content }}</p>
+                <p>{{ formatReadableText(item.content, '历史处理记录内容无法直接显示，请联系管理员查看原始记录。') }}</p>
               </article>
             </div>
             <p v-else class="message-center__feedback">当前还没有交互记录</p>
@@ -507,10 +511,22 @@ function jumpToWarning() {
   color: #ffffff;
 }
 
-.message-center__hero-action--secondary,
 .message-card__action--secondary {
   background: rgba(47, 105, 178, 0.12);
   color: #245391;
+}
+
+.message-center__hero-action--secondary {
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+  color: #ffffff;
+  border: 1px solid rgba(30, 58, 138, 0.9);
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(29, 78, 216, 0.26);
+}
+
+.message-center__hero-action--secondary:hover {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
 }
 
 .message-center__tabs {

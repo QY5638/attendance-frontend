@@ -316,17 +316,17 @@
     <section class="warning-list-card">
       <div class="warning-list-card__head">
         <h3>预警列表</h3>
-        <span>共 {{ listTotal }} 条</span>
+        <span>共 {{ displayedWarningListTotal }} 条</span>
       </div>
 
       <p v-if="listError" data-testid="warning-list-error" class="warning-feedback warning-feedback--error">
         {{ listError }}
       </p>
       <p v-else-if="listLoading" data-testid="warning-list-loading" class="warning-feedback">预警列表加载中...</p>
-      <p v-else-if="!warningList.length" data-testid="warning-list-empty" class="warning-feedback">暂无预警记录</p>
+      <p v-else-if="!displayedWarningList.length" data-testid="warning-list-empty" class="warning-feedback">暂无预警记录</p>
 
       <div v-else data-testid="warning-list" class="warning-list">
-          <article v-for="item in warningList" :key="item.id" :class="['warning-item', { 'warning-item--overdue': item.overdue }]">
+          <article v-for="item in displayedWarningList" :key="item.id" :class="['warning-item', { 'warning-item--overdue': item.overdue }]">
             <div class="warning-item__main">
               <div class="warning-item__title-row">
                 <div class="warning-item__title-main">
@@ -963,11 +963,20 @@ const quickReviewForm = reactive({
   reviewComment: '',
 })
 
+const displayedWarningList = computed(() => {
+  if (!Array.isArray(warningList.value) || !warningList.value.length) {
+    return []
+  }
+  return warningList.value.filter((item) => !isClosedFalsePositiveWarning(item))
+})
+
+const displayedWarningListTotal = computed(() => displayedWarningList.value.length)
+
 const overviewItems = computed(() => [
   {
     key: 'total',
     label: '预警总数',
-    value: `${listTotal.value}`,
+    value: `${displayedWarningListTotal.value}`,
     desc: '按当前筛选条件统计',
   },
   {
@@ -1340,10 +1349,25 @@ function resolveLabel(value, labelMap) {
 
 function getWarningById(warningId) {
   const normalizedId = warningId === null || warningId === undefined ? '' : `${warningId}`.trim()
-  return warningList.value.find((item) => `${item.id}` === normalizedId) || null
+  return displayedWarningList.value.find((item) => `${item.id}` === normalizedId)
+    || warningList.value.find((item) => `${item.id}` === normalizedId)
+    || null
+}
+
+function isClosedFalsePositiveWarning(item = {}) {
+  const status = `${item.status || ''}`.trim()
+  const aiSummary = `${item.aiSummary || ''}`.trim()
+  const disposeSuggestion = `${item.disposeSuggestion || ''}`.trim()
+  return status === 'PROCESSED'
+    && (aiSummary.includes('原综合异常已关闭')
+      || aiSummary.includes('符合已配置打卡规则')
+      || disposeSuggestion.includes('无需继续按综合异常升级处理'))
 }
 
 function buildWarningTitle(item = {}) {
+  if (isClosedFalsePositiveWarning(item)) {
+    return '已关闭误报预警'
+  }
   const levelLabel = resolveLabel(item.level, WARNING_LEVEL_LABELS)
   const exceptionLabel = formatExceptionType({
     type: item.exceptionType,
@@ -1370,6 +1394,9 @@ function buildWarningTitle(item = {}) {
 }
 
 function buildWarningRelation(item = {}) {
+  if (isClosedFalsePositiveWarning(item)) {
+    return '已关闭误报'
+  }
   return buildExceptionRelation({
     type: item.exceptionType,
     sourceType: item.exceptionSourceType,

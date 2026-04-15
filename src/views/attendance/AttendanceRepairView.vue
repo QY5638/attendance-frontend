@@ -126,11 +126,12 @@ import { formatDateTimeDisplay } from '../../utils/date-time'
 const RECORD_STATUS_LABELS = {
   ABNORMAL: '异常',
   ABSENT: '缺勤',
+  MISSING_CHECKOUT: '下班缺卡',
   LATE: '迟到',
   EARLY_LEAVE: '早退',
 }
 
-const REPAIRABLE_RECORD_STATUSES = new Set(['ABNORMAL', 'ABSENT', 'LATE', 'EARLY_LEAVE'])
+const REPAIRABLE_RECORD_STATUSES = new Set(['ABNORMAL', 'ABSENT', 'MISSING_CHECKOUT', 'LATE', 'EARLY_LEAVE'])
 const route = useRoute()
 
 const form = reactive({
@@ -343,6 +344,15 @@ function resolveSuggestedRepair(record) {
     }
   }
 
+  if (status === 'MISSING_CHECKOUT') {
+    const suggested = withTime(baseDate, 18, 0, 0)
+    return {
+      suggestedCheckType: 'OUT',
+      suggestedCheckTime: toDateTimeText(suggested),
+      suggestedCheckTimeLocal: toDateTimeLocalText(suggested),
+    }
+  }
+
   const defaultHour = checkType === 'OUT' ? 18 : 9
   const suggested = withTime(baseDate, defaultHour, 0, 0)
   return {
@@ -350,6 +360,11 @@ function resolveSuggestedRepair(record) {
     suggestedCheckTime: toDateTimeText(suggested),
     suggestedCheckTimeLocal: toDateTimeLocalText(suggested),
   }
+}
+
+function isContextOnlyExceptionRecord(record) {
+  const normalizedExceptionType = String(record?.exceptionType || '').toUpperCase()
+  return !record?.deviceId && (normalizedExceptionType === 'ABSENT' || normalizedExceptionType === 'MISSING_CHECKOUT')
 }
 
 function normalizeSourceRecordId(value) {
@@ -362,17 +377,19 @@ function normalizeSourceRecordId(value) {
 
 function buildRouteSourceRecord() {
   const sourceRecordId = normalizeSourceRecordId(route.query?.sourceRecordId)
-  if (!sourceRecordId) {
-    return null
-  }
   const checkType = String(route.query?.sourceCheckType || '').toUpperCase() === 'OUT' ? 'OUT' : 'IN'
   const normalizedCheckTime = normalizeRepairDateTime(route.query?.sourceCheckTime)
+  const normalizedStatus = String(route.query?.sourceStatus || '').toUpperCase()
+  const hasSourceContext = Boolean(sourceRecordId || normalizedCheckTime || normalizedStatus)
+  if (!hasSourceContext) {
+    return null
+  }
   const fallbackCheckTime = buildDefaultCheckTime(checkType).replace('T', ' ')
   return {
     id: sourceRecordId,
     checkType,
     checkTime: normalizedCheckTime || fallbackCheckTime,
-    status: String(route.query?.sourceStatus || 'ABNORMAL').toUpperCase(),
+    status: normalizedStatus || 'ABNORMAL',
   }
 }
 
@@ -400,7 +417,7 @@ function fillFromRecord(record, notice = '已带入建议补卡时间，请按�
   const suggested = resolveSuggestedRepair(record)
   form.checkType = suggested.suggestedCheckType || record?.checkType || 'IN'
   form.checkTime = suggested.suggestedCheckTimeLocal || toDateTimeLocal(record?.checkTime)
-  selectedRecordId.value = normalizeSourceRecordId(record?.id)
+  selectedRecordId.value = isContextOnlyExceptionRecord(record) ? null : normalizeSourceRecordId(record?.id)
   submitError.value = ''
   submitNotice.value = notice
   void scrollToSelectedReference()

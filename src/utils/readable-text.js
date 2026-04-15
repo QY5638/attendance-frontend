@@ -93,6 +93,25 @@ function buildReadableJsonSummary(value) {
   return lines.length ? lines.join('；') : null
 }
 
+function looksLikeQuestionPlaceholder(value) {
+  if (!value) {
+    return false
+  }
+
+  let placeholderCount = 0
+  let meaningfulCount = 0
+  for (const char of value) {
+    if (/\s/.test(char) || ',，.。;；:：!！()（）'.includes(char)) {
+      continue
+    }
+    meaningfulCount += 1
+    if (char === '?' || char === '？' || char === '�') {
+      placeholderCount += 1
+    }
+  }
+  return meaningfulCount >= 3 && placeholderCount === meaningfulCount
+}
+
 export function formatReadableText(value, fallback = '--') {
   if (value === null || value === undefined || value === '') {
     return fallback
@@ -100,6 +119,10 @@ export function formatReadableText(value, fallback = '--') {
 
   const normalizedText = String(value).trim()
   if (!normalizedText) {
+    return fallback
+  }
+
+  if (looksLikeQuestionPlaceholder(normalizedText)) {
     return fallback
   }
 
