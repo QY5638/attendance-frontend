@@ -20,9 +20,9 @@
         <select v-model="filters.status">
           <option value="">全部状态</option>
           <option value="PENDING">待审批</option>
-          <option value="APPROVED">已通过</option>
+          <option value="APPROVED">已通过（待采集）</option>
           <option value="REJECTED">已驳回</option>
-          <option value="USED">已使用</option>
+          <option value="USED">已使用（已采集）</option>
         </select>
       </label>
       <div class="panel-card__actions">
@@ -30,6 +30,8 @@
         <button type="button" @click="handleReset">重置</button>
       </div>
     </form>
+
+    <p class="panel-card__hint">说明：员工完成重录后，审批状态会从“已通过”转为“已使用”，因此“已通过”仅展示尚未完成采集的记录。</p>
 
     <p v-if="error" class="panel-card__feedback panel-card__feedback--error">{{ error }}</p>
     <p v-else-if="notice" class="panel-card__feedback panel-card__feedback--success">{{ notice }}</p>
@@ -222,13 +224,13 @@ function formatStatus(status) {
     return '待审批'
   }
   if (normalized === 'APPROVED') {
-    return '已通过'
+    return '已通过（待采集）'
   }
   if (normalized === 'REJECTED') {
     return '已驳回'
   }
   if (normalized === 'USED') {
-    return '已使用'
+    return '已使用（已采集）'
   }
   return '未知状态'
 }
@@ -337,6 +339,13 @@ onMounted(() => {
 
 .panel-card__filters {
   margin-bottom: 18px;
+}
+
+.panel-card__hint {
+  margin: -6px 0 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #64748b;
 }
 
 .panel-card__filters label,
