@@ -334,13 +334,13 @@ function formatRegisterStatus(status) {
     return '待审批'
   }
   if (normalized === 'APPROVED') {
-    return '已通过'
+    return '已通过（待采集）'
   }
   if (normalized === 'REJECTED') {
     return '已驳回'
   }
   if (normalized === 'USED') {
-    return '已使用'
+    return '已使用（已采集）'
   }
   if (normalized === 'NONE' && registerPermission.registered) {
     return '需申请'

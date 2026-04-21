@@ -71,11 +71,13 @@ function normalizeExceptionTarget(target) {
     }
   }
 
-  return {
-    type: target?.type || target?.exceptionType || '',
-    sourceType: target?.sourceType || target?.exceptionSourceType || '',
-    riskLevel: target?.riskLevel || '',
-    username: target?.username || '',
+    return {
+      type: target?.type || target?.exceptionType || '',
+      typeName: target?.typeName || target?.exceptionTypeName || '',
+      typeDescription: target?.typeDescription || target?.exceptionTypeDescription || '',
+      sourceType: target?.sourceType || target?.exceptionSourceType || '',
+      riskLevel: target?.riskLevel || '',
+      username: target?.username || '',
     realName: target?.realName || '',
     userId: target?.userId || '',
   }
@@ -110,6 +112,9 @@ export function getExceptionTypeLabel(type, fallback = '') {
 export function formatExceptionType(target, options = {}) {
   const { fallback = '待核查异常', unknownFallback = fallback } = options
   const normalizedTarget = normalizeExceptionTarget(target)
+  if (normalizedTarget.typeName) {
+    return normalizedTarget.typeName
+  }
   const label = getExceptionTypeLabel(normalizedTarget.type)
 
   if (label) {

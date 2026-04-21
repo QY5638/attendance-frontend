@@ -400,7 +400,7 @@ const exceptionTypeTrendItems = computed(() => {
 
     return {
       key: item.type,
-      label: getExceptionTypeLabel(item.type, item.type),
+      label: item.name || getExceptionTypeLabel(item.type, item.type),
       totalCount: Number(item.totalCount || 0),
       bars: values.map((value, index) => ({
         value,
@@ -420,7 +420,7 @@ const continuousPatternItems = computed(() => {
   const entries = CONTINUOUS_EXCEPTION_TYPES
     .map((key) => ({
       key,
-      label: getExceptionTypeLabel(key, key),
+      label: (Array.isArray(exceptionTypeTrendData.value?.items) ? exceptionTypeTrendData.value.items.find((item) => item.type === key)?.name : '') || getExceptionTypeLabel(key, key),
       count: Number(distribution[key] || 0),
     }))
     .filter((item) => item.count > 0)

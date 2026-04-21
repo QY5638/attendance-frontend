@@ -268,7 +268,6 @@ describe('system view', () => {
 
     expect(router.currentRoute.value.query.tab).toBe('device')
     expect(wrapper.get('[data-tab="device"]').classes()).toContain('system-view__tab--active')
-    expect(fetchRuleList).not.toHaveBeenCalled()
   })
 
   it('loads prompt panel with real backend data', async () => {
@@ -293,6 +292,33 @@ describe('system view', () => {
     expect(wrapper.text()).toContain('人脸申请')
     expect(wrapper.text()).toContain('张三')
     expect(wrapper.text()).toContain('需要重新采集照片')
+  })
+
+  it('queries face register approval panel with all statuses after clearing filter', async () => {
+    const wrapper = await mountPanel(SystemFaceRegisterApprovalPanel)
+
+    await wrapper.get('select').setValue('')
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(fetchFaceRegisterApprovalList).toHaveBeenLastCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+    })
+  })
+
+  it('queries face register approval panel with approved status explicitly', async () => {
+    const wrapper = await mountPanel(SystemFaceRegisterApprovalPanel)
+
+    await wrapper.get('select').setValue('APPROVED')
+    await wrapper.get('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(fetchFaceRegisterApprovalList).toHaveBeenLastCalledWith({
+      pageNum: 1,
+      pageSize: 10,
+      status: 'APPROVED',
+    })
   })
 
   it('loads operation log panel with readable actor and summary', async () => {

@@ -1067,7 +1067,7 @@ const topExceptionTypes = computed(() => {
   )
   return source.map((item) => ({
     ...item,
-    label: formatDisplayValue(item.label, WARNING_EXCEPTION_TYPE_LABELS),
+    label: WARNING_EXCEPTION_TYPE_LABELS[item.key] || item.label || item.key,
     count: Number(item.count || 0),
     highRiskCount: Number(item.highRiskCount || 0),
     trendBars: buildTrendBars(trendMap.get(item.key)?.dailyCounts || []),
@@ -1112,7 +1112,7 @@ const userPortraits = computed(() => {
     displayName: item.realName && item.username ? `${item.realName}（${item.username}）` : item.realName || item.username || '--',
     riskTier: item.riskTier || 'LOW',
     riskTierLabel: PORTRAIT_RISK_TIER_LABELS[item.riskTier] || '低风险',
-    latestExceptionTypeLabel: formatDisplayValue(item.latestExceptionType, WARNING_EXCEPTION_TYPE_LABELS),
+    latestExceptionTypeLabel: item.latestExceptionTypeName || formatDisplayValue(item.latestExceptionType, WARNING_EXCEPTION_TYPE_LABELS),
     latestWarningLevelLabel: formatDisplayValue(item.latestWarningLevel, WARNING_LEVEL_LABELS),
     totalWarnings: Number(item.totalWarnings || 0),
     highRiskWarnings: Number(item.highRiskWarnings || 0),
@@ -1371,6 +1371,7 @@ function buildWarningTitle(item = {}) {
   const levelLabel = resolveLabel(item.level, WARNING_LEVEL_LABELS)
   const exceptionLabel = formatExceptionType({
     type: item.exceptionType,
+    typeName: item.exceptionTypeName,
     sourceType: item.exceptionSourceType,
   }, {
     fallback: '',
@@ -1399,6 +1400,7 @@ function buildWarningRelation(item = {}) {
   }
   return buildExceptionRelation({
     type: item.exceptionType,
+    typeName: item.exceptionTypeName,
     sourceType: item.exceptionSourceType,
   })
 }
